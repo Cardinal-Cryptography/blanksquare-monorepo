@@ -22,7 +22,7 @@ export default defineConfig({
   },
   webServer: {
     url,
-    reuseExistingServer: true
+    reuseExistingServer: false
   },
   workers: 1
 });

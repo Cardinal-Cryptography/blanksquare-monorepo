@@ -1,12 +1,10 @@
-[![LOGO][logo]][aleph-homepage]
+[![LOGO][logo]][blanksquare-homepage]
 
 [![Nightly Testnet E2E tests][nightly-tests-badge]][nightly-tests]
-[![Contracts deployment][contracts-deployment-badge]][contracts-deployment]
 [![Relayer deployment][relayer-deployment-badge]][relayer-deployment]
 
-# Shielder: A First Iteration of zkOS
+# Shielder
 
-Welcome to Shielder, the first iteration of zkOS by Aleph Zero.
 Shielder is designed to provide a seamless integration of zero-knowledge (ZK) privacy into Ethereum Virtual Machine (EVM) compatible environments with subsecond proving times.
 
 **Audit report** by zkSecurity is available [here](https://reports.zksecurity.xyz/reports/aleph-zero-shielder/).
@@ -23,7 +21,7 @@ Shielder is designed to provide a seamless integration of zero-knowledge (ZK) pr
 
 ## Introduction
 
-Shielder is part of the Aleph Zero zkOS initiative, aimed at delivering Privacy-as-a-Service for Web3. With zkOS, developers can integrate ZK-based privacy into their applications without deep cryptographic knowledge.
+Shielder aims at delivering Privacy-as-a-Service for Web3. With Shielder, developers can integrate ZK-based privacy into their applications without deep cryptographic knowledge.
 
 ## Features
 
@@ -55,8 +53,8 @@ Before you begin, ensure you have the following:
 Clone the repository and install the dependencies:
 
 ```bash
-git clone git@github.com:Cardinal-Cryptography/zkOS-monorepo.git
-cd zkOS-monorepo
+git clone git@github.com:Cardinal-Cryptography/blanksquare-monorepo.git
+cd blanksquare-monorepo
 make deps
 ```
 
@@ -118,11 +116,9 @@ This step is essential to ensure that when we open source these parts, they adhe
 
 We are fully committed to open-sourcing these remaining components as soon as the audit is complete. Stay tuned for updates, and feel free to reach out with any questions or feedback in the meantime!
 
-[aleph-homepage]: https://alephzero.org
-[logo]: logo.png
-[contracts-deployment]: https://github.com/Cardinal-Cryptography/zkOS-monorepo/actions/workflows/manual-deploy-contract.yml
-[contracts-deployment-badge]: https://github.com/Cardinal-Cryptography/zkOS-monorepo/actions/workflows/manual-deploy-contract.yml/badge.svg
-[relayer-deployment]: https://github.com/Cardinal-Cryptography/zkOS-monorepo/actions/workflows/testnet-stage-build-and-deploy-shielder-relayer.yml
-[relayer-deployment-badge]: https://github.com/Cardinal-Cryptography/zkOS-monorepo/actions/workflows/testnet-stage-build-and-deploy-shielder-relayer.yml/badge.svg
-[nightly-tests]: https://github.com/Cardinal-Cryptography/zkOS-monorepo/actions/workflows/testnet-nightly-e2e.yml
-[nightly-tests-badge]: https://github.com/Cardinal-Cryptography/zkOS-monorepo/actions/workflows/testnet-nightly-e2e.yml/badge.svg
+[blanksquare-homepage]: https://blanksquare.io/
+[logo]: Blanksquare_logo_dark_area.png
+[relayer-deployment]: https://github.com/Cardinal-Cryptography/blanksquare-monorepo/actions/workflows/build-and-deploy-shielder-relayer.yml
+[relayer-deployment-badge]: https://github.com/Cardinal-Cryptography/blanksquare-monorepo/actions/workflows/build-and-deploy-shielder-relayer.yml/badge.svg
+[nightly-tests]: https://github.com/Cardinal-Cryptography/blanksquare-monorepo/actions/workflows/testnet-nightly-e2e.yml
+[nightly-tests-badge]: https://github.com/Cardinal-Cryptography/blanksquare-monorepo/actions/workflows/testnet-nightly-e2e.yml/badge.svg

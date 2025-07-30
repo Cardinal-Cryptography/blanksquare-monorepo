@@ -53,6 +53,11 @@ jobs:
         shell: bash
         run: make compile-contracts
 
+      - name: Install Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.5.0"
+
       - name: Run e2e tooling tests
         env:
           DEPLOYER_PRIVATE_KEY: ${{ secrets.CI_TESTNET_DEPLOYER_PRIVATE_KEY }}
@@ -72,6 +77,45 @@ jobs:
           NO_FORMATTING=true TESTNET=true ./tooling-e2e-tests/full_scenario.sh
           NO_FORMATTING=true TESTNET=true ./tooling-e2e-tests/recovery_scenario.sh
           NO_FORMATTING=true TESTNET=true ./tooling-e2e-tests/many_actors.sh
+
+      - name: Deploy proving server
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        run: |
+          cd tee/tf
+          terraform init
+          terraform apply -auto-approve -var-file=terraform.tfvars
+          echo "PROVER_SERVER_URL=$(terraform output -raw proxy_url)" >> $GITHUB_ENV
+
+      - name: Run TS SDK tests with proving server
+        env:
+          DEPLOYER_PRIVATE_KEY: ${{ secrets.CI_TESTNET_DEPLOYER_PRIVATE_KEY }}
+          ALICE_PUBLIC_KEY: ${{ vars.CI_TESTNET_ALICE_PUBLIC_KEY }}
+          ALICE_PRIVATE_KEY: ${{ secrets.CI_TESTNET_ALICE_PRIVATE_KEY }}
+          BOB_PUBLIC_KEY: ${{ vars.CI_TESTNET_BOB_PUBLIC_KEY }}
+          BOB_PRIVATE_KEY: ${{ secrets.CI_TESTNET_BOB_PRIVATE_KEY }}
+          CHARLIE_PUBLIC_KEY: ${{ vars.CI_TESTNET_CHARLIE_PUBLIC_KEY }}
+          CHARLIE_PRIVATE_KEY: ${{ secrets.CI_TESTNET_CHARLIE_PRIVATE_KEY }}
+          TS_SDK_PUBLIC_KEY: ${{ vars.CI_TESTNET_TS_SDK_PUBLIC_KEY }}
+          TS_SDK_PRIVATE_KEY: ${{ secrets.CI_TESTNET_TS_SDK_PRIVATE_KEY }}
+          FEE_DESTINATION: ${{ vars.CI_TESTNET_FEE_DESTINATION }}
+          FEE_DESTINATION_KEY: ${{ secrets.CI_TESTNET_FEE_DESTINATION_KEY }}
+          RELAYER_SIGNER_ADDRESSES: ${{ vars.CI_TESTNET_RELAYER_SIGNER_ADDRESSES }}
+          RELAYER_SIGNING_KEYS: ${{ secrets.CI_TESTNET_RELAYER_SIGNING_KEYS }}
+          CRYPTO_CLIENT_TYPE: "wasm-light"
+          CHECK_NITRO_ATTESTATION: "true"
+        run: |
+          NO_FORMATTING=true TESTNET=true ./tooling-e2e-tests/ts_sdk_tests.sh
+
+      - name: Destroy proving server
+        if: always()
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        run: |
+          cd tee/tf
+          terraform destroy -auto-approve -var-file=terraform.tfvars || echo "Warning: Failed to destroy some Terraform resources"
 
   slack-notification:
     name: Slack notification

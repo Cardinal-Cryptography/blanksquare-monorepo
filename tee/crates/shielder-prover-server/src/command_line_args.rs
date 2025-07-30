@@ -2,9 +2,13 @@ use clap::Parser;
 
 #[derive(Parser, Debug, Clone)]
 pub struct CommandLineArgs {
-    /// A port on whhich this serves listend to incoming HTTP connections.
+    /// A port on which this server listens to incoming HTTP connections.
     #[arg(short, long, default_value = "3000", env = "PUBLIC_PORT")]
     pub public_port: u16,
+
+    /// A port on which this server exposes its metrics endpoint.
+    #[arg(short, long, default_value = "3001", env = "METRICS_PORT")]
+    pub metrics_port: u16,
 
     /// Internal port on which host and tee applications talks to each other
     /// This is the part of the vsock endpoint, which is tee_cid:tee_port

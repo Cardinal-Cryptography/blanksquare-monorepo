@@ -11,12 +11,15 @@ use axum::{
 };
 use clap::Parser;
 use error::ShielderProverServerError as Error;
-use tokio::net::TcpListener;
+use tokio::{net::TcpListener, try_join};
 use tower_http::cors::CorsLayer;
 use tracing::info;
 use tracing_subscriber::{fmt, layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
 
-use crate::{command_line_args::CommandLineArgs, handlers as server_handlers};
+use crate::{
+    command_line_args::CommandLineArgs,
+    handlers::{self as server_handlers},
+};
 
 #[derive(Debug)]
 struct AppState {
@@ -38,6 +41,13 @@ async fn main() -> Result<(), Error> {
 
     let options = CommandLineArgs::parse();
 
+    let metrics_listener =
+        TcpListener::bind((options.bind_address.clone(), options.metrics_port)).await?;
+    let handler = server_handlers::metrics::register()?;
+    let metrics_app = Router::new()
+        .route("/metrics", get(server_handlers::metrics::metrics))
+        .with_state(handler);
+
     let listener = TcpListener::bind((options.bind_address.clone(), options.public_port)).await?;
     let task_pool = tokio_task_pool::Pool::bounded(options.task_pool_capacity)
         .with_spawn_timeout(Duration::from_secs(options.task_pool_timeout_secs))
@@ -58,8 +68,12 @@ async fn main() -> Result<(), Error> {
         .layer(CorsLayer::permissive())
         .with_state(AppState { options, task_pool }.into());
 
-    info!("Starting local server on {}", listener.local_addr()?);
-    serve(listener, app).await?;
+    info!(
+        "Starting local server on {} (metrics on {})",
+        listener.local_addr()?,
+        metrics_listener.local_addr()?
+    );
+    try_join!(serve(listener, app), serve(metrics_listener, metrics_app))?;
 
     Ok(())
 }

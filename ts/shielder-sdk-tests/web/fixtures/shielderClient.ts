@@ -3,7 +3,8 @@ import type {
   InjectedStorageInterface,
   SendShielderTransaction,
   ShielderClient,
-  Token
+  Token,
+  Referral
 } from "@cardinal-cryptography/shielder-sdk";
 import {
   createAccount,
@@ -22,8 +23,7 @@ export interface ShielderClientFixture {
   callbacks: CallbacksFixture;
   shield: (
     token: Token,
-    amount: bigint,
-    memo: Uint8Array
+    amount: bigint
   ) => Promise<{
     tx: `0x${string}`;
     protocolFee: bigint;
@@ -32,8 +32,7 @@ export interface ShielderClientFixture {
     token: Token,
     amount: bigint,
     to: `0x${string}`,
-    pocketMoney: bigint,
-    memo: Uint8Array
+    pocketMoney: bigint
   ) => Promise<{
     tx: `0x${string}`;
     relayerFee: bigint;
@@ -42,8 +41,7 @@ export interface ShielderClientFixture {
   withdrawManual: (
     token: Token,
     amount: bigint,
-    to: `0x${string}`,
-    memo: Uint8Array
+    to: `0x${string}`
   ) => Promise<{
     tx: `0x${string}`;
     protocolFee: bigint;
@@ -62,7 +60,9 @@ export const setupShielderClient = async (
     url: string;
   },
   privateKey: `0x${string}`,
-  shielderKey: `0x${string}`
+  shielderKey: `0x${string}`,
+  referralEncryptionPublicKey: `0x${string}`,
+  referralId: string
 ): Promise<ShielderClientFixture> => {
   const chainAccount: SeededAccount = createAccount(
     privateKey,
@@ -88,7 +88,13 @@ export const setupShielderClient = async (
     relayerUrl: relayerConfig.url,
     storage,
     cryptoClient,
-    callbacks: callbacks.callbacks
+    callbacks: callbacks.callbacks,
+    referral: {
+      referralId,
+      encryptionPublicKey: async () => {
+        return new Promise((resolve) => resolve(referralEncryptionPublicKey));
+      }
+    } as Referral
   });
 
   return {
@@ -97,7 +103,7 @@ export const setupShielderClient = async (
     storage,
     sendingTransaction,
     callbacks,
-    shield: async (token, amount, memo) => {
+    shield: async (token, amount) => {
       const { amount: totalAmount, protocolFee } =
         await shielderClient.getProtocolShieldFee(amount, false);
       if (token.type === "erc20")
@@ -112,13 +118,12 @@ export const setupShielderClient = async (
           totalAmount,
           sendingTransaction,
           chainAccount.account.address,
-          protocolFee,
-          memo
+          protocolFee
         ),
         protocolFee
       };
     },
-    withdraw: async (token, amount, to, pocketMoney, memo) => {
+    withdraw: async (token, amount, to, pocketMoney) => {
       const relayerFees = await shielderClient.getRelayerFees(
         token,
         pocketMoney
@@ -133,14 +138,13 @@ export const setupShielderClient = async (
           relayerFees,
           to,
           pocketMoney,
-          protocolFee,
-          memo
+          protocolFee
         ),
         protocolFee,
         relayerFee
       };
     },
-    withdrawManual: async (token, amount, to, memo) => {
+    withdrawManual: async (token, amount, to) => {
       const { amount: totalAmount, protocolFee } =
         await shielderClient.getProtocolWithdrawFee(amount, false);
       return {
@@ -150,8 +154,7 @@ export const setupShielderClient = async (
           to,
           sendingTransaction,
           chainAccount.account.address,
-          protocolFee,
-          memo
+          protocolFee
         ),
         protocolFee
       };

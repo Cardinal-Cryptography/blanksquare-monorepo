@@ -44,6 +44,7 @@
     "vitest": "^3.0.1"
   },
   "dependencies": {
+    "@cardinal-cryptography/ecies-encryption-lib": "git@github.com:Cardinal-Cryptography/ecies-encryption-lib.git#v0.1.0",
     "@cardinal-cryptography/shielder-sdk-crypto": "workspace:*",
     "async-mutex": "^0.5.0",
     "comlink": "^4.4.1",

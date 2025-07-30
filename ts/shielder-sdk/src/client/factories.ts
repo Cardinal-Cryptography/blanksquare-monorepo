@@ -25,6 +25,7 @@ import { LocalStateTransition } from "@/state/localStateTransition";
 import { ChainStateTransition } from "@/state/sync/chainStateTransition";
 import { AccountOnchain } from "@/state/accountOnchain";
 import { ProtocolFees } from "@/protocolFees";
+import { Referral } from "@/referral";
 
 // Base config with common properties
 type BaseShielderConfig = {
@@ -40,6 +41,7 @@ type BaseShielderConfig = {
 export type ShielderClientConfig = BaseShielderConfig & {
   contractAddress: Address;
   relayerUrl: string;
+  referral?: Referral;
 };
 
 export type ShielderComponents = {
@@ -48,6 +50,7 @@ export type ShielderComponents = {
   historyFetcher: HistoryFetcher;
   shielderActions: ShielderActions;
   protocolFees: ProtocolFees;
+  referral?: Referral;
 };
 
 /**
@@ -73,6 +76,7 @@ export const createShielderClient = (
 type ShielderComponentsConfig = BaseShielderConfig & {
   contract: IContract;
   relayer: IRelayer;
+  referral?: Referral;
 };
 
 type IdentityComponents = {
@@ -136,7 +140,8 @@ function createShielderComponents(
     stateSynchronizer: syncComponents.stateSynchronizer,
     historyFetcher: syncComponents.historyFetcher,
     shielderActions,
-    protocolFees
+    protocolFees,
+    referral: config.referral
   };
 }
 

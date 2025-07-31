@@ -54,6 +54,9 @@ jobs:
       - name: Run tests for halo2-verifier
         run: cd crates/halo2-verifier && make test
 
+      - name: Run tests for shielder-circuits
+        run: cd crates/shielder-circuits && make test
+
       - name: Run tests for shielder-cli
         run: cd crates/shielder-cli && make test
 

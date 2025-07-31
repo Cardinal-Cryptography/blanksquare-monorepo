@@ -6,7 +6,7 @@ authors = ["Cardinal"]
 homepage = "https://alephzero.org"
 license = "Apache-2.0"
 categories = ["cryptography"]
-repository = "https://github.com/Cardinal-Cryptography/zkOS-monorepo"
+repository = "https://github.com/Cardinal-Cryptography/blanksquare-monorepo"
 
 [dependencies]
 aws-nitro-enclaves-nsm-api = { workspace = true, optional = true }

@@ -1,0 +1,45 @@
+[package]
+name = "shielder-circuits"
+version = "0.1.0"
+edition = "2021"
+license.workspace = true
+
+[lib]
+bench = false # allows passing arguments through to criterion
+
+[[bin]]
+name = "measure-circuits"
+path = "src/bin/measure_circuits.rs"
+
+[dependencies]
+halo2_poseidon = { workspace = true }
+halo2_proofs = { workspace = true }
+human_bytes = { workspace = true }
+lazy_static = { workspace = true }
+macros = { workspace = true }
+once_cell = { workspace = true }
+rand = { workspace = true, features = ["small_rng"] }
+rand_core = { workspace = true }
+rayon = { workspace = true, optional = true }
+static_assertions = { workspace = true }
+strum = { workspace = true }
+strum_macros = { workspace = true }
+transcript = { workspace = true }
+
+[features]
+default = []
+multithreading = ["rayon"]
+
+[package.metadata.cargo-machete]
+ignored = ["getrandom", "rayon"]
+
+[dev-dependencies]
+criterion = { workspace = true }
+halo2_proofs = { workspace = true, default-features = true }
+parameterized = { workspace = true }
+regex = { workspace = true }
+
+[[bench]]
+name = "benchmarks"
+path = "benches/bench.rs"
+harness = false

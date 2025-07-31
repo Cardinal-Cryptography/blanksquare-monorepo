@@ -13,7 +13,7 @@
 # - RELAYER_SIGNER_ADDRESSES - as array
 # - RELAYER_SIGNING_KEYS - comma-separated
 
-NODE_RPC_URL="https://rpc.alephzero-testnet.gelato.digital"
+NODE_RPC_URL="https://sepolia.base.org"
 export NODE_RPC_URL
 
 CHAIN_ID=2039

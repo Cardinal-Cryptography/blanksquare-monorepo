@@ -12,7 +12,6 @@ import {
 } from "@tests/types";
 
 const ercToken = erc20Token(tokenContractAddresses[0] as `0x${string}`);
-const memo = new Uint8Array();
 
 const ercTokenLowercase = erc20Token(
   ercToken.address.toLowerCase() as `0x${string}`
@@ -24,34 +23,34 @@ const ercTokenLowercase = erc20Token(
     actions: [
       // create native account, deposit, withdraw manually and via relayer
       {
-        op: shieldOp(nativeToken(), 10n ** 17n, memo),
+        op: shieldOp(nativeToken(), 10n ** 17n),
         actor: "alice"
       },
       {
-        op: shieldOp(nativeToken(), 2n * 10n ** 17n, memo),
+        op: shieldOp(nativeToken(), 2n * 10n ** 17n),
         actor: "alice"
       },
       {
-        op: withdrawManualOp(nativeToken(), 5n ** 17n, "bob", memo),
+        op: withdrawManualOp(nativeToken(), 5n ** 17n, "bob"),
         actor: "alice"
       },
       {
-        op: withdrawOp(nativeToken(), 7n ** 17n, "bob", 0n, memo),
+        op: withdrawOp(nativeToken(), 7n ** 17n, "bob", 0n),
         actor: "alice"
       },
 
       // create ERC20 account, deposit, withdraw manually and via relayer
-      { op: shieldOp(ercToken, 10n ** 17n, memo), actor: "alice" },
+      { op: shieldOp(ercToken, 10n ** 17n), actor: "alice" },
       {
-        op: shieldOp(ercTokenLowercase, 2n * 10n ** 17n, memo),
+        op: shieldOp(ercTokenLowercase, 2n * 10n ** 17n),
         actor: "alice"
       },
       {
-        op: withdrawManualOp(ercToken, 5n ** 17n, "bob", memo),
+        op: withdrawManualOp(ercToken, 5n ** 17n, "bob"),
         actor: "alice"
       },
       {
-        op: withdrawOp(ercToken, 7n ** 17n, "bob", 10n ** 17n, memo),
+        op: withdrawOp(ercToken, 7n ** 17n, "bob", 10n ** 17n),
         actor: "alice"
       },
 
@@ -61,18 +60,18 @@ const ercTokenLowercase = erc20Token(
 
       // shield again
       {
-        op: shieldOp(nativeToken(), 10n ** 17n, memo),
+        op: shieldOp(nativeToken(), 10n ** 17n),
         actor: "alice"
       },
-      { op: shieldOp(ercToken, 10n ** 17n, memo), actor: "alice" },
+      { op: shieldOp(ercToken, 10n ** 17n), actor: "alice" },
 
       // withdraw again via relayer
       {
-        op: withdrawOp(nativeToken(), 10n ** 17n, "charlie", 0n, memo),
+        op: withdrawOp(nativeToken(), 10n ** 17n, "charlie", 0n),
         actor: "alice"
       },
       {
-        op: withdrawOp(ercToken, 10n ** 17n, "charlie", 0n, memo),
+        op: withdrawOp(ercToken, 10n ** 17n, "charlie", 0n),
         actor: "alice"
       }
     ]
@@ -90,7 +89,7 @@ const ercTokenLowercase = erc20Token(
 
             if (action.op.type !== "clearStorage") {
               await testFixture.validateShielderBalance(action.actor);
-              testFixture.validateShielderHistory(action.actor);
+              await testFixture.validateShielderHistory(action.actor);
             }
           }
           return true;

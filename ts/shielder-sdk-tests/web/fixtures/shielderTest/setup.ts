@@ -31,7 +31,7 @@ export interface ShielderTestFixture {
   executeAction: (action: TestAction) => Promise<void>;
   validateShielderBalance: (actor: AccountNames) => Promise<void>;
   validateWithdrawnBalance: (actor: AccountNames) => Promise<void>;
-  validateShielderHistory: (actor: AccountNames) => void;
+  validateShielderHistory: (actor: AccountNames) => Promise<void>;
 }
 
 const { sk, pk } = generateKeypair();

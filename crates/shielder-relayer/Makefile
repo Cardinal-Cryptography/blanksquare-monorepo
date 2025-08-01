@@ -29,9 +29,8 @@ lint: ## Run linter
 .PHONY: build-image
 build-image:  ## Builds a Docker image with the Relayer service binary. Use BUILD=client to use a binary built on the client.
 ifeq ($(BUILD),client)
-	# @cargo build --release
-	# @cd ../.. && docker build --tag "${RELAYER_DOCKER_IMAGE}" -f "crates/shielder-relayer/docker/Dockerfile.client" .
-	@cd ../.. && DOCKER_BUILDKIT=1 docker build --tag "${RELAYER_DOCKER_IMAGE}" -f "crates/shielder-relayer/docker/Dockerfile.docker" .
+	@cargo build --release
+	@cd ../.. && docker build --tag "${RELAYER_DOCKER_IMAGE}" -f "crates/shielder-relayer/docker/Dockerfile.client" .
 else ifeq ($(BUILD),docker)
 	@cd ../.. && DOCKER_BUILDKIT=1 docker build --tag "${RELAYER_DOCKER_IMAGE}" -f "crates/shielder-relayer/docker/Dockerfile.docker" .
 else
@@ -40,7 +39,7 @@ endif
 
 .PHONY: run
 run: ## Run the Relayer service in a local detached Docker container
-run: stop ## Start the Relayer service in a local Docker container
+run: build-image stop ## Start the Relayer service in a local Docker container
 	@DOCKER_USER=$(DOCKER_USER) \
 	RELAYER_CONTAINER_NAME=$(RELAYER_CONTAINER_NAME) \
 	RELAYER_DOCKER_IMAGE=$(RELAYER_DOCKER_IMAGE) \
@@ -54,7 +53,7 @@ stop:
 
 .PHONY: start-dummy
 start-dummy: ## Just start the relayer in a local Docker container with mocked contract addresses. Useful for debugging.
-start-dummy: stop
+start-dummy: build-image stop
 	@DOCKER_USER=$(DOCKER_USER) \
 	RELAYER_CONTAINER_NAME=$(RELAYER_CONTAINER_NAME) \
 	RELAYER_DOCKER_IMAGE=$(RELAYER_DOCKER_IMAGE) \

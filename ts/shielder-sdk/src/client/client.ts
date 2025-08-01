@@ -165,8 +165,9 @@ export class ShielderClient {
     from: `0x${string}`,
     protocolFee: bigint
   ) {
-    const memo =
-      this.referral ? await this.referral.getEncryptedReferral() : new Uint8Array();
+    const memo = this.referral
+      ? await this.referral.getEncryptedReferral()
+      : new Uint8Array();
     return this.shielderActions.shield(
       token,
       amount,
@@ -198,8 +199,9 @@ export class ShielderClient {
     pocketMoney: bigint,
     protocolFee: bigint
   ) {
-    const memo =
-      this.referral ? await this.referral.getEncryptedReferral() : new Uint8Array();
+    const memo = this.referral
+      ? await this.referral.getEncryptedReferral()
+      : new Uint8Array();
     return this.shielderActions.withdraw(
       token,
       amount,
@@ -233,8 +235,9 @@ export class ShielderClient {
     from: `0x${string}`,
     protocolFee: bigint
   ) {
-    const memo =
-      this.referral ? await this.referral.getEncryptedReferral() : new Uint8Array();
+    const memo = this.referral
+      ? await this.referral.getEncryptedReferral()
+      : new Uint8Array();
     return this.shielderActions.withdrawManual(
       token,
       amount,

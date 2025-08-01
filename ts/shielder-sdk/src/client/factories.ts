@@ -68,7 +68,7 @@ export const createShielderClient = (
   const referral = config.referral
     ? new Referral(
         config.referral.referralId,
-        config.referral.encryptionPublicKey,
+        config.referral.encryptionPublicKey
       )
     : undefined;
 

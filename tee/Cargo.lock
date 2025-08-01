@@ -1538,18 +1538,7 @@ checksum = "13dc2df351e3202783a1fe0d44375f7295ffb4049267b0f3018346dc122a1d94"
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/Cardinal-Cryptography/zkOS-circuits?rev=3bc3087#3bc3087bfdd4b64dddc5f734915e31e8a663cfd8"
-dependencies = [
- "darling",
- "proc-macro2",
- "quote",
- "syn 2.0.104",
-]
-
-[[package]]
-name = "macros"
-version = "0.1.0"
-source = "git+https://github.com/Cardinal-Cryptography/zkOS-circuits?rev=df31437#df314375b3fc0dad87a0e2805ff3c616b1794f35"
+source = "git+https://github.com/Cardinal-Cryptography/blanksquare-monorepo?branch=incorporate-circuits#77adf9444a7c633510cb24fb2e57636f3dc58b8d"
 dependencies = [
  "darling",
  "proc-macro2",
@@ -1855,14 +1844,14 @@ dependencies = [
 [[package]]
 name = "powers-of-tau"
 version = "0.1.0"
-source = "git+https://github.com/Cardinal-Cryptography/zkOS-monorepo?rev=374a0d5dea2128e9b5100ede6daecc9253a241d9#374a0d5dea2128e9b5100ede6daecc9253a241d9"
+source = "git+https://github.com/Cardinal-Cryptography/blanksquare-monorepo?branch=incorporate-circuits#77adf9444a7c633510cb24fb2e57636f3dc58b8d"
 dependencies = [
  "byteorder",
  "halo2_proofs",
  "halo2curves",
  "num-bigint",
  "rand 0.8.5",
- "shielder-circuits 0.1.0 (git+https://github.com/Cardinal-Cryptography/zkOS-circuits?rev=df31437)",
+ "shielder-circuits",
 ]
 
 [[package]]
@@ -2390,39 +2379,20 @@ dependencies = [
 [[package]]
 name = "shielder-circuits"
 version = "0.1.0"
-source = "git+https://github.com/Cardinal-Cryptography/zkOS-circuits?rev=3bc3087#3bc3087bfdd4b64dddc5f734915e31e8a663cfd8"
+source = "git+https://github.com/Cardinal-Cryptography/blanksquare-monorepo?branch=incorporate-circuits#77adf9444a7c633510cb24fb2e57636f3dc58b8d"
 dependencies = [
  "halo2_poseidon",
  "halo2_proofs",
  "human_bytes",
  "lazy_static",
- "macros 0.1.0 (git+https://github.com/Cardinal-Cryptography/zkOS-circuits?rev=3bc3087)",
+ "macros",
  "once_cell",
  "rand 0.8.5",
  "rand_core 0.6.4",
  "static_assertions",
  "strum",
  "strum_macros",
- "transcript 0.2.0 (git+https://github.com/Cardinal-Cryptography/zkOS-circuits?rev=3bc3087)",
-]
-
-[[package]]
-name = "shielder-circuits"
-version = "0.1.0"
-source = "git+https://github.com/Cardinal-Cryptography/zkOS-circuits?rev=df31437#df314375b3fc0dad87a0e2805ff3c616b1794f35"
-dependencies = [
- "halo2_poseidon",
- "halo2_proofs",
- "human_bytes",
- "lazy_static",
- "macros 0.1.0 (git+https://github.com/Cardinal-Cryptography/zkOS-circuits?rev=df31437)",
- "once_cell",
- "rand 0.8.5",
- "rand_core 0.6.4",
- "static_assertions",
- "strum",
- "strum_macros",
- "transcript 0.2.0 (git+https://github.com/Cardinal-Cryptography/zkOS-circuits?rev=df31437)",
+ "transcript",
 ]
 
 [[package]]
@@ -2467,7 +2437,7 @@ dependencies = [
  "rand 0.8.5",
  "serde",
  "serde_json",
- "shielder-circuits 0.1.0 (git+https://github.com/Cardinal-Cryptography/zkOS-circuits?rev=3bc3087)",
+ "shielder-circuits",
  "shielder-prover-common",
  "tokio",
  "tokio-vsock",
@@ -2552,20 +2522,19 @@ checksum = "7da8b5736845d9f2fcb837ea5d9e2628564b3b043a70948a3f0b778838c5fb4f"
 
 [[package]]
 name = "strum"
-version = "0.26.3"
+version = "0.27.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8fec0f0aef304996cf250b31b5a10dee7980c85da9d759361292b8bca5a18f06"
+checksum = "af23d6f6c1a224baef9d3f61e287d2761385a5b88fdab4eb4c6f11aeb54c4bcf"
 
 [[package]]
 name = "strum_macros"
-version = "0.26.4"
+version = "0.27.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4c6bee85a5a24955dc440386795aa378cd9cf82acd5f764469152d2270e581be"
+checksum = "7695ce3845ea4b33927c055a39dc438a45b059f7c1b3d91d38d10355fb8cbca7"
 dependencies = [
  "heck",
  "proc-macro2",
  "quote",
- "rustversion",
  "syn 2.0.104",
 ]
 
@@ -2852,18 +2821,7 @@ dependencies = [
 [[package]]
 name = "transcript"
 version = "0.2.0"
-source = "git+https://github.com/Cardinal-Cryptography/zkOS-circuits?rev=3bc3087#3bc3087bfdd4b64dddc5f734915e31e8a663cfd8"
-dependencies = [
- "halo2_proofs",
- "itertools 0.13.0",
- "ruint",
- "sha3 0.10.8",
-]
-
-[[package]]
-name = "transcript"
-version = "0.2.0"
-source = "git+https://github.com/Cardinal-Cryptography/zkOS-circuits?rev=df31437#df314375b3fc0dad87a0e2805ff3c616b1794f35"
+source = "git+https://github.com/Cardinal-Cryptography/blanksquare-monorepo?branch=incorporate-circuits#77adf9444a7c633510cb24fb2e57636f3dc58b8d"
 dependencies = [
  "halo2_proofs",
  "itertools 0.13.0",
@@ -2874,7 +2832,7 @@ dependencies = [
 [[package]]
 name = "type-conversions"
 version = "0.1.0"
-source = "git+https://github.com/Cardinal-Cryptography/zkOS-monorepo?rev=374a0d5dea2128e9b5100ede6daecc9253a241d9#374a0d5dea2128e9b5100ede6daecc9253a241d9"
+source = "git+https://github.com/Cardinal-Cryptography/blanksquare-monorepo?branch=incorporate-circuits#77adf9444a7c633510cb24fb2e57636f3dc58b8d"
 dependencies = [
  "alloy-primitives",
  "halo2curves",

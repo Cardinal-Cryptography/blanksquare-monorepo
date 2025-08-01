@@ -13,12 +13,13 @@
     };
 
     # below dependency is also used in tee/Cargo.toml, which is far from ideal since one needs to bump it there as well
-    zkOS-monorepo = {
-      url = "git+https://github.com/Cardinal-Cryptography/zkOS-monorepo?rev=374a0d5dea2128e9b5100ede6daecc9253a241d9";
+    # TODO replace with rev from main
+    blanksquare-monorepo = {
+      url = "git+https://github.com/Cardinal-Cryptography/blanksquare-monorepo?ref=incorporate-circuits&rev=0ace1dffef3267845fb2078b3c7a84b169186db3";
       flake = false;
     };
   };
-  outputs = { nitro-util, nixpkgs, flake-utils, crane, rust-overlay, zkOS-monorepo, ... }: (flake-utils.lib.eachDefaultSystem (system:
+  outputs = { nitro-util, nixpkgs, flake-utils, crane, rust-overlay, blanksquare-monorepo, ... }: (flake-utils.lib.eachDefaultSystem (system:
     let
       pkgs = import nixpkgs {
         inherit system;
@@ -47,12 +48,12 @@
           cargoExtraArgs = "-p shielder-prover-tee";
           version = "0.1.0";
 
-          src = "${zkOS-monorepo}/tee";
+          src = "${blanksquare-monorepo}/tee";
           strictDeps = true;
 
           CARGO_BUILD_TARGET = "x86_64-unknown-linux-musl";
           CARGO_BUILD_RUSTFLAGS = "-C target-feature=+crt-static";
-          PTAU_RESOURCES_DIR = "${zkOS-monorepo}/resources";
+          PTAU_RESOURCES_DIR = "${blanksquare-monorepo}/resources";
 
           postInstall = "mv $out/bin/shielder-prover-tee $out/bin/entrypoint";
         };

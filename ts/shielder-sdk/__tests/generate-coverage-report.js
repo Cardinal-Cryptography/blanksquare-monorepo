@@ -46,7 +46,7 @@ function generateCoverageReport() {
     .sort(([a], [b]) => a.localeCompare(b))
     .forEach(([file, metrics]) => {
       // Convert absolute path to relative path from repo root
-      const repoPath = file.split("/zkOS-monorepo/")[1];
+      const repoPath = file.split("/blanksquare-monorepo/")[1];
       // Add status emoji based on line coverage
       const coverageEmoji = getCoverageEmoji(metrics.lines.pct);
 

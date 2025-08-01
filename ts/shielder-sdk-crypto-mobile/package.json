@@ -54,14 +54,14 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Cardinal-Cryptography/zkOS-monorepo"
+    "url": "git+https://github.com/Cardinal-Cryptography/blanksquare-monorepo"
   },
   "author": "Cardinal <hi@cardinals.cc> (https://cardinal.co/)",
   "license": "Apache-2.0",
   "bugs": {
-    "url": "https://github.com/Cardinal-Cryptography/zkOS-monorepo/issues"
+    "url": "https://github.com/Cardinal-Cryptography/blanksquare-monorepo/issues"
   },
-  "homepage": "https://github.com/Cardinal-Cryptography/zkOS-monorepo#readme",
+  "homepage": "https://github.com/Cardinal-Cryptography/blanksquare-monorepo#readme",
   "publishConfig": {
     "registry": "https://registry.npmjs.org/"
   },

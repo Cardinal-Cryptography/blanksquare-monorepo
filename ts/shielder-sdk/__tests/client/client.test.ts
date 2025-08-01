@@ -111,9 +111,9 @@ describe("ShielderClient", () => {
 
     mockReferral = {
       referralId: mockReferralId,
-      getEncryptedReferral: vitest.fn().mockResolvedValue(
-        hexToBytes(mockReferralId)
-      )
+      getEncryptedReferral: vitest
+        .fn()
+        .mockResolvedValue(hexToBytes(mockReferralId))
     } as unknown as Mocked<Referral>;
 
     // Create client instance with mocked components

@@ -41,7 +41,10 @@ type BaseShielderConfig = {
 export type ShielderClientConfig = BaseShielderConfig & {
   contractAddress: Address;
   relayerUrl: string;
-  referral?: Referral;
+  referral?: {
+    referralId: string;
+    encryptionPublicKey: () => Promise<`0x${string}`>;
+  };
 };
 
 export type ShielderComponents = {
@@ -62,11 +65,18 @@ export const createShielderClient = (
 ): ShielderClient => {
   const contract = new Contract(config.publicClient, config.contractAddress);
   const relayer = new Relayer(config.relayerUrl);
+  const referral = config.referral
+    ? new Referral(
+        config.referral.referralId,
+        config.referral.encryptionPublicKey,
+      )
+    : undefined;
 
   const components = createShielderComponents({
     ...config,
     contract,
-    relayer
+    relayer,
+    referral
   });
 
   return new ShielderClient(components, config.callbacks);

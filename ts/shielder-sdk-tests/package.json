@@ -18,7 +18,7 @@
     "@cardinal-cryptography/shielder-sdk-crypto": "workspace:*",
     "@cardinal-cryptography/shielder-sdk-crypto-wasm": "workspace:*",
     "@cardinal-cryptography/shielder-sdk-crypto-wasm-light": "workspace:*",
-    "@cardinal-cryptography/ecies-encryption-lib": "git@github.com:Cardinal-Cryptography/ecies-encryption-lib.git#v0.1.0",
+    "@cardinal-cryptography/ecies-encryption-lib": "git@github.com:Cardinal-Cryptography/ecies-encryption-lib.git#v0.1.5",
     "@playwright/test": "^1.45.0",
     "@types/node": "^20.17.19",
     "@types/react": "^18.3.3",

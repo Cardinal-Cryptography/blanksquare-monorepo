@@ -3,8 +3,7 @@ import type {
   InjectedStorageInterface,
   SendShielderTransaction,
   ShielderClient,
-  Token,
-  Referral
+  Token
 } from "@cardinal-cryptography/shielder-sdk";
 import {
   createAccount,
@@ -92,9 +91,9 @@ export const setupShielderClient = async (
     referral: {
       referralId,
       encryptionPublicKey: async () => {
-        return new Promise((resolve) => resolve(referralEncryptionPublicKey));
+        return Promise.resolve(referralEncryptionPublicKey);
       }
-    } as Referral
+    }
   });
 
   return {

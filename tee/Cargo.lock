@@ -1538,7 +1538,7 @@ checksum = "13dc2df351e3202783a1fe0d44375f7295ffb4049267b0f3018346dc122a1d94"
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/Cardinal-Cryptography/blanksquare-monorepo?rev=711e494ab81bddc61421608ca089a2879d25e749#711e494ab81bddc61421608ca089a2879d25e749"
+source = "git+https://github.com/Cardinal-Cryptography/blanksquare-monorepo?branch=incorporate-circuits#77adf9444a7c633510cb24fb2e57636f3dc58b8d"
 dependencies = [
  "darling",
  "proc-macro2",
@@ -1844,7 +1844,7 @@ dependencies = [
 [[package]]
 name = "powers-of-tau"
 version = "0.1.0"
-source = "git+https://github.com/Cardinal-Cryptography/blanksquare-monorepo?rev=711e494ab81bddc61421608ca089a2879d25e749#711e494ab81bddc61421608ca089a2879d25e749"
+source = "git+https://github.com/Cardinal-Cryptography/blanksquare-monorepo?branch=incorporate-circuits#77adf9444a7c633510cb24fb2e57636f3dc58b8d"
 dependencies = [
  "byteorder",
  "halo2_proofs",
@@ -2379,7 +2379,7 @@ dependencies = [
 [[package]]
 name = "shielder-circuits"
 version = "0.1.0"
-source = "git+https://github.com/Cardinal-Cryptography/blanksquare-monorepo?rev=711e494ab81bddc61421608ca089a2879d25e749#711e494ab81bddc61421608ca089a2879d25e749"
+source = "git+https://github.com/Cardinal-Cryptography/blanksquare-monorepo?branch=incorporate-circuits#77adf9444a7c633510cb24fb2e57636f3dc58b8d"
 dependencies = [
  "halo2_poseidon",
  "halo2_proofs",
@@ -2821,7 +2821,7 @@ dependencies = [
 [[package]]
 name = "transcript"
 version = "0.2.0"
-source = "git+https://github.com/Cardinal-Cryptography/blanksquare-monorepo?rev=711e494ab81bddc61421608ca089a2879d25e749#711e494ab81bddc61421608ca089a2879d25e749"
+source = "git+https://github.com/Cardinal-Cryptography/blanksquare-monorepo?branch=incorporate-circuits#77adf9444a7c633510cb24fb2e57636f3dc58b8d"
 dependencies = [
  "halo2_proofs",
  "itertools 0.13.0",
@@ -2832,7 +2832,7 @@ dependencies = [
 [[package]]
 name = "type-conversions"
 version = "0.1.0"
-source = "git+https://github.com/Cardinal-Cryptography/blanksquare-monorepo?rev=711e494ab81bddc61421608ca089a2879d25e749#711e494ab81bddc61421608ca089a2879d25e749"
+source = "git+https://github.com/Cardinal-Cryptography/blanksquare-monorepo?branch=incorporate-circuits#77adf9444a7c633510cb24fb2e57636f3dc58b8d"
 dependencies = [
  "alloy-primitives",
  "halo2curves",

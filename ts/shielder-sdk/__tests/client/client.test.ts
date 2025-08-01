@@ -19,6 +19,7 @@ import { ShielderCallbacks } from "../../src/client/types";
 import { nativeToken } from "../../src/utils";
 import { ShielderActions } from "../../src/client/actions";
 import { ProtocolFees } from "../../src/protocolFees";
+import { Referral } from "../../src/referral";
 import { AccountRegistry } from "../../src/state/accountRegistry";
 import { StateSynchronizer } from "../../src/state/sync/synchronizer";
 import { HistoryFetcher } from "../../src/state/sync/historyFetcher";
@@ -47,10 +48,12 @@ describe("ShielderClient", () => {
   let mockHistoryFetcher: Mocked<HistoryFetcher>;
   let mockShielderActions: Mocked<ShielderActions>;
   let mockProtocolFees: Mocked<ProtocolFees>;
+  let mockReferral: Mocked<Referral>;
   let callbacks: ShielderCallbacks;
   let mockState: AccountStateMerkleIndexed;
   const mockedRelayerAddress =
     "0x1234567890123456789012345678901234567890" as const;
+  const mockReferralId = "0x1234567890abcdef" as `0x${string}`;
 
   beforeEach(() => {
     // Reset mocks
@@ -100,11 +103,18 @@ describe("ShielderClient", () => {
     };
 
     mockProtocolFees = {
-        getProtocolDepositFee: vitest.fn(),
-        getProtocolWithdrawFee: vitest.fn(),
-        syncProtocolDepositFeeBps: vitest.fn(),
-        syncProtocolWithdrawFeeBps: vitest.fn()
-    } as unknown as Mocked<ProtocolFees>
+      getProtocolDepositFee: vitest.fn(),
+      getProtocolWithdrawFee: vitest.fn(),
+      syncProtocolDepositFeeBps: vitest.fn(),
+      syncProtocolWithdrawFeeBps: vitest.fn()
+    } as unknown as Mocked<ProtocolFees>;
+
+    mockReferral = {
+      referralId: mockReferralId,
+      getEncryptedReferral: vitest
+        .fn()
+        .mockResolvedValue(hexToBytes(mockReferralId))
+    } as unknown as Mocked<Referral>;
 
     // Create client instance with mocked components
     const components: ShielderComponents = {
@@ -112,7 +122,8 @@ describe("ShielderClient", () => {
       stateSynchronizer: mockStateSynchronizer,
       historyFetcher: mockHistoryFetcher,
       shielderActions: mockShielderActions,
-      protocolFees: mockProtocolFees
+      protocolFees: mockProtocolFees,
+      referral: mockReferral
     };
 
     client = new ShielderClient(components, callbacks);
@@ -348,7 +359,6 @@ describe("ShielderClient", () => {
       const mockTxHash = "0x9876543210" as Hash;
       const mockSendTransaction = vitest.fn().mockResolvedValue(mockTxHash);
       const mockProtocolFee = 0n;
-      const mockMemo = Uint8Array.from([]);
 
       mockShielderActions.shield.mockResolvedValue(mockTxHash);
 
@@ -357,8 +367,7 @@ describe("ShielderClient", () => {
         mockAmount,
         mockSendTransaction,
         mockFrom,
-        mockProtocolFee,
-        mockMemo
+        mockProtocolFee
       );
 
       expect(txHash).toBe(mockTxHash);
@@ -368,7 +377,7 @@ describe("ShielderClient", () => {
         mockSendTransaction,
         mockFrom,
         mockProtocolFee,
-        mockMemo
+        hexToBytes(mockReferralId)
       );
     });
   });
@@ -382,7 +391,6 @@ describe("ShielderClient", () => {
       const mockTxHash = "0x9876543210" as Hash;
       const mockPocketMoney = 0n;
       const mockProtocolFee = 0n;
-      const mockMemo = Uint8Array.from([]);
 
       mockShielderActions.withdraw.mockResolvedValue(mockTxHash);
 
@@ -392,8 +400,7 @@ describe("ShielderClient", () => {
         quotedFeesFromExpectedTokenFee(mockExpectedFee),
         mockAddress,
         mockPocketMoney,
-        mockProtocolFee,
-        mockMemo
+        mockProtocolFee
       );
 
       expect(txHash).toBe(mockTxHash);
@@ -404,7 +411,7 @@ describe("ShielderClient", () => {
         mockAddress,
         mockPocketMoney,
         mockProtocolFee,
-        mockMemo
+        hexToBytes(mockReferralId)
       );
     });
   });
@@ -418,7 +425,6 @@ describe("ShielderClient", () => {
       const mockTxHash = "0x9876543210" as Hash;
       const mockSendTransaction = vitest.fn().mockResolvedValue(mockTxHash);
       const mockProtocolFee = 0n;
-      const mockMemo = Uint8Array.from([]);
 
       mockShielderActions.withdrawManual.mockResolvedValue(mockTxHash);
 
@@ -428,8 +434,7 @@ describe("ShielderClient", () => {
         mockAddress,
         mockSendTransaction,
         mockFrom,
-        mockProtocolFee,
-        mockMemo
+        mockProtocolFee
       );
 
       expect(txHash).toBe(mockTxHash);
@@ -440,7 +445,7 @@ describe("ShielderClient", () => {
         mockSendTransaction,
         mockFrom,
         mockProtocolFee,
-        mockMemo
+        hexToBytes(mockReferralId)
       );
     });
   });

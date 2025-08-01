@@ -11,23 +11,22 @@ import {
 } from "@tests/types";
 
 const ercToken = erc20Token(tokenContractAddresses[0] as `0x${string}`);
-const memo = new Uint8Array();
 
 [
   {
     id: 1,
     actions: [
       {
-        op: shieldOp(nativeToken(), 10n ** 17n, memo),
+        op: shieldOp(nativeToken(), 10n ** 17n),
         actor: "alice"
       },
-      { op: shieldOp(ercToken, 10n ** 17n, memo), actor: "alice" },
+      { op: shieldOp(ercToken, 10n ** 17n), actor: "alice" },
       {
-        op: shieldOp(nativeToken(), 2n * 10n ** 17n, memo),
+        op: shieldOp(nativeToken(), 2n * 10n ** 17n),
         actor: "bob"
       },
       {
-        op: shieldOp(ercToken, 2n * 10n ** 17n, memo),
+        op: shieldOp(ercToken, 2n * 10n ** 17n),
         actor: "bob"
       },
       { op: clearStorageOp(), actor: "alice" },
@@ -35,48 +34,48 @@ const memo = new Uint8Array();
       { op: recoverOp(), actor: "alice" },
       { op: recoverOp(), actor: "bob" },
       {
-        op: shieldOp(nativeToken(), 10n ** 17n, memo),
+        op: shieldOp(nativeToken(), 10n ** 17n),
         actor: "alice"
       },
-      { op: shieldOp(ercToken, 10n ** 17n, memo), actor: "alice" },
+      { op: shieldOp(ercToken, 10n ** 17n), actor: "alice" },
       {
-        op: shieldOp(nativeToken(), 2n * 10n ** 17n, memo),
+        op: shieldOp(nativeToken(), 2n * 10n ** 17n),
         actor: "bob"
       },
       {
-        op: shieldOp(ercToken, 2n * 10n ** 17n, memo),
+        op: shieldOp(ercToken, 2n * 10n ** 17n),
         actor: "bob"
       },
       {
-        op: withdrawOp(nativeToken(), 10n ** 17n, "dave", 0n, memo),
+        op: withdrawOp(nativeToken(), 10n ** 17n, "dave", 0n),
         actor: "alice"
       },
       {
-        op: withdrawOp(nativeToken(), 2n * 10n ** 17n, "dave", 0n, memo),
+        op: withdrawOp(nativeToken(), 2n * 10n ** 17n, "dave", 0n),
         actor: "bob"
       },
       {
-        op: shieldOp(nativeToken(), 3n * 10n ** 17n, memo),
+        op: shieldOp(nativeToken(), 3n * 10n ** 17n),
         actor: "charlie"
       },
       {
-        op: shieldOp(ercToken, 3n * 10n ** 17n, memo),
+        op: shieldOp(ercToken, 3n * 10n ** 17n),
         actor: "charlie"
       },
       {
-        op: shieldOp(nativeToken(), 3n * 10n ** 17n, memo),
+        op: shieldOp(nativeToken(), 3n * 10n ** 17n),
         actor: "charlie"
       },
       {
-        op: shieldOp(ercToken, 3n * 10n ** 17n, memo),
+        op: shieldOp(ercToken, 3n * 10n ** 17n),
         actor: "charlie"
       },
       {
-        op: withdrawOp(ercToken, 10n ** 17n, "dave", 10n ** 17n, memo),
+        op: withdrawOp(ercToken, 10n ** 17n, "dave", 10n ** 17n),
         actor: "charlie"
       },
       {
-        op: withdrawOp(nativeToken(), 3n * 10n ** 17n, "dave", 0n, memo),
+        op: withdrawOp(nativeToken(), 3n * 10n ** 17n, "dave", 0n),
         actor: "charlie"
       }
     ]
@@ -94,7 +93,7 @@ const memo = new Uint8Array();
 
             if (action.op.type !== "clearStorage") {
               await testFixture.validateShielderBalance(action.actor);
-              testFixture.validateShielderHistory(action.actor);
+              await testFixture.validateShielderHistory(action.actor);
             }
           }
           return true;

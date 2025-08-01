@@ -4,6 +4,8 @@ import type { ShielderClientFixture } from "../shielderClient";
 import type { WithdrawalAccountFixture } from "../withdrawalAccount";
 import type { BalanceRecorderFixture } from "../balanceRecorder";
 import { tokenToKey } from "@/testUtils";
+import { decryptPaddedUnchecked } from "@cardinal-cryptography/ecies-encryption-lib";
+import { referralEncryptionPrivateKey, referralId } from "./setup";
 
 export const validateShielderBalance =
   (
@@ -43,7 +45,7 @@ export const validateShielderHistory =
     registrar: RegistrarFixture,
     token: Token
   ) =>
-  () => {
+  async () => {
     const txHistory = shielderClient.callbacks.txHistory(token);
     const expectedHistory = registrar.recordedTxHistory(token);
     if (txHistory.length !== expectedHistory.length) {
@@ -72,6 +74,16 @@ export const validateShielderHistory =
       if (tx.to !== expectedTx.to) {
         throw new Error(
           `Tx to mismatch at index ${i}: expected ${expectedTx.to}, got ${tx.to}`
+        );
+      }
+      const historyReferralId = await decryptPaddedUnchecked(
+        tx.memo,
+        referralEncryptionPrivateKey,
+        crypto
+      );
+      if (historyReferralId !== referralId) {
+        throw new Error(
+          `Referral ID mismatch at index ${i}: expected ${referralId}, got ${historyReferralId}`
         );
       }
     }

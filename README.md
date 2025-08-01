@@ -119,7 +119,7 @@ Originally, `shielder-circuits` crate was placed in a different [repo](https://g
 preserving git history to this repo, so in case one needs to check `git blame`, please visit original repo.
 
 [blanksquare-homepage]: https://blanksquare.io/
-[logo]: Blanksquare_logo_dark_area.png
+[logo]: BSQ-header.png
 [relayer-deployment]: https://github.com/Cardinal-Cryptography/blanksquare-monorepo/actions/workflows/build-and-deploy-shielder-relayer.yml
 [relayer-deployment-badge]: https://github.com/Cardinal-Cryptography/blanksquare-monorepo/actions/workflows/build-and-deploy-shielder-relayer.yml/badge.svg
 [nightly-tests]: https://github.com/Cardinal-Cryptography/blanksquare-monorepo/actions/workflows/testnet-nightly-e2e.yml

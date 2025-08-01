@@ -24,22 +24,10 @@ pub enum ShielderProverServerError {
 impl IntoResponse for ShielderProverServerError {
     fn into_response(self) -> AxumResponse {
         let (status, error_message) = match &self {
-            ShielderProverServerError::Io(e) => (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                format!("Internal I/O error: {e:?}"),
-            ),
-            ShielderProverServerError::TaskPool(e) => (
-                StatusCode::GATEWAY_TIMEOUT,
-                format!("Cannot schedule more tasks: {e:?}"),
-            ),
-            ShielderProverServerError::ProvingServerError(e) => (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                format!("TEE Proving Server error: {e:?}"),
-            ),
-            ShielderProverServerError::JoinHandleError(e) => (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                format!("Servers task failed to completion : {e:?}"),
-            ),
+            ShielderProverServerError::TaskPool(_) => {
+                (StatusCode::SERVICE_UNAVAILABLE, "Try again later")
+            }
+            _ => (StatusCode::INTERNAL_SERVER_ERROR, "Internal server error"),
         };
 
         error!("Error encountered: {:?}", self);

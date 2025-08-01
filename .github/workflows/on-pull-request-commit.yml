@@ -68,5 +68,6 @@ jobs:
 
   measure-gas-usage-and-verifier-code-size:
     name: Measure gas usage
+    if: github.event_name == 'pull_request'
     uses: ./.github/workflows/_measure-gas-and-contract-size.yml
     secrets: inherit

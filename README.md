@@ -105,16 +105,18 @@ NETWORK=anvil make deploy-contracts
 
 ## License
 
-Shielder is licensed under the Apache-2.0 License. See the LICENSE file for more details.
+MOst of the Shielder is licensed under the Apache-2.0 License. See the LICENSE file for more details.
 
-## Private components and future open sourcing plan
-While this repository represents the majority of our work, there are still some components that are kept in private repositories.
-These include halo2 circuits and Poseidon2 hashing function.
+Some of the crates are licensed with LICENSE-GPL-3.0-only-with-Classpath-exception:
+* `crates/shielder-circuits`
 
-The main reason for keeping these components private at this time is that they are waiting for an external audit to ensure they meet all compliance, security, and quality standards.
-This step is essential to ensure that when we open source these parts, they adhere to our community's expectations for transparency, security, and usability.
+Some of the crates are licensed with MIT:
+* `crates/transcript`
 
-We are fully committed to open-sourcing these remaining components as soon as the audit is complete. Stay tuned for updates, and feel free to reach out with any questions or feedback in the meantime!
+## Circuits
+
+Originally, `shielder-circuits` crate was placed in a different [repo](https://github.com/Cardinal-Cryptography/zkOS-circuits) and migrated without 
+preserving git history to this repo, so in case one needs to check `git blame`, please visit original repo.
 
 [blanksquare-homepage]: https://blanksquare.io/
 [logo]: Blanksquare_logo_dark_area.png

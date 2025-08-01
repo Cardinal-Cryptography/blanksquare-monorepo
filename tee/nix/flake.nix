@@ -13,6 +13,7 @@
     };
 
     # below dependency is also used in tee/Cargo.toml, which is far from ideal since one needs to bump it there as well
+    # TODO replace with rev from main
     blanksquare-monorepo = {
       url = "git+https://github.com/Cardinal-Cryptography/blanksquare-monorepo?ref=incorporate-circuits&rev=0ace1dffef3267845fb2078b3c7a84b169186db3";
       flake = false;

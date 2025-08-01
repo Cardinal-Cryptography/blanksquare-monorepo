@@ -105,7 +105,7 @@ NETWORK=anvil make deploy-contracts
 
 ## License
 
-MOst of the Shielder is licensed under the Apache-2.0 License. See the LICENSE file for more details.
+Most of the Shielder is licensed under the Apache-2.0 License. See the LICENSE file for more details.
 
 Some of the crates are licensed with LICENSE-GPL-3.0-only-with-Classpath-exception:
 * `crates/shielder-circuits`

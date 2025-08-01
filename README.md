@@ -117,7 +117,7 @@ This step is essential to ensure that when we open source these parts, they adhe
 We are fully committed to open-sourcing these remaining components as soon as the audit is complete. Stay tuned for updates, and feel free to reach out with any questions or feedback in the meantime!
 
 [blanksquare-homepage]: https://blanksquare.io/
-[logo]: Blanksquare_logo_dark_area.png
+[logo]: BSQ-header.png
 [relayer-deployment]: https://github.com/Cardinal-Cryptography/blanksquare-monorepo/actions/workflows/build-and-deploy-shielder-relayer.yml
 [relayer-deployment-badge]: https://github.com/Cardinal-Cryptography/blanksquare-monorepo/actions/workflows/build-and-deploy-shielder-relayer.yml/badge.svg
 [nightly-tests]: https://github.com/Cardinal-Cryptography/blanksquare-monorepo/actions/workflows/testnet-nightly-e2e.yml

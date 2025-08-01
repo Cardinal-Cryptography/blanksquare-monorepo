@@ -115,5 +115,5 @@ type-conversions = { path = "crates/type-conversions" }
 transcript = { path = "crates/transcript" }
 
 [profile.release]
-lto = true
+lto = "thin"
 

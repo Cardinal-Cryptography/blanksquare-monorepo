@@ -3,16 +3,17 @@
     "blanksquare-monorepo": {
       "flake": false,
       "locked": {
-        "lastModified": 1754036515,
-        "narHash": "sha256-X4dgn8vD2asJVpWfBaTEj5OdDN50TzHRvvUUCNOelFw=",
+        "lastModified": 1754040987,
+        "narHash": "sha256-yq4z4BE9x2B8K86HRW+0lRHZu/OMaSxUSkSCB4oTkNs=",
         "ref": "incorporate-circuits",
-        "rev": "0eb37677f521a877a9f08d167e0881963a170f8a",
-        "revCount": 256,
+        "rev": "0ace1dffef3267845fb2078b3c7a84b169186db3",
+        "revCount": 259,
         "type": "git",
         "url": "https://github.com/Cardinal-Cryptography/blanksquare-monorepo"
       },
       "original": {
         "ref": "incorporate-circuits",
+        "rev": "0ace1dffef3267845fb2078b3c7a84b169186db3",
         "type": "git",
         "url": "https://github.com/Cardinal-Cryptography/blanksquare-monorepo"
       }

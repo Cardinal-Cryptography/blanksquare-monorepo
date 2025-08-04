@@ -20,7 +20,7 @@ jobs:
     name: Build enclave artifacts
     uses: ./.github/workflows/_build-enclave-artifacts.yml
     with:
-      ref: ${{ github.ref }}
+      ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
   build-contracts:
     name: Generate and compile contracts

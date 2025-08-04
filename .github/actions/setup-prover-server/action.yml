@@ -1,0 +1,76 @@
+name: 'Deploy Prover Server Action'
+
+description: 'Deploys or destroys the prover server using Terragrunt'
+
+inputs:
+  proxy_image:
+    description: 'Proxy Docker image URI'
+    required: true
+  eif_url:
+    description: 'Enclave Image File (EIF) URL'
+    required: true
+  create:
+    description: 'Create resources'
+    required: false
+    default: 'false'
+  destroy:
+    description: 'Destroy resources'
+    required: false
+    default: 'false'
+  ssh_private_key:
+    description: 'SSH private key for Git access'
+    required: true
+
+outputs:
+  proxy_url:
+    description: 'The proxy URL'
+    value: ${{ steps.set-output.outputs.proxy_url }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup SSH Agent
+      uses: webfactory/ssh-agent@v0.9.0
+      with:
+        ssh-private-key: ${{ inputs.ssh_private_key }}
+
+    - name: Install Terragrunt
+      shell: bash
+      run: |
+        curl -sL https://github.com/gruntwork-io/terragrunt/releases/download/v0.67.5/terragrunt_linux_amd64 -o /usr/local/bin/terragrunt
+        chmod +x /usr/local/bin/terragrunt
+
+    - name: Set environment variables
+      shell: bash
+      run: |
+        echo "TF_VAR_proxy_image=${{ inputs.proxy_image }}" >> $GITHUB_ENV
+        echo "TF_VAR_eif_url=${{ inputs.eif_url }}" >> $GITHUB_ENV
+
+    - name: Create resources
+      if: inputs.create == 'true'
+      shell: bash
+      working-directory: tee/terragrunt
+      run: |
+        terragrunt init
+        terragrunt apply -auto-approve
+        terragrunt output -json > outputs.json
+
+    - name: Set output
+      if: inputs.create == 'true'
+      id: set-output
+      shell: bash
+      working-directory: tee/terragrunt
+      run: |
+        PROXY_URL=$(jq -r .proxy_url.value outputs.json)
+        echo "proxy_url=$PROXY_URL" >> $GITHUB_OUTPUT
+
+    - name: Destroy resources
+      if: inputs.destroy == 'true'
+      shell: bash
+      working-directory: tee/terragrunt
+      run: |
+        terragrunt init
+        terragrunt destroy -auto-approve

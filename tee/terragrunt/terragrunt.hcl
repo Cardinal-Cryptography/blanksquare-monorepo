@@ -17,7 +17,7 @@ terraform {
 
 locals {
   project_name = "prover-server"
-  environment = "playground"
+  environment = "ci"
   aws_region = "eu-west-1"
 }
 

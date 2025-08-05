@@ -46,11 +46,13 @@ runs:
 
     - name: Install Terragrunt
       shell: bash
+      # yamllint disable rule:line-length
       run: |
         curl -sL \
           https://github.com/gruntwork-io/terragrunt/releases/download/v0.67.5/terragrunt_linux_amd64 \
           -o /usr/local/bin/terragrunt
         chmod +x /usr/local/bin/terragrunt
+      # yamllint enable rule:line-length
 
     - name: Set environment variables
       shell: bash

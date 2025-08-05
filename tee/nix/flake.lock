@@ -5,14 +5,13 @@
       "locked": {
         "lastModified": 1754057959,
         "narHash": "sha256-NEMmg/rnc8I4d6RaldeZOnPo4ZaZvt5uEstK65RwWms=",
-        "ref": "main",
+        "ref": "refs/heads/main",
         "rev": "fa55a8e23b5450bcce916290745f5c4635299a02",
         "revCount": 257,
         "type": "git",
         "url": "https://github.com/Cardinal-Cryptography/blanksquare-monorepo"
       },
       "original": {
-        "ref": "main",
         "rev": "fa55a8e23b5450bcce916290745f5c4635299a02",
         "type": "git",
         "url": "https://github.com/Cardinal-Cryptography/blanksquare-monorepo"

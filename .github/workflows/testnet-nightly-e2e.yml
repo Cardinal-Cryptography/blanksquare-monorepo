@@ -86,4 +86,4 @@ jobs:
         with:
           notify-on: "failure"
         env:
-          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_ZKOS }}
+          SLACK_WEBHOOK: ${{ secrets.SLACK_BLANKSQUARE_NOTIFICATIONS }}

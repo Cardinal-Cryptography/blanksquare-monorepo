@@ -34,15 +34,31 @@ jobs:
     uses: ./.github/workflows/_rust-crates-checks.yml
     secrets: inherit
 
-  build-wasm-packages:
-    name: Build wasm packages
+  build-wasm-package:
+    name: Build wasm package
     needs: [check-vars-and-secrets]
     uses: ./.github/workflows/_build-wasm-packages.yml
     secrets: inherit
+    with:
+      target: wasm
+      artifact-name: wasm-pkg
+      artifact-path: crates/shielder_bindings/pkg
+      upload-proving-keys: true
+
+  build-wasm-package-without-circuits:
+    name: Build wasm package without circuits
+    needs: [check-vars-and-secrets]
+    uses: ./.github/workflows/_build-wasm-packages.yml
+    secrets: inherit
+    with:
+      target: wasm-without-circuits
+      artifact-name: wasm-pkg-without-circuits
+      artifact-path: crates/shielder_bindings/pkg-without-circuits
+      upload-proving-keys: false
 
   ts-checks:
     name: Typescript modules checks
-    needs: [build-contracts, build-wasm-packages]
+    needs: [build-contracts, build-wasm-package, build-wasm-package-without-circuits]
     uses: ./.github/workflows/_ts-checks.yml
     secrets: inherit
 
@@ -51,7 +67,7 @@ jobs:
     runs-on: ubuntu-22.04
     if: ${{ always() }}
     # dependencies should include all jobs, which interact with wasm artifact
-    needs: [build-wasm-packages, ts-checks]
+    needs: [build-wasm-package, build-wasm-package-without-circuits, ts-checks]
     steps:
       - uses: geekyeggo/delete-artifact@v5
         with:

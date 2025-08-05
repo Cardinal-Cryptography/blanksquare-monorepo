@@ -49,6 +49,7 @@ jobs:
       target: wasm
       artifact-name: wasm-pkg
       artifact-path: crates/shielder_bindings/pkg
+      upload-proving-keys: true
 
   build-wasm-package-without-circuits:
     name: Build wasm package without circuits
@@ -59,6 +60,7 @@ jobs:
       target: wasm-without-circuits
       artifact-name: wasm-pkg-without-circuits
       artifact-path: crates/shielder_bindings/pkg-without-circuits
+      upload-proving-keys: false
 
   ts-checks:
     name: Typescript modules checks

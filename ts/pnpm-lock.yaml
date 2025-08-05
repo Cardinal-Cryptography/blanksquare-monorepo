@@ -39,8 +39,8 @@ importers:
   shielder-sdk:
     dependencies:
       '@cardinal-cryptography/ecies-encryption-lib':
-        specifier: git@github.com:Cardinal-Cryptography/ecies-encryption-lib.git#v0.1.5
-        version: https://codeload.github.com/Cardinal-Cryptography/ecies-encryption-lib/tar.gz/747f7abcad4b16aa6eb38764c69e771d96fa5245
+        specifier: ^0.1.6
+        version: 0.1.6
       '@cardinal-cryptography/shielder-sdk-crypto':
         specifier: workspace:*
         version: link:../shielder-sdk-crypto
@@ -254,8 +254,8 @@ importers:
         version: 2.22.22(typescript@5.7.3)(zod@3.24.1)
     devDependencies:
       '@cardinal-cryptography/ecies-encryption-lib':
-        specifier: git@github.com:Cardinal-Cryptography/ecies-encryption-lib.git#v0.1.5
-        version: https://codeload.github.com/Cardinal-Cryptography/ecies-encryption-lib/tar.gz/747f7abcad4b16aa6eb38764c69e771d96fa5245
+        specifier: ^0.1.6
+        version: 0.1.6
       '@cardinal-cryptography/shielder-sdk':
         specifier: workspace:*
         version: link:../shielder-sdk
@@ -418,9 +418,8 @@ packages:
     resolution: {integrity: sha512-6zABk/ECA/QYSCQ1NGiVwwbQerUCZ+TQbp64Q3AgmfNvurHH0j8TtXa1qbShXA6qqkpAj4V5W8pP6mLe1mcMqA==}
     engines: {node: '>=18'}
 
-  '@cardinal-cryptography/ecies-encryption-lib@https://codeload.github.com/Cardinal-Cryptography/ecies-encryption-lib/tar.gz/747f7abcad4b16aa6eb38764c69e771d96fa5245':
-    resolution: {tarball: https://codeload.github.com/Cardinal-Cryptography/ecies-encryption-lib/tar.gz/747f7abcad4b16aa6eb38764c69e771d96fa5245}
-    version: 0.1.5
+  '@cardinal-cryptography/ecies-encryption-lib@0.1.6':
+    resolution: {integrity: sha512-K7oWV++2hLczzw7YKkxU3YXVa7gn6CDlKWrDK8wwjyf7p0/6uVfaqb65VR+Usw2Q5OdytJa6SdHk8W+9vvwrag==}
 
   '@esbuild/aix-ppc64@0.21.5':
     resolution: {integrity: sha512-1SDgH6ZSPTlggy1yI6+Dbkiz8xzpHJEVAlF/AM1tHPLsf5STom9rwtjE4hKAF20FfXXNTFqEYXyJNWh1GiZedQ==}
@@ -797,6 +796,9 @@ packages:
   '@noble/hashes@1.7.1':
     resolution: {integrity: sha512-B8XBPsn4vT/KJAGqDzbwztd+6Yte3P4V7iafm24bxgDe/mlRuK6xmWPuCNrKt2vDafZ8MfJLlchDG/vYafQEjQ==}
     engines: {node: ^14.21.3 || >=16}
+
+  '@noble/secp256k1@1.7.2':
+    resolution: {integrity: sha512-/qzwYl5eFLH8OWIecQWM31qld2g1NfjgylK+TNhqtaUKP37Nm+Y+z30Fjhw0Ct8p9yCQEm2N3W/AckdIb3SMcQ==}
 
   '@noble/secp256k1@2.3.0':
     resolution: {integrity: sha512-0TQed2gcBbIrh7Ccyw+y/uZQvbJwm7Ao4scBUxqpBCcsOlZG0O4KGfjtNAy/li4W8n1xt3dxrwJ0beZ2h2G6Kw==}
@@ -2493,7 +2495,9 @@ snapshots:
 
   '@bcoe/v8-coverage@1.0.2': {}
 
-  '@cardinal-cryptography/ecies-encryption-lib@https://codeload.github.com/Cardinal-Cryptography/ecies-encryption-lib/tar.gz/747f7abcad4b16aa6eb38764c69e771d96fa5245': {}
+  '@cardinal-cryptography/ecies-encryption-lib@0.1.6':
+    dependencies:
+      '@noble/secp256k1': 1.7.2
 
   '@esbuild/aix-ppc64@0.21.5':
     optional: true
@@ -2727,6 +2731,8 @@ snapshots:
       '@noble/hashes': 1.7.1
 
   '@noble/hashes@1.7.1': {}
+
+  '@noble/secp256k1@1.7.2': {}
 
   '@noble/secp256k1@2.3.0': {}
 

@@ -45,7 +45,6 @@ jobs:
 
   test-rust-crates:
     name: Run tests for ${{ matrix.crate }}
-    needs: lint-and-format-rust
     runs-on: ubuntu-22.04
     timeout-minutes: 10
     strategy:

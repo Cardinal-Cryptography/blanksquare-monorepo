@@ -152,7 +152,8 @@ pub struct NewAccountCmd {
     /// Amount of the token to be shielded.
     pub amount: u128,
     /// Optional memo attached to the contract call.
-    pub memo: Option<Vec<u8>>,
+    #[clap(long, value_parser = parsing::parse_memo, default_value = "")]
+    pub memo: parsing::Memo,
     /// Optional seed for the ZK ID. If not provided, will be derived from the private key.
     pub zkid_seed: Option<U256>,
 }
@@ -164,7 +165,8 @@ pub struct NewAccountERC20Cmd {
     /// Address of the token.
     pub token_address: Address,
     /// Optional memo attached to the contract call.
-    pub memo: Option<Vec<u8>>,
+    #[clap(long, value_parser = parsing::parse_memo, default_value = "")]
+    pub memo: parsing::Memo,
     /// Optional seed for the ZK ID. If not provided, will be derived from the private key.
     pub zkid_seed: Option<U256>,
 }
@@ -174,7 +176,8 @@ pub struct DepositCmd {
     /// Amount of the token to be shielded.
     pub amount: u128,
     /// Optional memo attached to the contract call.
-    pub memo: Option<Vec<u8>>,
+    #[clap(long, value_parser = parsing::parse_memo, default_value = "")]
+    pub memo: parsing::Memo,
 }
 
 #[derive(Clone, Eq, PartialEq, Debug, Args)]
@@ -184,7 +187,8 @@ pub struct DepositERC20Cmd {
     /// Address of the token.
     pub token_address: Address,
     /// Optional memo attached to the contract call.
-    pub memo: Option<Vec<u8>>,
+    #[clap(long, value_parser = parsing::parse_memo, default_value = "")]
+    pub memo: parsing::Memo,
 }
 
 #[derive(Clone, Eq, PartialEq, Debug, Args)]
@@ -194,7 +198,8 @@ pub struct WithdrawCmd {
     /// Address to which the tokens should be sent.
     pub to: Address,
     /// Optional memo attached to the contract call.
-    pub memo: Option<Vec<u8>>,
+    #[clap(long, value_parser = parsing::parse_memo, default_value = "")]
+    pub memo: parsing::Memo,
 }
 
 #[derive(Clone, Eq, PartialEq, Debug, Args)]
@@ -208,7 +213,8 @@ pub struct WithdrawERC20Cmd {
     /// Pocket money to be sent to the withdrawal address.
     pub pocket_money: u128,
     /// Optional memo attached to the contract call.
-    pub memo: Option<Vec<u8>>,
+    #[clap(long, value_parser = parsing::parse_memo, default_value = "")]
+    pub memo: parsing::Memo,
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug, Default, ValueEnum)]
@@ -221,8 +227,19 @@ pub enum LoggingFormat {
 mod parsing {
     use std::{path::PathBuf, str::FromStr};
 
+    use alloy_primitives::{hex::FromHex, Bytes};
     use anyhow::{anyhow, Result};
     use shielder_account::Token;
+
+    /// Wrapper type for memo to work around clap's TypeId issues with Option<Vec<u8>>
+    #[derive(Clone, Debug, PartialEq, Eq)]
+    pub struct Memo(pub Vec<u8>);
+
+    impl From<Memo> for Vec<u8> {
+        fn from(wrapper: Memo) -> Self {
+            wrapper.0
+        }
+    }
 
     pub fn parse_path(path: &str) -> Result<PathBuf> {
         let expanded_path =
@@ -239,6 +256,16 @@ mod parsing {
                 .parse()
                 .map_err(|_| anyhow!("Invalid token address"))?;
             Ok(Token::ERC20(address))
+        }
+    }
+
+    pub fn parse_memo(memo: &str) -> Result<Memo> {
+        if memo.is_empty() {
+            Ok(Memo(Vec::new()))
+        } else {
+            Bytes::from_hex(memo)
+                .map_err(|_| anyhow!("Invalid memo format, expected hex string"))
+                .map(|bytes| Memo(bytes.to_vec()))
         }
     }
 }

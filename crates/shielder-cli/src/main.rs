@@ -101,7 +101,7 @@ async fn perform_contract_action(
 ) -> Result<()> {
     match command {
         ContractInteractionCommand::NewAccount(NewAccountCmd { amount, memo, .. }) => {
-            new_account(app_state, amount, Token::Native, memo.unwrap_or(vec![])).await
+            new_account(app_state, amount, Token::Native, memo.into()).await
         }
         ContractInteractionCommand::NewAccountERC20(NewAccountERC20Cmd {
             amount,
@@ -113,13 +113,13 @@ async fn perform_contract_action(
                 app_state,
                 amount,
                 Token::ERC20(token_address),
-                memo.unwrap_or(vec![]),
+                memo.into(),
             )
             .await
         }
 
         ContractInteractionCommand::Deposit(DepositCmd { amount, memo }) => {
-            deposit(app_state, amount, Token::Native, memo.unwrap_or(vec![])).await
+            deposit(app_state, amount, Token::Native, memo.into()).await
         }
         ContractInteractionCommand::DepositERC20(DepositERC20Cmd {
             amount,
@@ -130,7 +130,7 @@ async fn perform_contract_action(
                 app_state,
                 amount,
                 Token::ERC20(token_address),
-                memo.unwrap_or(vec![]),
+                memo.into(),
             )
             .await
         }
@@ -142,7 +142,7 @@ async fn perform_contract_action(
                 to,
                 Token::Native,
                 0,
-                memo.unwrap_or(vec![]),
+                memo.into(),
             )
             .await
         }
@@ -159,7 +159,7 @@ async fn perform_contract_action(
                 to,
                 Token::ERC20(token_address),
                 pocket_money,
-                memo.unwrap_or(vec![]),
+                memo.into(),
             )
             .await
         }

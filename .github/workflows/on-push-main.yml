@@ -1,0 +1,39 @@
+---
+name: Push to main
+
+on:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: "${{ github.ref }}-${{ github.workflow }}"
+  cancel-in-progress: true
+
+jobs:
+  check-vars-and-secrets:
+    name: Check vars and secrets
+    uses: ./.github/workflows/_check-vars-and-secrets.yml
+    secrets: inherit
+
+  build-enclave-artifacts:  
+    name: Build enclave artifacts
+    needs: [check-vars-and-secrets]
+    uses: ./.github/workflows/_build-enclave-artifacts.yml
+    with:
+      ref: ${{ github.sha }}
+
+  slack-notification:
+    name: Slack notification
+    runs-on: ubuntu-22.04
+    needs: [build-enclave-artifacts]
+    if: >
+      !cancelled() &&
+      github.event_name != 'workflow_dispatch'
+    steps:
+      - name: Send Slack message
+        uses: Cardinal-Cryptography/github-actions/slack-notification@v7
+        with:
+          notify-on: "failure"
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_BLANKSQUARE_NOTIFICATIONS }}

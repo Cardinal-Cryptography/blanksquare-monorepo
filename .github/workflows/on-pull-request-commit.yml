@@ -16,12 +16,6 @@ jobs:
     uses: ./.github/workflows/_check-vars-and-secrets.yml
     secrets: inherit
 
-  build-enclave-artifacts:
-    name: Build enclave artifacts
-    uses: ./.github/workflows/_build-enclave-artifacts.yml
-    with:
-      ref: ${{ github.event.pull_request.head.sha || github.sha }}
-
   build-contracts:
     name: Generate and compile contracts
     needs: [check-vars-and-secrets]

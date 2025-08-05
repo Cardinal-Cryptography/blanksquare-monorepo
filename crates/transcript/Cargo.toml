@@ -1,0 +1,11 @@
+[package]
+name = "transcript"
+version = "0.2.0"
+edition = "2021"
+license = "MIT"
+
+[dependencies]
+itertools = { workspace = true }
+ruint = { workspace = true }
+sha3 = { workspace = true }
+halo2_proofs = { workspace = true }

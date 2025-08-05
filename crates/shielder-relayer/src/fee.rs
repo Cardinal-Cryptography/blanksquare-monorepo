@@ -65,6 +65,10 @@ pub struct PriceDetails {
     pub fee_token_price: Decimal,
     /// Current price of the minimal unit of the fee token (like 1 wei or 1 satoshi).
     pub fee_token_unit_price: Decimal,
+    /// The ratio of the fee token price to the native token price.
+    pub token_price_ratio: Decimal,
+    /// The ratio of the fee token minimal unit price to the native token minimal unit price.
+    pub token_unit_price_ratio: Decimal,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, ToSchema)]

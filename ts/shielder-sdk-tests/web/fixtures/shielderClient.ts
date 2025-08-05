@@ -100,12 +100,15 @@ export const setupShielderClient = async (
     shield: async (token, amount, memo) => {
       const { amount: totalAmount, protocolFee } =
         await shielderClient.getProtocolShieldFee(amount, false);
-      if (token.type === "erc20")
+      if (token.type === "erc20") {
         await chainAccount.approveERC20(
           token.address,
           chainConfig.contractAddress,
           totalAmount
         );
+        // wait for 2 seconds to ensure all actions are processed
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+      }
       return {
         tx: await shielderClient.shield(
           token,

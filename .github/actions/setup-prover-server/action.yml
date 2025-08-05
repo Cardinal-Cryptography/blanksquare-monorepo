@@ -1,3 +1,4 @@
+---
 name: 'Deploy Prover Server Action'
 
 description: 'Deploys or destroys the prover server using Terragrunt'
@@ -46,7 +47,9 @@ runs:
     - name: Install Terragrunt
       shell: bash
       run: |
-        curl -sL https://github.com/gruntwork-io/terragrunt/releases/download/v0.67.5/terragrunt_linux_amd64 -o /usr/local/bin/terragrunt
+        curl -sL \
+          https://github.com/gruntwork-io/terragrunt/releases/download/v0.67.5/terragrunt_linux_amd64 \
+          -o /usr/local/bin/terragrunt
         chmod +x /usr/local/bin/terragrunt
 
     - name: Set environment variables

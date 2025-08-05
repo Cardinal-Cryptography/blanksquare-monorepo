@@ -16,7 +16,7 @@ jobs:
     uses: ./.github/workflows/_check-vars-and-secrets.yml
     secrets: inherit
 
-  build-enclave-artifacts:  
+  build-enclave-artifacts:
     name: Build enclave artifacts
     needs: [check-vars-and-secrets]
     uses: ./.github/workflows/_build-enclave-artifacts.yml

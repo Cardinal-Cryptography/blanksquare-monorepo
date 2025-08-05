@@ -251,3 +251,62 @@ cleanup() {
     stop_node
   fi
 }
+
+####################################################################################################
+#### REFERRALS #####################################################################################
+####################################################################################################
+
+setup_referrals() {
+  # Build CLIs
+  log_progress "🔄 Building memo-scan and encryption CLIs"
+  cargo build --release -p memo-scan -p ecies-encryption-cli &>> output.log
+  log_progress "✅ Referral keys CLI built"
+
+  # Referral ID
+  REFERRAL_ID="test-referral-id"
+  export REFERRAL_ID
+
+  # Generate referral keys
+  log_progress "🔄 Generating referral keys..."
+  REFERRAL_KEYS=$(target/release/ecies-encryption-cli generate-keypair)
+  REFERRAL_PRIVATE_KEY=$(echo "$REFERRAL_KEYS" | grep "Private key:" | awk '{print $3}')
+  REFERRAL_PUBLIC_KEY=$(echo "$REFERRAL_KEYS" | grep "Public key:" | awk '{print $3}')
+  export REFERRAL_PRIVATE_KEY
+  export REFERRAL_PUBLIC_KEY
+  log_progress "✅ Referral keys generated and exported"
+
+  # Pad the referral ID to 20 bytes
+  REFERRAL_PADDED_LENGTH=20
+  export REFERRAL_PADDED_LENGTH
+}
+
+referral_memo() {
+  echo $(
+    target/release/ecies-encryption-cli encrypt-padded \
+      --pubkey "${REFERRAL_PUBLIC_KEY}" \
+      --message "${REFERRAL_ID}" \
+      --padded-length "${REFERRAL_PADDED_LENGTH}"
+  )
+}
+
+scan_and_assert_referrals() {
+  # Scan for referrals
+  log_progress "🔄 Scanning for referrals..."
+  REFERRAL_SCAN_OUTPUT=$(target/release/memo-scan --rpc-url "${NODE_RPC_URL}" --contract-address "${SHIELDER_CONTRACT_ADDRESS}" --referral-private-key-hex "${REFERRAL_PRIVATE_KEY}")
+  log_progress "✅ Referral scan completed"
+
+  # Assert referral scan output
+  if [[ -z "$REFERRAL_SCAN_OUTPUT" ]]; then
+    log_progress "❌ No referrals found"
+    exit 1
+  else
+    echo "$REFERRAL_SCAN_OUTPUT" | jq -c '.[]' | while read -r referral; do
+      found_id=$(echo "$referral" | jq -r '.referral_id')
+      if [[ "$found_id" != "$REFERRAL_ID" ]]; then
+        log_progress "❌ Invalid referral found: $found_id"
+        exit 1
+      fi
+    done
+    log_progress "✅ All referrals are valid"
+  fi
+} 

@@ -14,7 +14,7 @@
 
     # below dependency is also used in tee/Cargo.toml, which is far from ideal since one needs to bump it there as well
     blanksquare-monorepo = {
-      url = "git+https://github.com/Cardinal-Cryptography/blanksquare-monorepo?rev=fa55a8e23b5450bcce916290745f5c4635299a02";
+      url = "git+https://github.com/Cardinal-Cryptography/blanksquare-monorepo?ref=main&rev=fa55a8e23b5450bcce916290745f5c4635299a02";
       flake = false;
     };
   };

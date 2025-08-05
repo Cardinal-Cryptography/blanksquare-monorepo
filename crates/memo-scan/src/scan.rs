@@ -119,49 +119,56 @@ fn find_referral(log: Log, referral_private_key: Option<&PrivKey>) -> Result<Opt
     let memo = match log.topic0() {
         Some(&NewAccount::SIGNATURE_HASH) => {
             let new_account = NewAccount::decode_log_data(log.data(), true)?;
-            Some(new_account.memo)
+            new_account.memo
         }
         Some(&Deposit::SIGNATURE_HASH) => {
             let deposit = Deposit::decode_log_data(log.data(), true)?;
-            Some(deposit.memo)
+            deposit.memo
         }
         Some(&Withdraw::SIGNATURE_HASH) => {
             let withdraw = Withdraw::decode_log_data(log.data(), true)?;
-            Some(withdraw.memo)
+            withdraw.memo
         }
-        _ => None,
+        _ => return Ok(None), // Not a relevant event
     };
-    if let Some(memo) = memo {
-        let referral_id = if let Some(referral_private_key) = referral_private_key {
+    let referral_id = match (referral_private_key, memo.is_empty()) {
+        (None, _) => {
+            // If no private key is provided, we skip decryption
+            None
+        }
+        (_, true) => {
+            // If memo is empty, it means no referral ID was set
+            eprintln!("Empty memo for transaction {}", Bytes::from(tx_hash));
+            return Ok(None);
+        }
+        (Some(referral_private_key), false) => {
+            // Attempt to decrypt the memo
             match decrypt_padded_unchecked(&memo, referral_private_key) {
-                Ok(decrypted) => String::from_utf8(decrypted).ok(),
+                Ok(decrypted) => match String::from_utf8(decrypted) {
+                    Ok(referral_id) => Some(referral_id),
+                    Err(_) => {
+                        eprintln!(
+                            "Decrypted memo contains invalid UTF-8 for transaction {}",
+                            Bytes::from(tx_hash)
+                        );
+                        None
+                    }
+                },
                 Err(err) => {
                     eprintln!(
-                        "Failed to decrypt memo for transaction {}: {}",
-                        Bytes::from(tx_hash).to_string(),
+                        "Failed to decrypt memo for transaction {}\n Error: {}\n Either the memo is not encrypted or the private key is incorrect.",
+                        Bytes::from(tx_hash),
                         err
                     );
                     None
                 }
             }
-        } else {
-            eprintln!(
-                "Referral private key is not provided, cannot decrypt memo for transaction {}",
-                Bytes::from(tx_hash).to_string()
-            );
-            None
-        };
-        Ok(Some(Referral {
-            block_number,
-            transaction_hash: tx_hash,
-            memo,
-            referral_id,
-        }))
-    } else {
-        eprintln!(
-            "Log with transaction hash {} does not contain a memo",
-            Bytes::from(tx_hash).to_string()
-        );
-        Ok(None)
-    }
+        }
+    };
+    Ok(Some(Referral {
+        block_number,
+        transaction_hash: tx_hash,
+        memo,
+        referral_id,
+    }))
 }

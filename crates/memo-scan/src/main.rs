@@ -2,7 +2,6 @@ use alloy_primitives::Address;
 use anyhow::Result;
 use clap::Parser;
 use ecies_encryption_lib::{utils::from_hex, PrivKey};
-use serde_json;
 
 use crate::scan::scan_blocks;
 pub mod scan;
@@ -45,6 +44,7 @@ async fn main() -> Result<()> {
     let referral_private_key = if let Some(pk) = args.referral_private_key_hex {
         Some(PrivKey::from_bytes(&from_hex(&pk)?)?)
     } else {
+        eprintln!("Referral private key is not provided. Decryption of memos will be skipped.");
         None
     };
 

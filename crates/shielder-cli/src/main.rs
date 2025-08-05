@@ -108,15 +108,7 @@ async fn perform_contract_action(
             token_address,
             memo,
             ..
-        }) => {
-            new_account(
-                app_state,
-                amount,
-                Token::ERC20(token_address),
-                memo.into(),
-            )
-            .await
-        }
+        }) => new_account(app_state, amount, Token::ERC20(token_address), memo.into()).await,
 
         ContractInteractionCommand::Deposit(DepositCmd { amount, memo }) => {
             deposit(app_state, amount, Token::Native, memo.into()).await
@@ -125,26 +117,10 @@ async fn perform_contract_action(
             amount,
             token_address,
             memo,
-        }) => {
-            deposit(
-                app_state,
-                amount,
-                Token::ERC20(token_address),
-                memo.into(),
-            )
-            .await
-        }
+        }) => deposit(app_state, amount, Token::ERC20(token_address), memo.into()).await,
 
         ContractInteractionCommand::Withdraw(WithdrawCmd { amount, to, memo }) => {
-            withdraw(
-                app_state,
-                amount,
-                to,
-                Token::Native,
-                0,
-                memo.into(),
-            )
-            .await
+            withdraw(app_state, amount, to, Token::Native, 0, memo.into()).await
         }
         ContractInteractionCommand::WithdrawERC20(WithdrawERC20Cmd {
             amount,

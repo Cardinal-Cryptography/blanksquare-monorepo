@@ -36,6 +36,6 @@ ecies-encryption-lib = { git = "https://github.com/Cardinal-Cryptography/ecies-e
 
 # below dependencies contains a rev which is also used in tee/nix/flake.nix, which is far from ideal since one needs to bump it there as well
 
-type-conversions = { git = "https://github.com/Cardinal-Cryptography/blanksquare-monorepo", rev = "fa55a8e23b5450bcce916290745f5c4635299a02" }
-powers-of-tau = { git = "https://github.com/Cardinal-Cryptography/blanksquare-monorepo", rev = "fa55a8e23b5450bcce916290745f5c4635299a02" }
-shielder-circuits =  { git = "https://github.com/Cardinal-Cryptography/blanksquare-monorepo", rev = "fa55a8e23b5450bcce916290745f5c4635299a02" }
+type-conversions = { git = "https://github.com/Cardinal-Cryptography/blanksquare-monorepo", rev = "cb7661402f57dd6af3acab5b434596672ff5d7e7" }
+powers-of-tau = { git = "https://github.com/Cardinal-Cryptography/blanksquare-monorepo", rev = "cb7661402f57dd6af3acab5b434596672ff5d7e7" }
+shielder-circuits =  { git = "https://github.com/Cardinal-Cryptography/blanksquare-monorepo", rev = "cb7661402f57dd6af3acab5b434596672ff5d7e7" }

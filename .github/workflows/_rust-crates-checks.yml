@@ -9,12 +9,59 @@ jobs:
   # Run formatter and linter for all crates, and unit tests for all simple crates, that,
   # in particular, do not require anvil node to be running.
   # For shielder-circuit crate, we run tests and build the binary for measuring circuits.
-  rust-checks-and-unit-tests:
-    name: Run lints and tests
-    runs-on: [self-hosted, Linux, X64, large]
-    timeout-minutes: 60
-    env:
-      RUSTC_WRAPPER: sccache
+  lint-and-format-rust:
+    name: Run lints and format
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      - name: Download generated contracts from artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: generated-contracts
+          path: contracts
+
+      - name: Download compiled contracts from artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: contract-artifacts
+          path: artifacts
+
+      - name: Download generated build cache
+        uses: actions/download-artifact@v4
+        with:
+          name: generated-build-cache
+          path: cache
+
+      - name: Prepare Rust env
+        uses: ./.github/actions/prepare-rust-env
+
+      - name: Run linter
+        run: |
+          make lint-rust
+          make format-rust
+
+  test-rust-crates:
+    name: Run tests for ${{ matrix.crate }}
+    needs: lint-and-format-rust
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        crate:
+          - crates/halo2-verifier
+          - crates/shielder-circuits
+          - crates/shielder-cli
+          - crates/shielder_bindings
+          - crates/powers-of-tau
+          - crates/shielder-account
+          - crates/shielder-contract
+          - crates/shielder-setup
+          - crates/integration-tests
+          - tee
     steps:
       - name: Checkout source code
         uses: actions/checkout@v4
@@ -42,50 +89,23 @@ jobs:
 
       # NOTE: integration tests use vanilla solc compiler for compiling Solidity
       - name: Install solc compiler
+        if: matrix.crate == 'crates/integration-tests'
         uses: ./.github/actions/install-solc
         with:
           solc-version: 0.8.26
 
-      - name: Run linter
-        run: |
-          make lint-rust
-          make format-rust
+      - name: Install dependencies
+        if: matrix.crate == 'crates/integration-tests'
+        run: make deps
 
-      - name: Run tests for halo2-verifier
-        run: cd crates/halo2-verifier && make test
-
-      - name: Run tests for shielder-circuits
-        run: cd crates/shielder-circuits && make test
-
-      - name: Run tests for shielder-cli
-        run: cd crates/shielder-cli && make test
-
-      - name: Run tests for shielder_bindings
-        run: cd crates/shielder_bindings && make test
-
-      - name: Run tests for powers of tau
-        run: cd crates/powers-of-tau && cargo test
-
-      - name: Run tests for other Shielder libs
-        run: |
-          cargo test --release -p shielder-account --all-features
-          cargo test --release -p shielder-contract --all-features
-          cargo test --release -p shielder-setup --all-features
-
-      - name: Run integration tests
-        run: make deps && cargo test --release -p integration-tests
-
-      - name: Check tee crates
-        run: |
-          cd tee && cargo check --workspace
+      - name: Run tests
+        run: cd ${{ matrix.crate }} && make test
 
   # Run heavy tests for shielder-relayer and e2e tooling tests.
   full-testing:
     name: Run heavy tests
-    runs-on: [self-hosted, Linux, X64, large]
-    timeout-minutes: 60
-    env:
-      RUSTC_WRAPPER: sccache
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
     steps:
       - name: Checkout source code
         uses: actions/checkout@v4

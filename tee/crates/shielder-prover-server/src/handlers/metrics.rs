@@ -94,8 +94,15 @@ impl FutureTimingMetric {
     }
 }
 
+/// A tracing_subscriber layer that collects timing metrics for spans.
+///
+/// Based on tracing_subscriber::fmt. Handles spans that are entered and exited
+/// multiple times, which is needed to track the time spent in busy and idle states
+/// for asynchronous operations.
+///
+/// The metrics are submitted to the metrics crate as histograms.
 #[derive(Debug, Clone)]
-pub struct FutureHistogramSubscriber;
+pub struct FutureHistogramLayer;
 
 struct Timings {
     idle: u64,
@@ -113,7 +120,7 @@ impl Timings {
     }
 }
 
-impl<S> Layer<S> for FutureHistogramSubscriber
+impl<S> Layer<S> for FutureHistogramLayer
 where
     S: Subscriber + for<'a> LookupSpan<'a>,
 {

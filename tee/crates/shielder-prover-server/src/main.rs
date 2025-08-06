@@ -19,7 +19,7 @@ use tracing_subscriber::{fmt, layer::SubscriberExt, util::SubscriberInitExt, Env
 
 use crate::{
     command_line_args::CommandLineArgs,
-    handlers::{self as server_handlers, metrics::FutureHistogramSubscriber},
+    handlers::{self as server_handlers, metrics::FutureHistogramLayer},
 };
 
 #[derive(Debug)]
@@ -38,7 +38,7 @@ async fn main() -> Result<(), Error> {
                 .with_timer(fmt::time::ChronoUtc::new("%Y-%m-%dT%H:%M:%S%.3fZ".into()))
                 .with_span_events(fmt::format::FmtSpan::CLOSE),
         )
-        .with(FutureHistogramSubscriber)
+        .with(FutureHistogramLayer)
         .init();
 
     let options = CommandLineArgs::parse();

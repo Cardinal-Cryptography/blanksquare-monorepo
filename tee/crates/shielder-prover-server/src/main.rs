@@ -75,7 +75,7 @@ async fn main() -> Result<(), Error> {
         .layer(CorsLayer::permissive())
         .with_state(AppState { options, task_pool }.into());
 
-    info!("Starting local server on {}", listener.local_addr()?,);
+    info!("Starting local server on {}", listener.local_addr()?);
     serve(listener, app).await?;
 
     Ok(())

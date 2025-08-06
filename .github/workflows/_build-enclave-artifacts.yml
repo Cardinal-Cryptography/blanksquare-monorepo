@@ -23,7 +23,7 @@ jobs:
         working-directory: "tee/nix"
     outputs:
       artifact-name-eif: ${{ steps.get-artifact-names.outputs.eif }}
-      artifact-name-measurements: ${{ steps.steps.get-artifact-names.outputs.measurements }}
+      artifact-name-measurements: ${{ steps.get-artifact-names.outputs.measurements }}
     steps:
       - name: Checkout source code
         uses: actions/checkout@v4

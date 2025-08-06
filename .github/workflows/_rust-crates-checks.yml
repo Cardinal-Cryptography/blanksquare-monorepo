@@ -5,61 +5,19 @@ on:
   workflow_call:
   workflow_dispatch:
 
+# Run formatter and linter for all crates, and unit tests for all simple crates, that,
+# in particular, do not require anvil node to be running.
+# For shielder-circuit crate, we run tests and build the binary for measuring circuits.
 jobs:
-  # Run formatter and linter for all crates, and unit tests for all simple crates, that,
-  # in particular, do not require anvil node to be running.
-  # For shielder-circuit crate, we run tests and build the binary for measuring circuits.
   lint-and-format-rust:
-    name: Run lints and format
-    runs-on: ubuntu-22.04
-    timeout-minutes: 10
-    steps:
-      - name: Checkout source code
-        uses: actions/checkout@v4
-
-      - name: Download generated contracts from artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: generated-contracts
-          path: contracts
-
-      - name: Download compiled contracts from artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: contract-artifacts
-          path: artifacts
-
-      - name: Download generated build cache
-        uses: actions/download-artifact@v4
-        with:
-          name: generated-build-cache
-          path: cache
-
-      - name: Prepare Rust env
-        uses: ./.github/actions/prepare-rust-env
-
-      - name: Run linter
-        run: |
-          make lint-rust
-          make format-rust
-
-  test-rust-crates:
-    name: Run tests for ${{ matrix.crate }}
+    name: Run lints and format for ${{ matrix.workspace }}
     runs-on: ubuntu-22.04
     timeout-minutes: 10
     strategy:
       fail-fast: false
       matrix:
-        crate:
-          - crates/halo2-verifier
-          - crates/shielder-circuits
-          - crates/shielder-cli
-          - crates/shielder_bindings
-          - crates/powers-of-tau
-          - crates/shielder-account
-          - crates/shielder-contract
-          - crates/shielder-setup
-          - crates/integration-tests
+        workspace:
+          - .
           - tee
     steps:
       - name: Checkout source code
@@ -86,22 +44,98 @@ jobs:
       - name: Prepare Rust env
         uses: ./.github/actions/prepare-rust-env
 
-      # NOTE: integration tests use vanilla solc compiler for compiling Solidity
+      - name: Run linter and formatter
+        run: |
+          cd ${{ matrix.workspace }} && make lint-rust && make format-rust
+
+  test-rust-crates:
+    name: Run tests for ${{ matrix.crate }}
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        crate:
+          - crates/halo2-verifier
+          - crates/shielder-circuits
+          - crates/shielder-cli
+          - crates/shielder_bindings
+          - crates/powers-of-tau
+          - crates/shielder-account
+          - crates/shielder-contract
+          - crates/shielder-setup
+          - crates/shielder-relayer
+          - tee
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      - name: Download generated contracts from artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: generated-contracts
+          path: contracts
+
+      - name: Download compiled contracts from artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: contract-artifacts
+          path: artifacts
+
+      - name: Download generated build cache
+        uses: actions/download-artifact@v4
+        with:
+          name: generated-build-cache
+          path: cache
+
+      - name: Prepare Rust env
+        uses: ./.github/actions/prepare-rust-env
+
+      # crates/halo2-verifier tests use vanilla solc compiler for compiling Solidity
       - name: Install solc compiler
-        if: matrix.crate == 'crates/integration-tests'
         uses: ./.github/actions/install-solc
         with:
           solc-version: 0.8.26
 
-      - name: Install dependencies
-        if: matrix.crate == 'crates/integration-tests'
-        run: make deps
-
       - name: Run tests
         run: cd ${{ matrix.crate }} && make test
 
-  # Run heavy tests for shielder-relayer and e2e tooling tests.
-  full-testing:
+  test-integration-crate:
+    name: Run tests for integration-tests
+    runs-on: github-large-runner-x64-16-cpu-64-gb-ram-600-gb-disk
+    timeout-minutes: 10
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      - name: Download generated contracts from artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: generated-contracts
+          path: contracts
+
+      - name: Download compiled contracts from artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: contract-artifacts
+          path: artifacts
+
+      - name: Download generated build cache
+        uses: actions/download-artifact@v4
+        with:
+          name: generated-build-cache
+          path: cache
+
+      - name: Prepare Rust env
+        uses: ./.github/actions/prepare-rust-env
+
+      - name: Install dependencies
+        run: make deps
+
+      - name: Run tests
+        run: cd crates/integration-tests && make test
+
+  e2e-tests:
     name: Run heavy tests
     runs-on: ubuntu-22.04
     timeout-minutes: 10
@@ -133,8 +167,8 @@ jobs:
       - name: Prepare Solidity environment
         uses: ./.github/actions/prepare-sol-env
 
-      - name: Run tests for shielder-relayer
-        run: cd crates/shielder-relayer && BUILD=client make test
+      - name: Build shielder-relayer
+        run: cd crates/shielder-relayer && make build-image
 
       - name: Run e2e tooling tests
         run: |

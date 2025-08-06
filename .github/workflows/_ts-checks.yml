@@ -171,5 +171,7 @@ jobs:
         working-directory: ts
 
       - name: Run e2e sdk tests
-        run: |
-          NO_FORMATTING=true FEE_SCENARIO=${{ matrix.fee_scenario }} ./tooling-e2e-tests/ts_sdk_tests.sh
+        env:
+          NO_FORMATTING: true
+          FEE_SCENARIO: ${{ matrix.fee_scenario }}
+        run: ./tooling-e2e-tests/ts_sdk_tests.sh

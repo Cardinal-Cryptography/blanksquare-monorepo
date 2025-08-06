@@ -51,7 +51,7 @@ jobs:
   test-rust-crates:
     name: Run tests for ${{ matrix.crate }}
     runs-on: ubuntu-22.04
-    timeout-minutes: 10
+    timeout-minutes: 6
     strategy:
       fail-fast: false
       matrix:
@@ -100,7 +100,7 @@ jobs:
         run: cd ${{ matrix.crate }} && make test
 
   run-heavy-tests:
-    name: Run tests for ${{ matrix.crate }}
+    name: Run heavy tests for ${{ matrix.crate }}
     runs-on: github-large-runner-x64-16-cpu-64-gb-ram-600-gb-disk
     timeout-minutes: 10
     strategy:

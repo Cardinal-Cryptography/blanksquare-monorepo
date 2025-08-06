@@ -8,7 +8,7 @@ on:
 jobs:
   main:
     name: Run lints and tests
-    runs-on: [self-hosted, Linux, X64, small]
+    runs-on: unbuntu-22.04
     timeout-minutes: 10
 
     steps:
@@ -93,10 +93,8 @@ jobs:
 
   e2e-tests:
     name: Run E2E tests on local anvil node
-    runs-on: [self-hosted, Linux, X64, large]
+    runs-on: github-large-runner-x64-16-cpu-64-gb-ram-600-gb-disk
     timeout-minutes: 15
-    env:
-      RUSTC_WRAPPER: sccache
     steps:
       - name: Checkout source code
         uses: actions/checkout@v4

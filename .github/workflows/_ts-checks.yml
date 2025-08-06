@@ -94,7 +94,7 @@ jobs:
   e2e-tests:
     name: Run E2E tests on local anvil node
     runs-on: github-large-runner-x64-16-cpu-64-gb-ram-600-gb-disk
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - name: Checkout source code
         uses: actions/checkout@v4

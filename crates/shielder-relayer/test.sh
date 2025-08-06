@@ -19,8 +19,6 @@ export ACCEPTING_SHIELDER
 export REVERTING_SHIELDER
 export NODE_RPC_URL
 
-make run
-
 cargo test --release -- --show-output --test-threads 1
 TEST_RESULT=$?
 

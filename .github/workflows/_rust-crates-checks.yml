@@ -64,7 +64,6 @@ jobs:
           - crates/shielder-account
           - crates/shielder-contract
           - crates/shielder-setup
-          - crates/shielder-relayer
           - tee
     steps:
       - name: Checkout source code
@@ -100,10 +99,16 @@ jobs:
       - name: Run tests
         run: cd ${{ matrix.crate }} && make test
 
-  test-integration-crate:
-    name: Run tests for integration-tests
+  run-heavy-tests:
+    name: Run tests for ${{ matrix.crate }}
     runs-on: github-large-runner-x64-16-cpu-64-gb-ram-600-gb-disk
     timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        crate:
+          - crates/integration-tests
+          - crates/shielder-relayer
     steps:
       - name: Checkout source code
         uses: actions/checkout@v4
@@ -129,14 +134,24 @@ jobs:
       - name: Prepare Rust env
         uses: ./.github/actions/prepare-rust-env
 
+      - name: Prepare Solidity environment
+        uses: ./.github/actions/prepare-sol-env
+
       - name: Install dependencies
+        if: matrix.crate == 'crates/integration-tests'
         run: make deps
 
+      - name: Install solc compiler
+        if: matrix.crate == 'crates/integration-tests'
+        uses: ./.github/actions/install-solc
+        with:
+          solc-version: 0.8.26
+
       - name: Run tests
-        run: cd crates/integration-tests && make test
+        run: cd ${{ matrix.crate }} && make test
 
   e2e-tests:
-    name: Run heavy tests
+    name: Run E2E tests
     runs-on: ubuntu-22.04
     timeout-minutes: 10
     steps:

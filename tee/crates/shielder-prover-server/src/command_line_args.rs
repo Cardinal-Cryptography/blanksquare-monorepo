@@ -41,4 +41,12 @@ pub struct CommandLineArgs {
     /// How much time this server waits for a response from TEE
     #[clap(long, default_value_t = 60, env = "TEE_COMPUTE_TIMEOUT_SECS")]
     pub tee_compute_timeout_secs: u64,
+
+    /// How often to perform metric upkeep
+    #[clap(long, default_value_t = 60, env = "METRICS_UPKEEP_TIMEOUT_SECS")]
+    pub(crate) metrics_upkeep_timeout_secs: u64,
+
+    /// How long are the buckets from which metric histograms are built
+    #[clap(long, default_value_t = 60, env = "METRICS_BUCKET_DURATION_SECS")]
+    pub(crate) metrics_bucket_duration_secs: u64,
 }

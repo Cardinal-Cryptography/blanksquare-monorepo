@@ -22,6 +22,9 @@ pub enum ShielderProverServerError {
 
     #[error("Failed to initialize metrics: {0}")]
     MetricsError(#[from] metrics_exporter_prometheus::BuildError),
+
+    #[error("Failed to parse commandline arguments: {0}")]
+    ParseError(String),
 }
 
 impl IntoResponse for ShielderProverServerError {

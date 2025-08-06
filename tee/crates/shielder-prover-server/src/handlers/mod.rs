@@ -9,7 +9,7 @@ use shielder_prover_common::{
 };
 use tracing::{info_span, Instrument as _};
 
-use crate::AppState;
+use crate::{handlers::metrics::FutureTimingMetric::*, AppState};
 
 pub mod generate_proof;
 pub mod health;
@@ -18,12 +18,12 @@ pub mod tee_public_key;
 
 async fn request(state: Arc<AppState>, request: Request) -> Result<Json<Response>, VsockError> {
     let mut tee_client = ProverClient::new(state.options.tee_cid, state.options.tee_port as u32)
-        .instrument(info_span!("Creating VSOCK conn"))
+        .instrument(info_span!(BuildingVsocksConnection.name()))
         .await?;
 
     let response = tee_client
         .request(&request)
-        .instrument(info_span!("Sending TEE request"))
+        .instrument(info_span!(SendingTeeRequest.name()))
         .await?;
 
     Ok(Json(response))

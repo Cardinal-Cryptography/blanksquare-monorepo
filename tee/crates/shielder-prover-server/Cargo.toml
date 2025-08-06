@@ -11,10 +11,12 @@ repository = { workspace = true }
 [dependencies]
 axum = { workspace = true, features = ["tokio", "macros"] }
 clap = { workspace = true, features = ["derive", "env"] }
+lazy_static = { workspace = true }
 metrics = { workspace = true }
 metrics-exporter-prometheus = { workspace = true }
 serde = { workspace = true }
 shielder-prover-common = { workspace = true }
+strum = { workspace = true, features = ["derive"] }
 thiserror = { workspace = true }
 tokio = { workspace = true, features = ["net", "rt", "rt-multi-thread"] }
 tokio-task-pool = { workspace = true, features = ["log"] }

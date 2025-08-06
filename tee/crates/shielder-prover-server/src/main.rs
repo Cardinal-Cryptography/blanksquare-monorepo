@@ -2,7 +2,7 @@ mod command_line_args;
 mod error;
 mod handlers;
 
-use std::{sync::Arc, time::Duration};
+use std::{net::SocketAddrV4, sync::Arc, time::Duration};
 
 use axum::{
     extract::DefaultBodyLimit,
@@ -11,14 +11,15 @@ use axum::{
 };
 use clap::Parser;
 use error::ShielderProverServerError as Error;
-use tokio::{net::TcpListener, try_join};
+use metrics_exporter_prometheus::PrometheusBuilder;
+use tokio::net::TcpListener;
 use tower_http::cors::CorsLayer;
 use tracing::info;
 use tracing_subscriber::{fmt, layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
 
 use crate::{
     command_line_args::CommandLineArgs,
-    handlers::{self as server_handlers},
+    handlers::{self as server_handlers, metrics::FutureHistogramSubscriber},
 };
 
 #[derive(Debug)]
@@ -37,16 +38,22 @@ async fn main() -> Result<(), Error> {
                 .with_timer(fmt::time::ChronoUtc::new("%Y-%m-%dT%H:%M:%S%.3fZ".into()))
                 .with_span_events(fmt::format::FmtSpan::CLOSE),
         )
+        .with(FutureHistogramSubscriber)
         .init();
 
     let options = CommandLineArgs::parse();
 
-    let metrics_listener =
-        TcpListener::bind((options.bind_address.clone(), options.metrics_port)).await?;
-    let handler = server_handlers::metrics::register()?;
-    let metrics_app = Router::new()
-        .route("/metrics", get(server_handlers::metrics::metrics))
-        .with_state(handler);
+    PrometheusBuilder::new()
+        .with_http_listener(SocketAddrV4::new(
+            options
+                .bind_address
+                .parse()
+                .map_err(|_| Error::ParseError("Invalid bind address".to_string()))?,
+            options.metrics_port,
+        ))
+        .set_bucket_duration(Duration::from_secs(options.metrics_bucket_duration_secs))?
+        .upkeep_timeout(Duration::from_secs(options.metrics_upkeep_timeout_secs))
+        .install()?;
 
     let listener = TcpListener::bind((options.bind_address.clone(), options.public_port)).await?;
     let task_pool = tokio_task_pool::Pool::bounded(options.task_pool_capacity)
@@ -68,12 +75,8 @@ async fn main() -> Result<(), Error> {
         .layer(CorsLayer::permissive())
         .with_state(AppState { options, task_pool }.into());
 
-    info!(
-        "Starting local server on {} (metrics on {})",
-        listener.local_addr()?,
-        metrics_listener.local_addr()?
-    );
-    try_join!(serve(listener, app), serve(metrics_listener, metrics_app))?;
+    info!("Starting local server on {}", listener.local_addr()?,);
+    serve(listener, app).await?;
 
     Ok(())
 }

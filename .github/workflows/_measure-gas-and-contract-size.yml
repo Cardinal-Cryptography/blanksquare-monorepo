@@ -9,7 +9,7 @@ jobs:
   main:
     name: Measure gas and verifier code size
     runs-on: ubuntu-22.04
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - name: Checkout code (from the current branch)
         uses: actions/checkout@v4

@@ -24,10 +24,31 @@ lazy_static! {
         histogram!(format!("{}_idle", SENDING_TEE_REQUEST));
 }
 
+const HEALTH: &str = "health";
+lazy_static! {
+    static ref HEALTH_BUSY: Histogram = histogram!(format!("{}_busy", HEALTH));
+    static ref HEALTH_IDLE: Histogram = histogram!(format!("{}_idle", HEALTH));
+}
+
+const GENERATE_PROOF: &str = "generate_proof";
+lazy_static! {
+    static ref GENERATE_PROOF_BUSY: Histogram = histogram!(format!("{}_busy", GENERATE_PROOF));
+    static ref GENERATE_PROOF_IDLE: Histogram = histogram!(format!("{}_idle", GENERATE_PROOF));
+}
+
+const TEE_PUBLIC_KEY: &str = "tee_public_key";
+lazy_static! {
+    static ref TEE_PUBLIC_KEY_BUSY: Histogram = histogram!(format!("{}_busy", TEE_PUBLIC_KEY));
+    static ref TEE_PUBLIC_KEY_IDLE: Histogram = histogram!(format!("{}_idle", TEE_PUBLIC_KEY));
+}
+
 #[derive(Debug, Clone, Copy, EnumIter)]
 pub enum FutureTimingMetric {
     BuildingVsocksConnection,
     SendingTeeRequest,
+    Health,
+    GenerateProof,
+    TeePublicKey,
 }
 
 impl FutureTimingMetric {
@@ -35,6 +56,9 @@ impl FutureTimingMetric {
         match name {
             BUILDING_VSOCKS_CONNECTION => Some(FutureTimingMetric::BuildingVsocksConnection),
             SENDING_TEE_REQUEST => Some(FutureTimingMetric::SendingTeeRequest),
+            HEALTH => Some(FutureTimingMetric::Health),
+            GENERATE_PROOF => Some(FutureTimingMetric::GenerateProof),
+            TEE_PUBLIC_KEY => Some(FutureTimingMetric::TeePublicKey),
             _ => None,
         }
     }
@@ -43,6 +67,9 @@ impl FutureTimingMetric {
         match self {
             FutureTimingMetric::BuildingVsocksConnection => BUILDING_VSOCKS_CONNECTION,
             FutureTimingMetric::SendingTeeRequest => SENDING_TEE_REQUEST,
+            FutureTimingMetric::Health => HEALTH,
+            FutureTimingMetric::GenerateProof => GENERATE_PROOF,
+            FutureTimingMetric::TeePublicKey => TEE_PUBLIC_KEY,
         }
     }
 
@@ -50,6 +77,9 @@ impl FutureTimingMetric {
         match self {
             FutureTimingMetric::BuildingVsocksConnection => &BUILDING_VSOCKS_CONNECTION_BUSY,
             FutureTimingMetric::SendingTeeRequest => &SENDING_TEE_REQUEST_BUSY,
+            FutureTimingMetric::Health => &HEALTH_BUSY,
+            FutureTimingMetric::GenerateProof => &GENERATE_PROOF_BUSY,
+            FutureTimingMetric::TeePublicKey => &TEE_PUBLIC_KEY_BUSY,
         }
     }
 
@@ -57,6 +87,9 @@ impl FutureTimingMetric {
         match self {
             FutureTimingMetric::BuildingVsocksConnection => &BUILDING_VSOCKS_CONNECTION_IDLE,
             FutureTimingMetric::SendingTeeRequest => &SENDING_TEE_REQUEST_IDLE,
+            FutureTimingMetric::Health => &HEALTH_IDLE,
+            FutureTimingMetric::GenerateProof => &GENERATE_PROOF_IDLE,
+            FutureTimingMetric::TeePublicKey => &TEE_PUBLIC_KEY_IDLE,
         }
     }
 }

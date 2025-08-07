@@ -53,7 +53,7 @@ run() {
     log_progress "ℹ️ Running scenario with zero protocol fees"
     scenario
   else
-    log_progress "ℹ️ Scenario with non-zero protocol fees"
+    log_progress "ℹ️ Running scenario with non-zero protocol fees"
     log_progress "ℹ️ Setting non-zero protocol fees..."
     PRIVATE_KEY="${DEPLOYER_PRIVATE_KEY}" \
     PROTOCOL_DEPOSIT_FEE_BPS=25 \

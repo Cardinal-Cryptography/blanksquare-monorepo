@@ -69,6 +69,7 @@ Each referral contains:
 - Block number
 - Transaction hash
 - Memo data (as bytes)
+- Decrypted Referral ID (if decryptable)
 
 ## Error Handling
 

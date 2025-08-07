@@ -185,7 +185,8 @@ jobs:
       - name: Check job status
         run: |
           if [[ "${{ needs.run-lints-and-tests.result }}" != "success" ]]; then
-            echo "Required job failed: run-lints-and-tests (${{ needs.run-lints-and-tests.result }})"
+            echo "Required job failed: run-lints-and-tests" \
+                 "(${{ needs.run-lints-and-tests.result }})"
             exit 1
           fi
           if [[ "${{ needs.e2e-tests.result }}" != "success" ]]; then

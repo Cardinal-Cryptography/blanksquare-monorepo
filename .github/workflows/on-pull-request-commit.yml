@@ -86,7 +86,16 @@ jobs:
     name: All jobs completed
     runs-on: ubuntu-22.04
     if: ${{ always() }}
-    needs: [check-vars-and-secrets, build-contracts, deploy-contracts, rust-crates-checks, build-wasm-package, build-wasm-package-without-circuits, ts-checks, clean-wasm-artifact, measure-gas-usage-and-verifier-code-size]
+    needs:
+      - check-vars-and-secrets
+      - build-contracts
+      - deploy-contracts
+      - rust-crates-checks
+      - build-wasm-package
+      - build-wasm-package-without-circuits
+      - ts-checks
+      - clean-wasm-artifact
+      - measure-gas-usage-and-verifier-code-size
     steps:
       - name: Check job status
         run: |
@@ -107,7 +116,8 @@ jobs:
             exit 1
           fi
           if [[ "${{ needs.build-wasm-package-without-circuits.result }}" != "success" ]]; then
-            echo "Required job failed: build-wasm-package-without-circuits (${{ needs.build-wasm-package-without-circuits.result }})"
+            echo "Required job failed: build-wasm-package-without-circuits" \
+                 "(${{ needs.build-wasm-package-without-circuits.result }})"
             exit 1
           fi
           if [[ "${{ needs.ts-checks.result }}" != "success" ]]; then

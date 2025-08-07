@@ -200,7 +200,8 @@ jobs:
       - name: Check job status
         run: |
           if [[ "${{ needs.lint-and-format-rust.result }}" != "success" ]]; then
-            echo "Required job failed: lint-and-format-rust (${{ needs.lint-and-format-rust.result }})"
+            echo "Required job failed: lint-and-format-rust" \
+                 "(${{ needs.lint-and-format-rust.result }})"
             exit 1
           fi
           if [[ "${{ needs.test-rust-crates.result }}" != "success" ]]; then

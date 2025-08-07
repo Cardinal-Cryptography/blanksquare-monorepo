@@ -1,6 +1,7 @@
+use enum_map::{enum_map, Enum, EnumMap};
 use lazy_static::lazy_static;
 use metrics::{histogram, Histogram};
-use strum::{EnumIter, IntoEnumIterator as _};
+use strum::{EnumIter, EnumString, IntoStaticStr, IntoEnumIterator as _};
 use tokio::time::Instant;
 use tracing::{
     span::{Attributes, Id},
@@ -8,89 +9,59 @@ use tracing::{
 };
 use tracing_subscriber::{layer::Context, registry::LookupSpan, Layer};
 
-const BUILDING_VSOCKS_CONNECTION: &str = "Building_VSOCK_connection";
 lazy_static! {
-    static ref BUILDING_VSOCKS_CONNECTION_BUSY: Histogram =
-        histogram!(format!("{}_busy", BUILDING_VSOCKS_CONNECTION));
-    static ref BUILDING_VSOCKS_CONNECTION_IDLE: Histogram =
-        histogram!(format!("{}_idle", BUILDING_VSOCKS_CONNECTION));
+    static ref BUSY_HISTOGRAMS: EnumMap<FutureTimingMetric, Histogram> = enum_map! {
+        FutureTimingMetric::BuildingVsocksConnection => histogram!(format!("{}_busy", <&str>::from(FutureTimingMetric::BuildingVsocksConnection))),
+        FutureTimingMetric::SendingTeeRequest => histogram!(format!("{}_busy", <&str>::from(FutureTimingMetric::SendingTeeRequest))),
+        FutureTimingMetric::Health => histogram!(format!("{}_busy", <&str>::from(FutureTimingMetric::Health))),
+        FutureTimingMetric::GenerateProof => histogram!(format!("{}_busy", <&str>::from(FutureTimingMetric::GenerateProof))),
+        FutureTimingMetric::TeePublicKey => histogram!(format!("{}_busy", <&str>::from(FutureTimingMetric::TeePublicKey))),
+    };
+    
+    static ref IDLE_HISTOGRAMS: EnumMap<FutureTimingMetric, Histogram> = enum_map! {
+        FutureTimingMetric::BuildingVsocksConnection => histogram!(format!("{}_idle", <&str>::from(FutureTimingMetric::BuildingVsocksConnection))),
+        FutureTimingMetric::SendingTeeRequest => histogram!(format!("{}_idle", <&str>::from(FutureTimingMetric::SendingTeeRequest))),
+        FutureTimingMetric::Health => histogram!(format!("{}_idle", <&str>::from(FutureTimingMetric::Health))),
+        FutureTimingMetric::GenerateProof => histogram!(format!("{}_idle", <&str>::from(FutureTimingMetric::GenerateProof))),
+        FutureTimingMetric::TeePublicKey => histogram!(format!("{}_idle", <&str>::from(FutureTimingMetric::TeePublicKey))),
+    };
 }
 
-const SENDING_TEE_REQUEST: &str = "Sending_TEE_request";
-lazy_static! {
-    static ref SENDING_TEE_REQUEST_BUSY: Histogram =
-        histogram!(format!("{}_busy", SENDING_TEE_REQUEST));
-    static ref SENDING_TEE_REQUEST_IDLE: Histogram =
-        histogram!(format!("{}_idle", SENDING_TEE_REQUEST));
-}
-
-const HEALTH: &str = "health";
-lazy_static! {
-    static ref HEALTH_BUSY: Histogram = histogram!(format!("{}_busy", HEALTH));
-    static ref HEALTH_IDLE: Histogram = histogram!(format!("{}_idle", HEALTH));
-}
-
-const GENERATE_PROOF: &str = "generate_proof";
-lazy_static! {
-    static ref GENERATE_PROOF_BUSY: Histogram = histogram!(format!("{}_busy", GENERATE_PROOF));
-    static ref GENERATE_PROOF_IDLE: Histogram = histogram!(format!("{}_idle", GENERATE_PROOF));
-}
-
-const TEE_PUBLIC_KEY: &str = "tee_public_key";
-lazy_static! {
-    static ref TEE_PUBLIC_KEY_BUSY: Histogram = histogram!(format!("{}_busy", TEE_PUBLIC_KEY));
-    static ref TEE_PUBLIC_KEY_IDLE: Histogram = histogram!(format!("{}_idle", TEE_PUBLIC_KEY));
-}
-
-#[derive(Debug, Clone, Copy, EnumIter)]
+#[derive(Debug, Clone, Copy, EnumIter, EnumString, IntoStaticStr, Enum)]
 pub enum FutureTimingMetric {
+    #[strum(serialize = "Building_VSOCK_connection")]
     BuildingVsocksConnection,
+    #[strum(serialize = "Sending_TEE_request")]
     SendingTeeRequest,
+    #[strum(serialize = "health")]
     Health,
+    #[strum(serialize = "generate_proof")]
     GenerateProof,
+    #[strum(serialize = "tee_public_key")]
     TeePublicKey,
 }
 
 impl FutureTimingMetric {
     pub fn by_name(name: &str) -> Option<Self> {
-        match name {
-            BUILDING_VSOCKS_CONNECTION => Some(FutureTimingMetric::BuildingVsocksConnection),
-            SENDING_TEE_REQUEST => Some(FutureTimingMetric::SendingTeeRequest),
-            HEALTH => Some(FutureTimingMetric::Health),
-            GENERATE_PROOF => Some(FutureTimingMetric::GenerateProof),
-            TEE_PUBLIC_KEY => Some(FutureTimingMetric::TeePublicKey),
-            _ => None,
-        }
+        name.parse().ok()
     }
 
     pub const fn name(&self) -> &'static str {
         match self {
-            FutureTimingMetric::BuildingVsocksConnection => BUILDING_VSOCKS_CONNECTION,
-            FutureTimingMetric::SendingTeeRequest => SENDING_TEE_REQUEST,
-            FutureTimingMetric::Health => HEALTH,
-            FutureTimingMetric::GenerateProof => GENERATE_PROOF,
-            FutureTimingMetric::TeePublicKey => TEE_PUBLIC_KEY,
+            FutureTimingMetric::BuildingVsocksConnection => "Building_VSOCK_connection",
+            FutureTimingMetric::SendingTeeRequest => "Sending_TEE_request",
+            FutureTimingMetric::Health => "health",
+            FutureTimingMetric::GenerateProof => "generate_proof",
+            FutureTimingMetric::TeePublicKey => "tee_public_key",
         }
     }
 
     pub fn busy_histogram(&self) -> &'static Histogram {
-        match self {
-            FutureTimingMetric::BuildingVsocksConnection => &BUILDING_VSOCKS_CONNECTION_BUSY,
-            FutureTimingMetric::SendingTeeRequest => &SENDING_TEE_REQUEST_BUSY,
-            FutureTimingMetric::Health => &HEALTH_BUSY,
-            FutureTimingMetric::GenerateProof => &GENERATE_PROOF_BUSY,
-            FutureTimingMetric::TeePublicKey => &TEE_PUBLIC_KEY_BUSY,
-        }
+        &BUSY_HISTOGRAMS[*self]
     }
 
     pub fn idle_histogram_name(&self) -> &'static Histogram {
-        match self {
-            FutureTimingMetric::BuildingVsocksConnection => &BUILDING_VSOCKS_CONNECTION_IDLE,
-            FutureTimingMetric::SendingTeeRequest => &SENDING_TEE_REQUEST_IDLE,
-            FutureTimingMetric::Health => &HEALTH_IDLE,
-            FutureTimingMetric::GenerateProof => &GENERATE_PROOF_IDLE,
-            FutureTimingMetric::TeePublicKey => &TEE_PUBLIC_KEY_IDLE,
-        }
+        &IDLE_HISTOGRAMS[*self]
     }
 }
 

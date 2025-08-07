@@ -4,8 +4,10 @@ import type { ShielderClientFixture } from "../shielderClient";
 import type { WithdrawalAccountFixture } from "../withdrawalAccount";
 import type { BalanceRecorderFixture } from "../balanceRecorder";
 import { tokenToKey } from "@/testUtils";
-import { decryptPaddedUnchecked } from "@cardinal-cryptography/ecies-encryption-lib";
+import { decryptPadded } from "@cardinal-cryptography/ecies-encryption-lib";
 import { referralEncryptionPrivateKey, referralId } from "./setup";
+
+const referralPaddedLength = 20; // Length of the referral ID padding in bytes, as defined in shielder-sdk constants.ts
 
 export const validateShielderBalance =
   (
@@ -76,10 +78,11 @@ export const validateShielderHistory =
           `Tx to mismatch at index ${i}: expected ${expectedTx.to}, got ${tx.to}`
         );
       }
-      const historyReferralId = await decryptPaddedUnchecked(
+      const historyReferralId = await decryptPadded(
         tx.memo,
         referralEncryptionPrivateKey,
-        crypto
+        crypto,
+        referralPaddedLength
       );
       if (historyReferralId !== referralId) {
         throw new Error(

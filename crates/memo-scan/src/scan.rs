@@ -5,7 +5,7 @@ use alloy_rpc_types::{Filter, Log};
 use alloy_sol_types::SolEvent;
 use alloy_transport::BoxTransport;
 use anyhow::Result;
-use ecies_encryption_lib::{decrypt_padded_unchecked, PrivKey};
+use ecies_encryption_lib::{decrypt_padded, PrivKey};
 use shielder_contract::{
     providers::create_simple_provider,
     ShielderContract::{Deposit, NewAccount, Withdraw},
@@ -14,6 +14,11 @@ use shielder_contract::{
 use crate::utils::get_contract_deployment_block_num;
 
 const BATCH_LENGTH: usize = 10000;
+
+/// Length of the referral ID padding in bytes.
+/// This is used to ensure that the referral ID is padded to a fixed length for encryption.
+/// 4 bytes for the length prefix + 16 bytes for padded data.
+const REFERRAL_PADDED_LENGTH: usize = 20;
 
 #[derive(serde::Serialize, Debug)]
 pub struct Referral {
@@ -143,7 +148,7 @@ fn find_referral(log: Log, referral_private_key: Option<&PrivKey>) -> Result<Opt
         }
         (Some(referral_private_key), false) => {
             // Attempt to decrypt the memo
-            match decrypt_padded_unchecked(&memo, referral_private_key) {
+            match decrypt_padded(&memo, referral_private_key, REFERRAL_PADDED_LENGTH) {
                 Ok(decrypted) => match String::from_utf8(decrypted) {
                     Ok(referral_id) => Some(referral_id),
                     Err(_) => {
@@ -156,7 +161,7 @@ fn find_referral(log: Log, referral_private_key: Option<&PrivKey>) -> Result<Opt
                 },
                 Err(err) => {
                     eprintln!(
-                        "Failed to decrypt memo for transaction {}\n Error: {}\n Either the memo is not encrypted or the private key is incorrect.",
+                        "Failed to decrypt memo for transaction {}\n Error: {}",
                         Bytes::from(tx_hash),
                         err
                     );

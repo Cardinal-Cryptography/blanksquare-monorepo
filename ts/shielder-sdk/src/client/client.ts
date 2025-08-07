@@ -10,6 +10,7 @@ import { ShielderComponents } from "./factories";
 import { QuotedFees } from "@/chain/relayer";
 import { handleShielderError } from "@/utils/errorHandler";
 import { ProtocolFees, ProtocolFeeQuote } from "@/protocolFees";
+import { Referral } from "@/referral";
 
 export class ShielderClient {
   private accountRegistry: AccountRegistry;
@@ -18,6 +19,7 @@ export class ShielderClient {
   private shielderActions: ShielderActions;
   private protocolFees: ProtocolFees;
   private callbacks: ShielderCallbacks;
+  private referral?: Referral;
 
   /**
    * Creates a new ShielderClient instance.
@@ -32,6 +34,7 @@ export class ShielderClient {
     this.shielderActions = components.shielderActions;
     this.protocolFees = components.protocolFees;
     this.callbacks = callbacks;
+    this.referral = components.referral;
   }
 
   /**
@@ -153,7 +156,6 @@ export class ShielderClient {
    * @param {`0x${string}`} from - public address of the sender
    * @returns transaction hash of the shield transaction
    * @param {bigint} protocolFee - Protocol fee amount, in wei. Part of the `amount`.
-   * @param {Uint8Array} [memo=] - Bytes to be included as a part of the public transaction. (optional)
    * @throws {OutdatedSdkError} if cannot call the contract due to unsupported contract version
    */
   async shield(
@@ -161,16 +163,18 @@ export class ShielderClient {
     amount: bigint,
     sendShielderTransaction: SendShielderTransaction,
     from: `0x${string}`,
-    protocolFee: bigint,
-    memo?: Uint8Array
+    protocolFee: bigint
   ) {
+    const memo = this.referral
+      ? await this.referral.getEncryptedReferral()
+      : new Uint8Array();
     return this.shielderActions.shield(
       token,
       amount,
       sendShielderTransaction,
       from,
       protocolFee,
-      memo ?? new Uint8Array()
+      memo
     );
   }
 
@@ -184,7 +188,6 @@ export class ShielderClient {
    * @param {`0x${string}`} withdrawalAddress - public address of the recipient
    * @param {bigint} pocketMoney - amount of native token to be sent to the recipient by the relayer; only for ERC20 withdrawals
    * @param {bigint} protocolFee - Protocol fee amount, in wei. Part of the `amount`.
-   * @param {Uint8Array} [memo=] - Bytes to be included as a part of the public transaction. (optional)
    * @returns transaction hash of the withdraw transaction
    * @throws {OutdatedSdkError} if cannot call the relayer due to unsupported contract version
    */
@@ -194,9 +197,11 @@ export class ShielderClient {
     quotedFees: QuotedFees,
     withdrawalAddress: Address,
     pocketMoney: bigint,
-    protocolFee: bigint,
-    memo?: Uint8Array
+    protocolFee: bigint
   ) {
+    const memo = this.referral
+      ? await this.referral.getEncryptedReferral()
+      : new Uint8Array();
     return this.shielderActions.withdraw(
       token,
       amount,
@@ -204,7 +209,7 @@ export class ShielderClient {
       withdrawalAddress,
       pocketMoney,
       protocolFee,
-      memo ?? new Uint8Array()
+      memo
     );
   }
 
@@ -228,9 +233,11 @@ export class ShielderClient {
     withdrawalAddress: Address,
     sendShielderTransaction: SendShielderTransaction,
     from: `0x${string}`,
-    protocolFee: bigint,
-    memo: Uint8Array
+    protocolFee: bigint
   ) {
+    const memo = this.referral
+      ? await this.referral.getEncryptedReferral()
+      : new Uint8Array();
     return this.shielderActions.withdrawManual(
       token,
       amount,

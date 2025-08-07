@@ -8,7 +8,7 @@ DEPLOYER_PRIVATE_KEY=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf
 
 ########################## Start anvil #########################################
 
-../../scripts/aleph-anvil.sh --port "${NODE_RPC_PORT}" 1> /dev/null 2>&1
+../../scripts/aleph-anvil.sh --port "${NODE_RPC_PORT}"
 
 ########################## Deploy contracts and setup caller ###################
 ACCEPTING_SHIELDER=$(forge create -r "${NODE_RPC_URL}" --private-key "${DEPLOYER_PRIVATE_KEY}" --broadcast crates/shielder-relayer/test-resources/AcceptingShielder.sol:AcceptingShielder --json | jq -r '.deployedTo')

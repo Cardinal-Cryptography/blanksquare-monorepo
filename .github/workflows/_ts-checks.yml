@@ -8,7 +8,7 @@ on:
 jobs:
   main:
     name: Run lints and tests
-    runs-on: [self-hosted, Linux, X64, small]
+    runs-on: ubuntu-22.04
     timeout-minutes: 10
 
     steps:
@@ -92,11 +92,13 @@ jobs:
           path: ts/shielder-sdk/coverage/coverage-report.md
 
   e2e-tests:
-    name: Run E2E tests on local anvil node
-    runs-on: [self-hosted, Linux, X64, large]
+    name: Run E2E tests on local anvil node (${{ matrix.fee_scenario }} fee)
+    runs-on: ubuntu-22.04
     timeout-minutes: 15
-    env:
-      RUSTC_WRAPPER: sccache
+    strategy:
+      fail-fast: false
+      matrix:
+        fee_scenario: [zero, nonzero]
     steps:
       - name: Checkout source code
         uses: actions/checkout@v4
@@ -169,5 +171,7 @@ jobs:
         working-directory: ts
 
       - name: Run e2e sdk tests
-        run: |
-          NO_FORMATTING=true ./tooling-e2e-tests/ts_sdk_tests.sh
+        env:
+          NO_FORMATTING: true
+          FEE_SCENARIO: ${{ matrix.fee_scenario }}
+        run: ./tooling-e2e-tests/ts_sdk_tests.sh

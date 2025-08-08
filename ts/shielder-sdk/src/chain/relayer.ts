@@ -10,33 +10,66 @@ const withdrawResponseSchema = z.object({
 
 export type WithdrawResponse = z.infer<typeof withdrawResponseSchema>;
 
+/**
+ * Response schema for quoted fees from the relayer.
+ * Contains detailed breakdown of costs and current token prices.
+ */
 const quoteFeesResponseSchema = z.object({
+  /** Detailed breakdown of all fee components */
   fee_details: z.object({
+    /** Total cost in native token */
     total_cost_native: z.coerce.bigint(),
+    /** Total cost in fee token */
     total_cost_fee_token: z.coerce.bigint(),
+    /** Gas cost for relay call (network fee) in native token. */
     gas_cost_native: z.coerce.bigint(),
+    /** Gas cost for relay call (network fee) in fee token. */
     gas_cost_fee_token: z.coerce.bigint(),
+    /** The actual on-chain cost of the relay in native token, including gas and pocket money, but excluding the commission. */
     relayer_cost_native: z.coerce.bigint(),
+    /** The actual on-chain cost of the relay in fee token, including gas and pocket money, but excluding the commission. */
+    relayer_cost_fee_token: z.coerce.bigint(),
+    /** The cost of pocket money in native. */
     pocket_money_native: z.coerce.bigint(),
+    /** The cost of pocket money in fee token. */
     pocket_money_fee_token: z.coerce.bigint(),
+    /** Commission amount in native token. */
     commission_native: z.coerce.bigint(),
+    /** Commission amount in fee token. */
     commission_fee_token: z.coerce.bigint()
   }),
+  /** Current market prices and ratios */
   price_details: z.object({
+    /** Current gas price (in native token). */
     gas_price: z.coerce.bigint(),
+    /** Current price of the native token (base unit, like 1 ETH or 1 BTC). */
     native_token_price: z.coerce.string(),
+    /** Current price of the minimal unit of the native token (like 1 wei or 1 satoshi). */
     native_token_unit_price: z.coerce.string(),
+    /** Current price of the fee token (base unit, like 1 ETH or 1 BTC). */
     fee_token_price: z.coerce.string(),
+    /** Current price of the minimal unit of the fee token (like 1 wei or 1 satoshi). */
     fee_token_unit_price: z.coerce.string(),
-    token_price_ratio: z.coerce.string()
+    /** Ratio of native token price to fee token price */
+    token_price_ratio: z.coerce.string(),
+    /** Ratio of native token unit price to fee token unit price */
+    token_unit_price_ratio: z.coerce.string()
   })
 });
 
+/**
+ * Quoted fees response from the relayer API.
+ * Contains detailed cost breakdown and current market prices.
+ */
 export type QuotedFees = z.infer<typeof quoteFeesResponseSchema>;
 
-/// Create a quoted fees object from the expected token fee. Only `total_cost_fee_token`
-/// has reasonable value, the rest are set arbitrarily.
-export const quotedFeesFromExpectedTokenFee = (totalCostFeeToken: bigint) => {
+/**
+ * Create a quoted fees object from the expected token fee. Only `total_cost_fee_token`
+ * has reasonable value, the rest are set arbitrarily.
+ */
+export const quotedFeesFromExpectedTokenFee = (
+  totalCostFeeToken: bigint
+): QuotedFees => {
   return {
     fee_details: {
       total_cost_native: 0n,
@@ -44,6 +77,7 @@ export const quotedFeesFromExpectedTokenFee = (totalCostFeeToken: bigint) => {
       gas_cost_native: 0n,
       gas_cost_fee_token: 0n,
       relayer_cost_native: 0n,
+      relayer_cost_fee_token: 0n,
       pocket_money_native: 0n,
       pocket_money_fee_token: 0n,
       commission_native: 0n,
@@ -55,7 +89,8 @@ export const quotedFeesFromExpectedTokenFee = (totalCostFeeToken: bigint) => {
       native_token_unit_price: "1",
       fee_token_price: "1",
       fee_token_unit_price: "1",
-      token_price_ratio: "1"
+      token_price_ratio: "1",
+      token_unit_price_ratio: "1"
     }
   };
 };

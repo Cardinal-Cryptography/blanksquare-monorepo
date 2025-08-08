@@ -68,6 +68,10 @@ async fn _quote_fees(
         native_token_unit_price: prices.native_token_price.unit_price,
         fee_token_price: prices.fee_token_price.token_price,
         fee_token_unit_price: prices.fee_token_price.unit_price,
+        token_price_ratio: prices.native_token_price.token_price
+            / prices.fee_token_price.token_price,
+        token_unit_price_ratio: prices.native_token_price.unit_price
+            / prices.fee_token_price.unit_price,
     };
 
     let cached_quote = CachedQuote {

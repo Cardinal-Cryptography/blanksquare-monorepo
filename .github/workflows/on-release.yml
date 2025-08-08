@@ -16,17 +16,10 @@ jobs:
     uses: ./.github/workflows/_check-vars-and-secrets.yml
     secrets: inherit
 
-  build-enclave-artifacts:
-    name: Build enclave artifacts
-    uses: ./.github/workflows/_build-enclave-artifacts.yml
-    with:
-      ref: ${{ github.ref }}
-
   add-ci-artifacts-to-release:
     name: Add CI artifacts to the release
     needs:
       - check-vars-and-secrets
-      - build-enclave-artifacts
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout source code
@@ -37,18 +30,22 @@ jobs:
         uses: Cardinal-Cryptography/github-actions/get-ref-properties@v7
 
       - name: Download enclave artifacts - EIF
-        uses: actions/download-artifact@v4
+        uses: ./.github/actions/download-artifact-by-run-id
         with:
-          name: ${{ needs.build-enclave-artifacts.outputs.artifact-name-eif }}
-          merge-multiple: true
-          path: artifacts
+          workflow-name: on-push-main.yml
+          full-sha: ${{ steps.get-ref-properties.outputs.full-sha }}
+          github_token: ${{ secrets.CI_GH_TOKEN }}
+          artifact-name: shielder-prover-tee-eif
+          artifact-path: artifacts
 
       - name: Download enclave artifacts - Measurements
-        uses: actions/download-artifact@v4
+        uses: ./.github/actions/download-artifact-by-run-id
         with:
-          name: ${{ needs.build-enclave-artifacts.outputs.artifact-name-measurements }}
-          merge-multiple: true
-          path: artifacts
+          workflow-name: on-push-main.yml
+          full-sha: ${{ steps.get-ref-properties.outputs.full-sha }}
+          github_token: ${{ secrets.CI_GH_TOKEN }}
+          artifact-name: shielder-prover-tee-measurements
+          artifact-path: artifacts
 
       - name: Generate release artifacts checksum (SHA256)
         uses: jmgilman/actions-generate-checksum@v1

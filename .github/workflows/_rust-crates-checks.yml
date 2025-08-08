@@ -190,3 +190,30 @@ jobs:
           NO_FORMATTING=true ./tooling-e2e-tests/full_scenario.sh
           NO_FORMATTING=true ./tooling-e2e-tests/recovery_scenario.sh
           NO_FORMATTING=true ./tooling-e2e-tests/many_actors.sh
+
+  all-jobs-completed:
+    name: All jobs completed
+    runs-on: ubuntu-22.04
+    if: ${{ always() }}
+    needs: [lint-and-format-rust, test-rust-crates, run-heavy-tests, e2e-tests]
+    steps:
+      - name: Check job status
+        run: |
+          if [[ "${{ needs.lint-and-format-rust.result }}" != "success" ]]; then
+            echo "Required job failed: lint-and-format-rust" \
+                 "(${{ needs.lint-and-format-rust.result }})"
+            exit 1
+          fi
+          if [[ "${{ needs.test-rust-crates.result }}" != "success" ]]; then
+            echo "Required job failed: test-rust-crates (${{ needs.test-rust-crates.result }})"
+            exit 1
+          fi
+          if [[ "${{ needs.run-heavy-tests.result }}" != "success" ]]; then
+            echo "Required job failed: run-heavy-tests (${{ needs.run-heavy-tests.result }})"
+            exit 1
+          fi
+          if [[ "${{ needs.e2e-tests.result }}" != "success" ]]; then
+            echo "Required job failed: e2e-tests (${{ needs.e2e-tests.result }})"
+            exit 1
+          fi
+          echo "All required jobs completed successfully"

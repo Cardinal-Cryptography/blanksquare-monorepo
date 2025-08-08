@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  main:
+  run-lints-and-tests:
     name: Run lints and tests
     runs-on: ubuntu-22.04
     timeout-minutes: 10
@@ -175,3 +175,22 @@ jobs:
           NO_FORMATTING: true
           FEE_SCENARIO: ${{ matrix.fee_scenario }}
         run: ./tooling-e2e-tests/ts_sdk_tests.sh
+
+  all-jobs-completed:
+    name: All jobs completed
+    runs-on: ubuntu-22.04
+    if: ${{ always() }}
+    needs: [run-lints-and-tests, e2e-tests]
+    steps:
+      - name: Check job status
+        run: |
+          if [[ "${{ needs.run-lints-and-tests.result }}" != "success" ]]; then
+            echo "Required job failed: run-lints-and-tests" \
+                 "(${{ needs.run-lints-and-tests.result }})"
+            exit 1
+          fi
+          if [[ "${{ needs.e2e-tests.result }}" != "success" ]]; then
+            echo "Required job failed: e2e-tests (${{ needs.e2e-tests.result }})"
+            exit 1
+          fi
+          echo "All required jobs completed successfully"

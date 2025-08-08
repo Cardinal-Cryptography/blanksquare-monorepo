@@ -1,6 +1,7 @@
 use alloy_primitives::Address;
 use anyhow::Result;
 use clap::Parser;
+use ecies_encryption_lib::{utils::from_hex, PrivKey};
 
 use crate::scan::scan_blocks;
 pub mod scan;
@@ -25,6 +26,10 @@ struct Args {
     /// Stop block number
     #[arg(long)]
     stop_block: Option<u64>,
+
+    /// Referral encryption private key
+    #[arg(long)]
+    referral_private_key_hex: Option<String>,
 }
 
 #[tokio::main(flavor = "multi_thread")]
@@ -36,13 +41,22 @@ async fn main() -> Result<()> {
         .parse::<Address>()
         .map_err(|_| anyhow::anyhow!("Invalid contract address"))?;
 
+    let referral_private_key = if let Some(pk) = args.referral_private_key_hex {
+        Some(PrivKey::from_bytes(&from_hex(&pk)?)?)
+    } else {
+        eprintln!("Referral private key is not provided. Decryption of memos will be skipped.");
+        None
+    };
+
     let referrals = scan_blocks(
         &args.rpc_url,
         &contract_address,
         args.start_block,
         args.stop_block,
+        referral_private_key,
     )
     .await?;
-    println!("Found {} referrals", referrals.len());
+    eprintln!("Found {} referrals", referrals.len());
+    println!("{}", serde_json::to_string_pretty(&referrals)?);
     Ok(())
 }

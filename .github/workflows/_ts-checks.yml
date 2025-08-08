@@ -6,9 +6,9 @@ on:
   workflow_dispatch:
 
 jobs:
-  main:
+  run-lints-and-tests:
     name: Run lints and tests
-    runs-on: [self-hosted, Linux, X64, small]
+    runs-on: ubuntu-22.04
     timeout-minutes: 10
 
     steps:
@@ -92,11 +92,13 @@ jobs:
           path: ts/shielder-sdk/coverage/coverage-report.md
 
   e2e-tests:
-    name: Run E2E tests on local anvil node
-    runs-on: [self-hosted, Linux, X64, large]
+    name: Run E2E tests on local anvil node (${{ matrix.fee_scenario }} fee)
+    runs-on: ubuntu-22.04
     timeout-minutes: 15
-    env:
-      RUSTC_WRAPPER: sccache
+    strategy:
+      fail-fast: false
+      matrix:
+        fee_scenario: [zero, nonzero]
     steps:
       - name: Checkout source code
         uses: actions/checkout@v4
@@ -169,5 +171,26 @@ jobs:
         working-directory: ts
 
       - name: Run e2e sdk tests
+        env:
+          NO_FORMATTING: true
+          FEE_SCENARIO: ${{ matrix.fee_scenario }}
+        run: ./tooling-e2e-tests/ts_sdk_tests.sh
+
+  all-jobs-completed:
+    name: All jobs completed
+    runs-on: ubuntu-22.04
+    if: ${{ always() }}
+    needs: [run-lints-and-tests, e2e-tests]
+    steps:
+      - name: Check job status
         run: |
-          NO_FORMATTING=true ./tooling-e2e-tests/ts_sdk_tests.sh
+          if [[ "${{ needs.run-lints-and-tests.result }}" != "success" ]]; then
+            echo "Required job failed: run-lints-and-tests" \
+                 "(${{ needs.run-lints-and-tests.result }})"
+            exit 1
+          fi
+          if [[ "${{ needs.e2e-tests.result }}" != "success" ]]; then
+            echo "Required job failed: e2e-tests (${{ needs.e2e-tests.result }})"
+            exit 1
+          fi
+          echo "All required jobs completed successfully"

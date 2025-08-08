@@ -101,50 +101,26 @@ async fn perform_contract_action(
 ) -> Result<()> {
     match command {
         ContractInteractionCommand::NewAccount(NewAccountCmd { amount, memo, .. }) => {
-            new_account(app_state, amount, Token::Native, memo.unwrap_or(vec![])).await
+            new_account(app_state, amount, Token::Native, memo.into()).await
         }
         ContractInteractionCommand::NewAccountERC20(NewAccountERC20Cmd {
             amount,
             token_address,
             memo,
             ..
-        }) => {
-            new_account(
-                app_state,
-                amount,
-                Token::ERC20(token_address),
-                memo.unwrap_or(vec![]),
-            )
-            .await
-        }
+        }) => new_account(app_state, amount, Token::ERC20(token_address), memo.into()).await,
 
         ContractInteractionCommand::Deposit(DepositCmd { amount, memo }) => {
-            deposit(app_state, amount, Token::Native, memo.unwrap_or(vec![])).await
+            deposit(app_state, amount, Token::Native, memo.into()).await
         }
         ContractInteractionCommand::DepositERC20(DepositERC20Cmd {
             amount,
             token_address,
             memo,
-        }) => {
-            deposit(
-                app_state,
-                amount,
-                Token::ERC20(token_address),
-                memo.unwrap_or(vec![]),
-            )
-            .await
-        }
+        }) => deposit(app_state, amount, Token::ERC20(token_address), memo.into()).await,
 
         ContractInteractionCommand::Withdraw(WithdrawCmd { amount, to, memo }) => {
-            withdraw(
-                app_state,
-                amount,
-                to,
-                Token::Native,
-                0,
-                memo.unwrap_or(vec![]),
-            )
-            .await
+            withdraw(app_state, amount, to, Token::Native, 0, memo.into()).await
         }
         ContractInteractionCommand::WithdrawERC20(WithdrawERC20Cmd {
             amount,
@@ -159,7 +135,7 @@ async fn perform_contract_action(
                 to,
                 Token::ERC20(token_address),
                 pocket_money,
-                memo.unwrap_or(vec![]),
+                memo.into(),
             )
             .await
         }

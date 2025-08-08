@@ -19,6 +19,12 @@ pub enum ShielderProverServerError {
 
     #[error("Proving Server error: {0}")]
     ProvingServerError(#[from] VsockError),
+
+    #[error("Failed to initialize metrics: {0}")]
+    MetricsError(#[from] metrics_exporter_prometheus::BuildError),
+
+    #[error("Failed to parse commandline arguments: {0}")]
+    ParseError(String),
 }
 
 impl IntoResponse for ShielderProverServerError {

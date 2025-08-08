@@ -6,7 +6,7 @@ use tracing::instrument;
 
 use crate::{error::ShielderProverServerError, handlers::request, AppState};
 
-#[instrument(level = "trace")]
+#[instrument(level = "info")]
 pub async fn tee_public_key(
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<Response>, ShielderProverServerError> {

@@ -1,0 +1,69 @@
+---
+name: 'Download Artifact by Run ID'
+description: 'Downloads artifacts from a GitHub workflow run by workflow name and commit SHA'
+inputs:
+  workflow-name:
+    description: 'The workflow file name (e.g., on-push-main.yml)'
+    required: true
+  full-sha:
+    description: 'The full commit SHA'
+    required: true
+  github_token:
+    description: 'GitHub token for API access'
+    required: true
+  artifact-name:
+    description: 'Name of the artifact to download'
+    required: false
+  artifact-path:
+    description: 'Path to download the artifact to'
+    required: false
+runs:
+  using: "composite"
+  steps:
+    - name: Get workflow run ID and verify completion
+      shell: bash
+      run: |
+        echo "Getting workflow run for SHA ${{ inputs.full-sha }} and workflow ${{ inputs.workflow-name }}"
+        
+        # Get the workflow run info
+        WORKFLOW_RUN_INFO=$(curl -s -H "Authorization: Bearer ${{ inputs.github_token }}" \
+          "https://api.github.com/repos/Cardinal-Cryptography/blanksquare-monorepo/actions/workflows/${{ inputs.workflow-name }}/runs" \
+          | jq '.workflow_runs[] | select(.head_sha=="${{ inputs.full-sha }}") | {id, status, conclusion}')
+        
+        if [[ -z "$WORKFLOW_RUN_INFO" || "$WORKFLOW_RUN_INFO" == "null" ]]; then
+          echo "Error: No workflow run found for SHA ${{ inputs.full-sha }} and workflow ${{ inputs.workflow-name }}"
+          exit 1
+        fi
+        
+        echo "Workflow run info: $WORKFLOW_RUN_INFO"
+        
+        # Extract status and conclusion
+        STATUS=$(echo "$WORKFLOW_RUN_INFO" | jq -r '.status')
+        CONCLUSION=$(echo "$WORKFLOW_RUN_INFO" | jq -r '.conclusion')
+        RUN_ID=$(echo "$WORKFLOW_RUN_INFO" | jq -r '.id')
+        
+        echo "Status: $STATUS"
+        echo "Conclusion: $CONCLUSION"
+        echo "Run ID: $RUN_ID"
+        
+        # Check if workflow is completed and successful
+        if [[ "$STATUS" != "completed" ]]; then
+          echo "Error: Workflow run is not completed. Status: $STATUS"
+          exit 1
+        fi
+        
+        if [[ "$CONCLUSION" != "success" ]]; then
+          echo "Error: Workflow run did not succeed. Conclusion: $CONCLUSION"
+          exit 1
+        fi
+        
+        # Save the run ID for next step
+        echo "RUN_ID=$RUN_ID" >> $GITHUB_ENV
+
+    - name: Download artifact
+      uses: actions/download-artifact@v5
+      with:
+        name: ${{ inputs.artifact-name }}
+        path: ${{ inputs.artifact-path }}
+        merge-multiple: true
+        run-id: ${{ env.RUN_ID }}

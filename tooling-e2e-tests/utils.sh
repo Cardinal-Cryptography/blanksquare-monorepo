@@ -60,11 +60,13 @@ mtzero() {
 deploy_shielder_contracts() {
   SHIELDER_CONTRACT_ADDRESS=$(
     PRIVATE_KEY="${DEPLOYER_PRIVATE_KEY}" \
+    IS_ARBITRUM_CHAIN=false \
     NETWORK="${NODE_RPC_URL}" \
 	  ./scripts/deploy-shielder.sh \
       2> output.log \
     | grep 'Shielder deployed at:' | awk '{print $NF}')
   export SHIELDER_CONTRACT_ADDRESS
+  sleep 5
 
   log_progress "✅ Contracts deployed"
 }
@@ -80,6 +82,7 @@ deploy_erc20_token() {
       2> output.log \
     | jq -r '.deployedTo'
   )
+  sleep 5
 }
 
 deploy_erc20_tokens() {
@@ -129,6 +132,7 @@ mint_erc20_tokens() {
         ${key} \
         ${AMOUNT} \
         &>> output.log
+      sleep 5
     done
   done
 

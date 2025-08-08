@@ -68,6 +68,9 @@ export const setupShielderTest = async (globalConfig: GlobalConfigFixture) => {
           action.op.amount,
           action.op.memo
         );
+        // wait for 2 seconds to ensure all actions are processed
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+        await shielderClient.shielderClient.syncShielder();
         registrar.registerShield(
           action.op.token,
           action.op.amount + protocolFee,
@@ -82,6 +85,10 @@ export const setupShielderTest = async (globalConfig: GlobalConfigFixture) => {
           action.op.pocketMoney,
           action.op.memo
         );
+        // wait for 2 seconds to ensure all actions are processed
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+        await shielderClient.shielderClient.syncShielder();
+        console.log(`Relayer fee: ${relayerFee}, Protocol fee: ${protocolFee}`);
         registrar.registerWithdrawal(
           action.op.token,
           withdrawalAccounts[action.op.to].address,
@@ -105,6 +112,9 @@ export const setupShielderTest = async (globalConfig: GlobalConfigFixture) => {
           withdrawalAccounts[action.op.to].address,
           action.op.memo
         );
+        // wait for 2 seconds to ensure all actions are processed
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+        await shielderClient.shielderClient.syncShielder();
         registrar.registerWithdrawal(
           action.op.token,
           withdrawalAccounts[action.op.to].address,

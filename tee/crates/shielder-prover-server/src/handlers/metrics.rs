@@ -1,7 +1,7 @@
 use enum_map::{enum_map, Enum, EnumMap};
 use lazy_static::lazy_static;
 use metrics::{histogram, Histogram};
-use strum::{EnumIter, EnumString, IntoStaticStr, IntoEnumIterator as _};
+use strum::{EnumIter, EnumString, IntoEnumIterator as _, IntoStaticStr};
 use tokio::time::Instant;
 use tracing::{
     span::{Attributes, Id},
@@ -17,7 +17,6 @@ lazy_static! {
         FutureTimingMetric::GenerateProof => histogram!(format!("{}_busy", <&str>::from(FutureTimingMetric::GenerateProof))),
         FutureTimingMetric::TeePublicKey => histogram!(format!("{}_busy", <&str>::from(FutureTimingMetric::TeePublicKey))),
     };
-    
     static ref IDLE_HISTOGRAMS: EnumMap<FutureTimingMetric, Histogram> = enum_map! {
         FutureTimingMetric::BuildingVsocksConnection => histogram!(format!("{}_idle", <&str>::from(FutureTimingMetric::BuildingVsocksConnection))),
         FutureTimingMetric::SendingTeeRequest => histogram!(format!("{}_idle", <&str>::from(FutureTimingMetric::SendingTeeRequest))),

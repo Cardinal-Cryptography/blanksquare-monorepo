@@ -10,7 +10,7 @@ use crate::{
     AppState,
 };
 
-#[instrument(level = "trace")]
+#[instrument(level = "info")]
 pub async fn generate_proof(
     State(state): State<Arc<AppState>>,
     Json(generate_proof_payload): Json<GenerateProofPayload>,

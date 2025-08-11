@@ -2,9 +2,13 @@ use clap::Parser;
 
 #[derive(Parser, Debug, Clone)]
 pub struct CommandLineArgs {
-    /// A port on whhich this serves listend to incoming HTTP connections.
+    /// A port on which this server listens to incoming HTTP connections.
     #[arg(short, long, default_value = "3000", env = "PUBLIC_PORT")]
     pub public_port: u16,
+
+    /// A port on which this server exposes its metrics endpoint.
+    #[arg(short, long, default_value = "3001", env = "METRICS_PORT")]
+    pub metrics_port: u16,
 
     /// Internal port on which host and tee applications talks to each other
     /// This is the part of the vsock endpoint, which is tee_cid:tee_port
@@ -37,4 +41,12 @@ pub struct CommandLineArgs {
     /// How much time this server waits for a response from TEE
     #[clap(long, default_value_t = 60, env = "TEE_COMPUTE_TIMEOUT_SECS")]
     pub tee_compute_timeout_secs: u64,
+
+    /// How often to perform metric upkeep
+    #[clap(long, default_value_t = 60, env = "METRICS_UPKEEP_TIMEOUT_SECS")]
+    pub(crate) metrics_upkeep_timeout_secs: u64,
+
+    /// How long are the buckets from which metric histograms are built
+    #[clap(long, default_value_t = 60, env = "METRICS_BUCKET_DURATION_SECS")]
+    pub(crate) metrics_bucket_duration_secs: u64,
 }

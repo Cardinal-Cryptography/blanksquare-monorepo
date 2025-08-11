@@ -13,18 +13,12 @@ jobs:
     steps:
       - name: Checkout source code
         uses: actions/checkout@v4
-        with:
-          ref: '2aeb66b9df73d9b81e0e430bf0a9649049f16592'
-
-      - name: Call action get-ref-properties
-        id: get-ref-properties
-        uses: Cardinal-Cryptography/github-actions/get-ref-properties@v7
 
       - name: Download enclave artifacts - EIF
         uses: ./.github/actions/download-artifact-by-run-id
         with:
           workflow-name: on-push-main.yml
-          full-sha: ${{ steps.get-ref-properties.outputs.full-sha }}
+          full-sha: '2aeb66b9df73d9b81e0e430bf0a9649049f16592'
           github_token: ${{ secrets.CI_GH_TOKEN }}
           artifact-name: shielder-prover-tee-eif
           artifact-path: artifacts
@@ -33,7 +27,7 @@ jobs:
         uses: ./.github/actions/download-artifact-by-run-id
         with:
           workflow-name: on-push-main.yml
-          full-sha: ${{ steps.get-ref-properties.outputs.full-sha }}
+          full-sha: '2aeb66b9df73d9b81e0e430bf0a9649049f16592'
           github_token: ${{ secrets.CI_GH_TOKEN }}
           artifact-name: shielder-prover-tee-measurements
           artifact-path: artifacts

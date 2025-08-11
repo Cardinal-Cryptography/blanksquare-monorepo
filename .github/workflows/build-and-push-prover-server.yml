@@ -2,7 +2,7 @@
 name: Build and push Shielder-Prover-Server docker image (host app)
 
 on:
-  workflow_dispatch:
+  workflow_call:
     inputs:
       ref:
         description: 'git ref: hash, branch, tag to build shielder-prover-server files from'

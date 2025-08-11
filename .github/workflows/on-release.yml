@@ -30,7 +30,7 @@ jobs:
         uses: Cardinal-Cryptography/github-actions/get-ref-properties@v7
 
       - name: Download enclave artifacts - EIF
-        uses: ./.github/actions/download-artifact-by-run-id
+        uses: ./.github/actions/download-artifact-by-sha
         with:
           workflow-name: on-push-main.yml
           full-sha: ${{ steps.get-ref-properties.outputs.full-sha }}
@@ -39,7 +39,7 @@ jobs:
           artifact-path: artifacts
 
       - name: Download enclave artifacts - Measurements
-        uses: ./.github/actions/download-artifact-by-run-id
+        uses: ./.github/actions/download-artifact-by-sha
         with:
           workflow-name: on-push-main.yml
           full-sha: ${{ steps.get-ref-properties.outputs.full-sha }}

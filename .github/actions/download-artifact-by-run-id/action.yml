@@ -69,3 +69,4 @@ runs:
         path: ${{ inputs.artifact-path }}
         merge-multiple: true
         run-id: ${{ env.RUN_ID }}
+        github-token: ${{ inputs.github_token }}

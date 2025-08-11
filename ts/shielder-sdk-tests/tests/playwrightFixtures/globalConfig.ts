@@ -1,8 +1,12 @@
 import { getChainConfig, getRelayerConfig } from "@tests/envConfig";
-import { ACCOUNT_NAMES, INITIAL_EVM_BALANCE } from "@tests/constants";
+import {
+  ACCOUNT_NAMES,
+  INITIAL_EVM_BALANCE_GAS_POINTS
+} from "@tests/constants";
 import type { AccountValue } from "@tests/types";
 import { generatePrivateKey, privateKeyToAddress } from "viem/accounts";
 import { createAccount } from "@tests/chainAccount";
+import { createPublicClient, http } from "viem";
 
 export type GlobalConfigFixture = {
   chainConfig: ReturnType<typeof getChainConfig>;
@@ -30,16 +34,26 @@ export const globalConfigFixture = async (
     chainConfig.rpcHttpEndpoint
   );
 
+  const publicClient = createPublicClient({
+    transport: http(chainConfig.rpcHttpEndpoint)
+  });
+
+  const gasPrice = await publicClient.getGasPrice();
+
+  // initial balance is gas points constant, multiplied by gas price and adjusted with +20%
+  const initialEvmBalance =
+    (INITIAL_EVM_BALANCE_GAS_POINTS * gasPrice * 120n) / 100n;
+
   for (const name of ACCOUNT_NAMES) {
     await faucet.sendNative(
       privateKeyToAddress(privateKeys[name]),
-      INITIAL_EVM_BALANCE
+      initialEvmBalance
     );
     for (const tokenAddress of chainConfig.tokenContractAddresses) {
       await faucet.sendERC20(
         tokenAddress as `0x${string}`,
         privateKeyToAddress(privateKeys[name]),
-        INITIAL_EVM_BALANCE
+        initialEvmBalance
       );
     }
   }

@@ -13,23 +13,23 @@ const memo = new Uint8Array();
     actions: [
       // create native account
       {
-        op: shieldOp(nativeToken(), 10n ** 17n, memo),
+        op: shieldOp(nativeToken(), 100n, memo),
         actor: "alice"
       },
       // create erc20 account
       {
-        op: shieldOp(ercToken, 2n * 10n ** 17n, memo),
+        op: shieldOp(ercToken, 200n, memo),
         actor: "alice"
       },
       // clear storage, don't recover
       { op: clearStorageOp(), actor: "alice" },
       // new shield will throw
       {
-        op: shieldOp(nativeToken(), 10n ** 17n, memo),
+        op: shieldOp(nativeToken(), 100n, memo),
         actor: "alice"
       },
       {
-        op: shieldOp(ercToken, 2n * 10n ** 17n, memo),
+        op: shieldOp(ercToken, 200n, memo),
         actor: "alice"
       }
     ]
@@ -39,33 +39,33 @@ const memo = new Uint8Array();
     actions: [
       // create native account
       {
-        op: shieldOp(nativeToken(), 10n ** 17n, memo),
+        op: shieldOp(nativeToken(), 100n, memo),
         actor: "alice"
       },
       // deposit into native account
       {
-        op: shieldOp(nativeToken(), 2n * 10n ** 17n, memo),
+        op: shieldOp(nativeToken(), 200n, memo),
         actor: "alice"
       },
       // create erc20 account
       {
-        op: shieldOp(ercToken, 2n * 10n ** 17n, memo),
+        op: shieldOp(ercToken, 200n, memo),
         actor: "alice"
       },
       // deposit into erc20 account
       {
-        op: shieldOp(ercToken, 2n * 10n ** 17n, memo),
+        op: shieldOp(ercToken, 200n, memo),
         actor: "alice"
       },
       // clear storage, don't recover
       { op: clearStorageOp(), actor: "alice" },
       // new shield will throw
       {
-        op: shieldOp(nativeToken(), 10n ** 17n, memo),
+        op: shieldOp(nativeToken(), 100n, memo),
         actor: "alice"
       },
       {
-        op: shieldOp(ercToken, 2n * 10n ** 17n, memo),
+        op: shieldOp(ercToken, 200n, memo),
         actor: "alice"
       }
     ]

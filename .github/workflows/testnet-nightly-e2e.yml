@@ -53,6 +53,29 @@ jobs:
         shell: bash
         run: make compile-contracts
 
+      - name: Install wasm-pack
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+
+      - name: Build shielder_bindings
+        run: cd crates/shielder_bindings && make wasm && make wasm-without-circuits
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 23
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.2.0
+
+      - name: Install dependencies (workspace)
+        run: pnpm install-deps
+        working-directory: ts
+
+      - name: Build all (workspace)
+        run: pnpm build
+        working-directory: ts
+
       - name: Run e2e tooling tests
         env:
           DEPLOYER_PRIVATE_KEY: ${{ secrets.CI_TESTNET_DEPLOYER_PRIVATE_KEY }}
@@ -68,10 +91,9 @@ jobs:
           FEE_DESTINATION_KEY: ${{ secrets.CI_TESTNET_FEE_DESTINATION_KEY }}
           RELAYER_SIGNER_ADDRESSES: ${{ vars.CI_TESTNET_RELAYER_SIGNER_ADDRESSES }}
           RELAYER_SIGNING_KEYS: ${{ secrets.CI_TESTNET_RELAYER_SIGNING_KEYS }}
+          CRYPTO_CLIENT_TYPE: "wasm-full"
         run: |
-          NO_FORMATTING=true TESTNET=true ./tooling-e2e-tests/full_scenario.sh
-          NO_FORMATTING=true TESTNET=true ./tooling-e2e-tests/recovery_scenario.sh
-          NO_FORMATTING=true TESTNET=true ./tooling-e2e-tests/many_actors.sh
+          NO_FORMATTING=true TESTNET=true ./tooling-e2e-tests/ts_sdk_tests.sh
 
   slack-notification:
     name: Slack notification
@@ -86,4 +108,4 @@ jobs:
         with:
           notify-on: "failure"
         env:
-          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_ZKOS }}
+          SLACK_WEBHOOK: ${{ secrets.SLACK_BLANKSQUARE_NOTIFICATIONS }}

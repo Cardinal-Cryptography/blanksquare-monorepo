@@ -5,6 +5,7 @@ import { sdkTest } from "@tests/playwrightTestConfig";
 import {
   clearStorageOp,
   recoverOp,
+  shieldGasOp,
   shieldOp,
   withdrawOp,
   type TestDescription
@@ -18,16 +19,16 @@ const memo = new Uint8Array();
     id: 1,
     actions: [
       {
-        op: shieldOp(nativeToken(), 10n ** 17n, memo),
+        op: shieldGasOp(nativeToken(), memo),
         actor: "alice"
       },
-      { op: shieldOp(ercToken, 10n ** 17n, memo), actor: "alice" },
+      { op: shieldGasOp(ercToken, memo), actor: "alice" },
       {
-        op: shieldOp(nativeToken(), 2n * 10n ** 17n, memo),
+        op: shieldGasOp(nativeToken(), memo),
         actor: "bob"
       },
       {
-        op: shieldOp(ercToken, 2n * 10n ** 17n, memo),
+        op: shieldGasOp(ercToken, memo),
         actor: "bob"
       },
       { op: clearStorageOp(), actor: "alice" },
@@ -35,48 +36,48 @@ const memo = new Uint8Array();
       { op: recoverOp(), actor: "alice" },
       { op: recoverOp(), actor: "bob" },
       {
-        op: shieldOp(nativeToken(), 10n ** 17n, memo),
+        op: shieldOp(nativeToken(), 100n, memo),
         actor: "alice"
       },
-      { op: shieldOp(ercToken, 10n ** 17n, memo), actor: "alice" },
+      { op: shieldOp(ercToken, 100n, memo), actor: "alice" },
       {
-        op: shieldOp(nativeToken(), 2n * 10n ** 17n, memo),
+        op: shieldOp(nativeToken(), 200n, memo),
         actor: "bob"
       },
       {
-        op: shieldOp(ercToken, 2n * 10n ** 17n, memo),
+        op: shieldOp(ercToken, 200n, memo),
         actor: "bob"
       },
       {
-        op: withdrawOp(nativeToken(), 10n ** 17n, "dave", 0n, memo),
+        op: withdrawOp(nativeToken(), 100n, "dave", 0n, memo),
         actor: "alice"
       },
       {
-        op: withdrawOp(nativeToken(), 2n * 10n ** 17n, "dave", 0n, memo),
+        op: withdrawOp(nativeToken(), 200n, "dave", 0n, memo),
         actor: "bob"
       },
       {
-        op: shieldOp(nativeToken(), 3n * 10n ** 17n, memo),
+        op: shieldOp(nativeToken(), 300n, memo),
         actor: "charlie"
       },
       {
-        op: shieldOp(ercToken, 3n * 10n ** 17n, memo),
+        op: shieldOp(ercToken, 300n, memo),
         actor: "charlie"
       },
       {
-        op: shieldOp(nativeToken(), 3n * 10n ** 17n, memo),
+        op: shieldGasOp(nativeToken(), memo),
         actor: "charlie"
       },
       {
-        op: shieldOp(ercToken, 3n * 10n ** 17n, memo),
+        op: shieldGasOp(ercToken, memo),
         actor: "charlie"
       },
       {
-        op: withdrawOp(ercToken, 10n ** 17n, "dave", 10n ** 17n, memo),
+        op: withdrawOp(ercToken, 100n, "dave", 100n, memo),
         actor: "charlie"
       },
       {
-        op: withdrawOp(nativeToken(), 3n * 10n ** 17n, "dave", 0n, memo),
+        op: withdrawOp(nativeToken(), 300n, "dave", 0n, memo),
         actor: "charlie"
       }
     ]

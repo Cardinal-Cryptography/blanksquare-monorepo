@@ -5,7 +5,6 @@ on:
   push:
     branches:
       - main
-      - prover-server-ci
 
 concurrency:
   group: "${{ github.ref }}-${{ github.workflow }}"
@@ -30,7 +29,7 @@ jobs:
     secrets: inherit
     uses: ./.github/workflows/build-and-push-fee-estimator.yml
     with:
-      ref: ${{ github.sha }}  
+      ref: ${{ github.sha }}
 
   build-and-push-prover-server:
     name: Build and push shielder-prover-server
@@ -43,7 +42,7 @@ jobs:
   all-jobs-completion:
     name: All jobs completion
     runs-on: ubuntu-22.04
-    needs: 
+    needs:
       - build-enclave-artifacts
       - build-and-push-fee-estimator
       - build-and-push-prover-server

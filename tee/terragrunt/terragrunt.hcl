@@ -40,9 +40,9 @@ EOF
 remote_state {
   backend = "s3"
   config = {
-    bucket         = "${local.project_name}-terraformstate"
+    bucket         = "${local.project_name}-terraformstate-demo"
     key            = "${local.environment}/terraform.tfstate"
-    region         = "eu-central-1"
+    region         = "eu-west-1"
     dynamodb_table = "${local.project_name}-tfstate"
     encrypt        = true
   }

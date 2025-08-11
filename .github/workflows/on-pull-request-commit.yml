@@ -81,3 +81,47 @@ jobs:
     if: github.event_name == 'pull_request'
     uses: ./.github/workflows/_measure-gas-and-contract-size.yml
     secrets: inherit
+
+  all-jobs-completed:
+    name: All jobs completed
+    runs-on: ubuntu-22.04
+    if: ${{ always() }}
+    needs:
+      - check-vars-and-secrets
+      - build-contracts
+      - deploy-contracts
+      - rust-crates-checks
+      - build-wasm-package
+      - build-wasm-package-without-circuits
+      - ts-checks
+      - clean-wasm-artifact
+      - measure-gas-usage-and-verifier-code-size
+    steps:
+      - name: Check job status
+        run: |
+          if [[ "${{ needs.build-contracts.result }}" != "success" ]]; then
+            echo "Required job failed: build-contracts (${{ needs.build-contracts.result }})"
+            exit 1
+          fi
+          if [[ "${{ needs.deploy-contracts.result }}" != "success" ]]; then
+            echo "Required job failed: deploy-contracts (${{ needs.deploy-contracts.result }})"
+            exit 1
+          fi
+          if [[ "${{ needs.rust-crates-checks.result }}" != "success" ]]; then
+            echo "Required job failed: rust-crates-checks (${{ needs.rust-crates-checks.result }})"
+            exit 1
+          fi
+          if [[ "${{ needs.build-wasm-package.result }}" != "success" ]]; then
+            echo "Required job failed: build-wasm-package (${{ needs.build-wasm-package.result }})"
+            exit 1
+          fi
+          if [[ "${{ needs.build-wasm-package-without-circuits.result }}" != "success" ]]; then
+            echo "Required job failed: build-wasm-package-without-circuits" \
+                 "(${{ needs.build-wasm-package-without-circuits.result }})"
+            exit 1
+          fi
+          if [[ "${{ needs.ts-checks.result }}" != "success" ]]; then
+            echo "Required job failed: ts-checks (${{ needs.ts-checks.result }})"
+            exit 1
+          fi
+          echo "All required jobs completed successfully"

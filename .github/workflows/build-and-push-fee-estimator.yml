@@ -53,4 +53,4 @@ jobs:
           push: true
           # yamllint disable rule:line-length
           tags: |
-             ${{ vars.ECR_CC_RES_PUBLIC_REGISTRY }}fee-estimator:${{ steps.get-ref-properties.outputs.sha }}
+             ${{ vars.ECR_CC_RES_PUBLIC_REGISTRY }}shielder-fee-estimator:${{ steps.get-ref-properties.outputs.sha }}

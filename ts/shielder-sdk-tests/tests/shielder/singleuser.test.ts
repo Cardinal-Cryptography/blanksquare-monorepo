@@ -13,7 +13,6 @@ import {
 } from "@tests/types";
 
 const ercToken = erc20Token(tokenContractAddresses[0] as `0x${string}`);
-const memo = new Uint8Array();
 
 const ercTokenLowercase = erc20Token(
   ercToken.address.toLowerCase() as `0x${string}`
@@ -25,34 +24,34 @@ const ercTokenLowercase = erc20Token(
     actions: [
       // create native account, deposit, withdraw manually and via relayer
       {
-        op: shieldOp(nativeToken(), 200n, memo),
+        op: shieldOp(nativeToken(), 200n),
         actor: "alice"
       },
       {
-        op: shieldGasOp(nativeToken(), memo),
+        op: shieldGasOp(nativeToken()),
         actor: "alice"
       },
       {
-        op: withdrawManualOp(nativeToken(), 50n, "bob", memo),
+        op: withdrawManualOp(nativeToken(), 50n, "bob"),
         actor: "alice"
       },
       {
-        op: withdrawOp(nativeToken(), 70n, "bob", 0n, memo),
+        op: withdrawOp(nativeToken(), 70n, "bob", 0n),
         actor: "alice"
       },
 
       // create ERC20 account, deposit, withdraw manually and via relayer
-      { op: shieldOp(ercToken, 100n, memo), actor: "alice" },
+      { op: shieldOp(ercToken, 100n), actor: "alice" },
       {
-        op: shieldGasOp(ercTokenLowercase, memo),
+        op: shieldGasOp(ercTokenLowercase),
         actor: "alice"
       },
       {
-        op: withdrawManualOp(ercToken, 50n, "bob", memo),
+        op: withdrawManualOp(ercToken, 50n, "bob"),
         actor: "alice"
       },
       {
-        op: withdrawOp(ercToken, 70n, "bob", 0n, memo),
+        op: withdrawOp(ercToken, 70n, "bob", 0n),
         actor: "alice"
       },
 
@@ -62,26 +61,26 @@ const ercTokenLowercase = erc20Token(
 
       // shield again
       {
-        op: shieldOp(nativeToken(), 100n, memo),
+        op: shieldOp(nativeToken(), 100n),
         actor: "alice"
       },
       {
-        op: shieldGasOp(nativeToken(), memo),
+        op: shieldGasOp(nativeToken()),
         actor: "alice"
       },
-      { op: shieldOp(ercToken, 100n, memo), actor: "alice" },
+      { op: shieldOp(ercToken, 100n), actor: "alice" },
       {
-        op: shieldGasOp(ercTokenLowercase, memo),
+        op: shieldGasOp(ercTokenLowercase),
         actor: "alice"
       },
 
       // withdraw again via relayer
       {
-        op: withdrawOp(nativeToken(), 100n, "charlie", 0n, memo),
+        op: withdrawOp(nativeToken(), 100n, "charlie", 0n),
         actor: "alice"
       },
       {
-        op: withdrawOp(ercToken, 100n, "charlie", 0n, memo),
+        op: withdrawOp(ercToken, 100n, "charlie", 0n),
         actor: "alice"
       }
     ]
@@ -99,7 +98,7 @@ const ercTokenLowercase = erc20Token(
 
             if (action.op.type !== "clearStorage") {
               await testFixture.validateShielderBalance(action.actor);
-              testFixture.validateShielderHistory(action.actor);
+              await testFixture.validateShielderHistory(action.actor);
             }
           }
           return true;

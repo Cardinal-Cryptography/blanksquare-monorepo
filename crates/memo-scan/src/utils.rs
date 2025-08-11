@@ -54,6 +54,10 @@ fn archival_test_query(chain_id: u64) -> Result<(Address, BlockNumber)> {
 
 pub async fn is_archival_node(provider: &impl Provider<BoxTransport, AnyNetwork>) -> Result<bool> {
     let chain_id = provider.get_chain_id().await?;
+    if chain_id == 31337 {
+        // Local development chain, assume it's archival
+        return Ok(true);
+    }
     let (address, block_number) = archival_test_query(chain_id)?;
     let code = get_code_at_height(provider, address, block_number).await?;
     Ok(code.is_some())
@@ -69,7 +73,7 @@ pub async fn get_contract_deployment_block_num(
         ));
     }
     let block_number = provider.get_block_number().await?;
-    println!("Current block number: {block_number}");
+    eprintln!("Current block number: {block_number}");
     let code_curr = get_code_at_height(provider, *contract_address, block_number).await?;
     if code_curr.is_none() {
         return Err(anyhow::anyhow!("Contract does not exist on chain"));

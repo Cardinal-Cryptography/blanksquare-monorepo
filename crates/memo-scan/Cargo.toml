@@ -23,3 +23,8 @@ alloy-rpc-types = { workspace = true }
 alloy-sol-types = { workspace = true }
 alloy-transport = { workspace = true }
 clap = { workspace = true, features = ["derive"] }
+# This dependency bin is used in the e2e tests
+ecies-encryption-cli = { workspace = true }
+ecies-encryption-lib = { workspace = true}
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true}

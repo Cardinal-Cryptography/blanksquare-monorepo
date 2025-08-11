@@ -9,19 +9,24 @@ authors = ["Cardinal"]
 homepage = "https://alephzero.org"
 license = "Apache-2.0"
 categories = ["cryptography"]
-repository = "https://github.com/Cardinal-Cryptography/zkOS-monorepo"
+repository = "https://github.com/Cardinal-Cryptography/blanksquare-monorepo"
 
 [workspace.dependencies]
 aws-nitro-enclaves-nsm-api = "0.4.0"
 axum = "0.8.4"
 base64 = "0.22.1"
 clap = "4.5.38"
+enum-map = "2.7.3"
 futures = "0.3.31"
+lazy_static = "1.5.0"
 log = "0.4.27"
+metrics = "0.24.2"
+metrics-exporter-prometheus = "0.17.2"
 rand = { version = "0.8.5" }
 serde = "1.0.219"
 serde_json = "1.0.140"
 shielder-prover-common = { path = "crates/shielder-prover-common" }
+strum = "0.27.2"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt", "chrono"] }
 thiserror = "2.0.12"
@@ -32,11 +37,9 @@ tokio-vsock = "0.7.1"
 tower-http = { version = "0.6.1" }
 vsock = "0.5.1"
 
-# below dependency is also used in master workspace Cargo.toml
-shielder-circuits = { git = "https://github.com/Cardinal-Cryptography/zkOS-circuits", rev = "3bc3087" }
-
 ecies-encryption-lib = { git = "https://github.com/Cardinal-Cryptography/ecies-encryption-lib", rev = "a03b55e37d610aa9babf4719ffaea6e61fe7655a" }
 
 # below dependencies contains a rev which is also used in tee/nix/flake.nix, which is far from ideal since one needs to bump it there as well
-type-conversions = { git = "https://github.com/Cardinal-Cryptography/zkOS-monorepo", rev = "374a0d5dea2128e9b5100ede6daecc9253a241d9" }
-powers-of-tau = { git = "https://github.com/Cardinal-Cryptography/zkOS-monorepo", rev = "374a0d5dea2128e9b5100ede6daecc9253a241d9" }
+shielder-circuits =  { git = "https://github.com/Cardinal-Cryptography/blanksquare-monorepo", rev = "fa55a8e23b5450bcce916290745f5c4635299a02" }
+type-conversions = { git = "https://github.com/Cardinal-Cryptography/blanksquare-monorepo", rev = "fa55a8e23b5450bcce916290745f5c4635299a02" }
+powers-of-tau = { git = "https://github.com/Cardinal-Cryptography/blanksquare-monorepo", rev = "fa55a8e23b5450bcce916290745f5c4635299a02" }

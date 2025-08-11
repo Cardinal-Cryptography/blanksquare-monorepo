@@ -1,0 +1,69 @@
+---
+name: Push to main
+
+on:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: "${{ github.ref }}-${{ github.workflow }}"
+  cancel-in-progress: true
+
+jobs:
+  check-vars-and-secrets:
+    name: Check vars and secrets
+    uses: ./.github/workflows/_check-vars-and-secrets.yml
+    secrets: inherit
+
+  build-enclave-artifacts:
+    name: Build enclave artifacts
+    needs: [check-vars-and-secrets]
+    uses: ./.github/workflows/_build-enclave-artifacts.yml
+    with:
+      ref: ${{ github.sha }}
+
+  build-and-push-fee-estimator:
+    name: Build and push fee-estimator
+    needs: [check-vars-and-secrets]
+    secrets: inherit
+    uses: ./.github/workflows/build-and-push-fee-estimator.yml
+    with:
+      ref: ${{ github.sha }}
+
+  build-and-push-prover-server:
+    name: Build and push shielder-prover-server
+    needs: [check-vars-and-secrets]
+    secrets: inherit
+    uses: ./.github/workflows/build-and-push-prover-server.yml
+    with:
+      ref: ${{ github.sha }}
+
+  all-jobs-completion:
+    name: All jobs completion
+    runs-on: ubuntu-24.04
+    needs:
+      - build-enclave-artifacts
+      - build-and-push-fee-estimator
+      - build-and-push-prover-server
+    if: >
+      !cancelled() &&
+      github.event_name != 'workflow_dispatch'
+    steps:
+      - name: Notify all jobs completed
+        run: echo "All jobs have been completed successfully."
+
+  slack-notification:
+    name: Slack notification
+    runs-on: ubuntu-24.04
+    needs: [all-jobs-completion]
+    if: >
+      !cancelled() &&
+      github.event_name != 'workflow_dispatch'
+    steps:
+      - name: Send Slack message
+        uses: Cardinal-Cryptography/github-actions/slack-notification@v7
+        with:
+          notify-on: "failure"
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_BLANKSQUARE_NOTIFICATIONS }}

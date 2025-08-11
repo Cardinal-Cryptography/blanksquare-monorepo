@@ -22,14 +22,23 @@ import {
 } from "./validate";
 import { keyToToken, tokenToKey } from "@/testUtils";
 import { nativeToken } from "@cardinal-cryptography/shielder-sdk";
+import {
+  generateKeypair,
+  toHex
+} from "@cardinal-cryptography/ecies-encryption-lib";
 import { createPublicClient, http } from "viem";
 
 export interface ShielderTestFixture {
   executeAction: (action: TestAction) => Promise<void>;
   validateShielderBalance: (actor: AccountNames) => Promise<void>;
   validateWithdrawnBalance: (actor: AccountNames) => Promise<void>;
-  validateShielderHistory: (actor: AccountNames) => void;
+  validateShielderHistory: (actor: AccountNames) => Promise<void>;
 }
+
+const { sk, pk } = generateKeypair();
+export const referralEncryptionPrivateKey = toHex(sk) as `0x${string}`;
+export const referralEncryptionPublicKey = toHex(pk) as `0x${string}`;
+export const referralId = "test-referral-id";
 
 export const setupShielderTest = async (globalConfig: GlobalConfigFixture) => {
   const shielderClients = {} as AccountValue<ShielderClientFixture>;
@@ -45,7 +54,9 @@ export const setupShielderTest = async (globalConfig: GlobalConfigFixture) => {
       globalConfig.chainConfig,
       globalConfig.relayerConfig,
       globalConfig.privateKeys[name],
-      shielderKey
+      shielderKey,
+      referralEncryptionPublicKey,
+      referralId
     );
 
     const withdrawalKey = generatePrivateKey();
@@ -66,8 +77,7 @@ export const setupShielderTest = async (globalConfig: GlobalConfigFixture) => {
       if (action.op.type === "shield") {
         const { protocolFee } = await shielderClient.shield(
           action.op.token,
-          action.op.amount,
-          action.op.memo
+          action.op.amount
         );
         // wait for 2 seconds to ensure all actions are processed
         await new Promise((resolve) => setTimeout(resolve, 2000));
@@ -86,8 +96,7 @@ export const setupShielderTest = async (globalConfig: GlobalConfigFixture) => {
         const amount = (2_000_000n * gasPrice * 120n) / 100n;
         const { protocolFee } = await shielderClient.shield(
           action.op.token,
-          amount,
-          action.op.memo
+          amount
         );
         // wait for 2 seconds to ensure all actions are processed
         await new Promise((resolve) => setTimeout(resolve, 2000));
@@ -103,8 +112,7 @@ export const setupShielderTest = async (globalConfig: GlobalConfigFixture) => {
           action.op.token,
           action.op.amount,
           withdrawalAccounts[action.op.to].address,
-          action.op.pocketMoney,
-          action.op.memo
+          action.op.pocketMoney
         );
         // wait for 2 seconds to ensure all actions are processed
         await new Promise((resolve) => setTimeout(resolve, 2000));
@@ -129,8 +137,7 @@ export const setupShielderTest = async (globalConfig: GlobalConfigFixture) => {
         const { protocolFee } = await shielderClient.withdrawManual(
           action.op.token,
           action.op.amount,
-          withdrawalAccounts[action.op.to].address,
-          action.op.memo
+          withdrawalAccounts[action.op.to].address
         );
         // wait for 2 seconds to ensure all actions are processed
         await new Promise((resolve) => setTimeout(resolve, 2000));
@@ -187,10 +194,10 @@ export const setupShielderTest = async (globalConfig: GlobalConfigFixture) => {
     }
   };
 
-  const validateShielderHistory = (actor: AccountNames) => {
+  const validateShielderHistory = async (actor: AccountNames) => {
     for (const tokenKey of usedTokens) {
       const token = keyToToken(tokenKey);
-      validateShielderHistorySingle(
+      await validateShielderHistorySingle(
         shielderClients[actor],
         registrars[actor],
         token

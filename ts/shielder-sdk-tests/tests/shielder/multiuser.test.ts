@@ -12,23 +12,22 @@ import {
 } from "@tests/types";
 
 const ercToken = erc20Token(tokenContractAddresses[0] as `0x${string}`);
-const memo = new Uint8Array();
 
 [
   {
     id: 1,
     actions: [
       {
-        op: shieldGasOp(nativeToken(), memo),
+        op: shieldGasOp(nativeToken()),
         actor: "alice"
       },
-      { op: shieldGasOp(ercToken, memo), actor: "alice" },
+      { op: shieldGasOp(ercToken), actor: "alice" },
       {
-        op: shieldGasOp(nativeToken(), memo),
+        op: shieldGasOp(nativeToken()),
         actor: "bob"
       },
       {
-        op: shieldGasOp(ercToken, memo),
+        op: shieldGasOp(ercToken),
         actor: "bob"
       },
       { op: clearStorageOp(), actor: "alice" },
@@ -36,48 +35,48 @@ const memo = new Uint8Array();
       { op: recoverOp(), actor: "alice" },
       { op: recoverOp(), actor: "bob" },
       {
-        op: shieldOp(nativeToken(), 100n, memo),
+        op: shieldOp(nativeToken(), 100n),
         actor: "alice"
       },
-      { op: shieldOp(ercToken, 100n, memo), actor: "alice" },
+      { op: shieldOp(ercToken, 100n), actor: "alice" },
       {
-        op: shieldOp(nativeToken(), 200n, memo),
+        op: shieldOp(nativeToken(), 200n),
         actor: "bob"
       },
       {
-        op: shieldOp(ercToken, 200n, memo),
+        op: shieldOp(ercToken, 200n),
         actor: "bob"
       },
       {
-        op: withdrawOp(nativeToken(), 100n, "dave", 0n, memo),
+        op: withdrawOp(nativeToken(), 100n, "dave", 0n),
         actor: "alice"
       },
       {
-        op: withdrawOp(nativeToken(), 200n, "dave", 0n, memo),
+        op: withdrawOp(nativeToken(), 200n, "dave", 0n),
         actor: "bob"
       },
       {
-        op: shieldOp(nativeToken(), 300n, memo),
+        op: shieldOp(nativeToken(), 300n),
         actor: "charlie"
       },
       {
-        op: shieldOp(ercToken, 300n, memo),
+        op: shieldOp(ercToken, 300n),
         actor: "charlie"
       },
       {
-        op: shieldGasOp(nativeToken(), memo),
+        op: shieldGasOp(nativeToken()),
         actor: "charlie"
       },
       {
-        op: shieldGasOp(ercToken, memo),
+        op: shieldGasOp(ercToken),
         actor: "charlie"
       },
       {
-        op: withdrawOp(ercToken, 100n, "dave", 100n, memo),
+        op: withdrawOp(ercToken, 100n, "dave", 100n),
         actor: "charlie"
       },
       {
-        op: withdrawOp(nativeToken(), 300n, "dave", 0n, memo),
+        op: withdrawOp(nativeToken(), 300n, "dave", 0n),
         actor: "charlie"
       }
     ]
@@ -95,7 +94,7 @@ const memo = new Uint8Array();
 
             if (action.op.type !== "clearStorage") {
               await testFixture.validateShielderBalance(action.actor);
-              testFixture.validateShielderHistory(action.actor);
+              await testFixture.validateShielderHistory(action.actor);
             }
           }
           return true;

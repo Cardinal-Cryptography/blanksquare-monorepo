@@ -1,5 +1,23 @@
 {
   "nodes": {
+    "blanksquare-monorepo": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1754057959,
+        "narHash": "sha256-NEMmg/rnc8I4d6RaldeZOnPo4ZaZvt5uEstK65RwWms=",
+        "ref": "main",
+        "rev": "fa55a8e23b5450bcce916290745f5c4635299a02",
+        "revCount": 257,
+        "type": "git",
+        "url": "https://github.com/Cardinal-Cryptography/blanksquare-monorepo"
+      },
+      "original": {
+        "ref": "main",
+        "rev": "fa55a8e23b5450bcce916290745f5c4635299a02",
+        "type": "git",
+        "url": "https://github.com/Cardinal-Cryptography/blanksquare-monorepo"
+      }
+    },
     "crane": {
       "locked": {
         "lastModified": 1751562746,
@@ -90,12 +108,12 @@
     },
     "root": {
       "inputs": {
+        "blanksquare-monorepo": "blanksquare-monorepo",
         "crane": "crane",
         "flake-utils": "flake-utils",
         "nitro-util": "nitro-util",
         "nixpkgs": "nixpkgs",
-        "rust-overlay": "rust-overlay",
-        "zkOS-monorepo": "zkOS-monorepo"
+        "rust-overlay": "rust-overlay"
       }
     },
     "rust-overlay": {
@@ -146,23 +164,6 @@
         "owner": "nix-systems",
         "repo": "default",
         "type": "github"
-      }
-    },
-    "zkOS-monorepo": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1752656551,
-        "narHash": "sha256-RZume0ig/eNs+BvqT3uh3VWfa8b1z0qBUh5g+Knvsyg=",
-        "ref": "refs/heads/main",
-        "rev": "374a0d5dea2128e9b5100ede6daecc9253a241d9",
-        "revCount": 233,
-        "type": "git",
-        "url": "https://github.com/Cardinal-Cryptography/zkOS-monorepo"
-      },
-      "original": {
-        "rev": "374a0d5dea2128e9b5100ede6daecc9253a241d9",
-        "type": "git",
-        "url": "https://github.com/Cardinal-Cryptography/zkOS-monorepo"
       }
     }
   },

@@ -2,7 +2,7 @@ mod command_line_args;
 mod error;
 mod handlers;
 
-use std::{sync::Arc, time::Duration};
+use std::{net::SocketAddrV4, sync::Arc, time::Duration};
 
 use axum::{
     extract::DefaultBodyLimit,
@@ -11,12 +11,16 @@ use axum::{
 };
 use clap::Parser;
 use error::ShielderProverServerError as Error;
+use metrics_exporter_prometheus::PrometheusBuilder;
 use tokio::net::TcpListener;
 use tower_http::cors::CorsLayer;
 use tracing::info;
 use tracing_subscriber::{fmt, layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
 
-use crate::{command_line_args::CommandLineArgs, handlers as server_handlers};
+use crate::{
+    command_line_args::CommandLineArgs,
+    handlers::{self as server_handlers, metrics::FutureHistogramLayer},
+};
 
 #[derive(Debug)]
 struct AppState {
@@ -34,9 +38,22 @@ async fn main() -> Result<(), Error> {
                 .with_timer(fmt::time::ChronoUtc::new("%Y-%m-%dT%H:%M:%S%.3fZ".into()))
                 .with_span_events(fmt::format::FmtSpan::CLOSE),
         )
+        .with(FutureHistogramLayer)
         .init();
 
     let options = CommandLineArgs::parse();
+
+    PrometheusBuilder::new()
+        .with_http_listener(SocketAddrV4::new(
+            options
+                .bind_address
+                .parse()
+                .map_err(|_| Error::ParseError("Invalid bind address".to_string()))?,
+            options.metrics_port,
+        ))
+        .set_bucket_duration(Duration::from_secs(options.metrics_bucket_duration_secs))?
+        .upkeep_timeout(Duration::from_secs(options.metrics_upkeep_timeout_secs))
+        .install()?;
 
     let listener = TcpListener::bind((options.bind_address.clone(), options.public_port)).await?;
     let task_pool = tokio_task_pool::Pool::bounded(options.task_pool_capacity)

@@ -3,14 +3,32 @@ name: Build wasm packages
 
 on:
   workflow_call:
-  workflow_dispatch:
-
+    inputs:
+      target:
+        description: 'Build target'
+        required: true
+        type: string
+        default: 'wasm'
+      artifact-name:
+        description: 'Wasm artifact name'
+        required: true
+        type: string
+        default: 'wasm-pkg'
+      artifact-path:
+        description: 'Path to wasm artifact'
+        required: true
+        type: string
+        default: 'crates/shielder_bindings/pkg'
+      upload-proving-keys:
+        description: 'Whether to upload the proving keys artifact'
+        required: false
+        type: boolean
+        default: true
 jobs:
   main:
     name: Build wasm packages
-    runs-on: [self-hosted, Linux, X64, large]
+    runs-on: github-large-runner-x64-16-cpu-64-gb-ram-600-gb-disk
     timeout-minutes: 10
-
     steps:
       - name: Checkout source code
         uses: actions/checkout@v4
@@ -22,23 +40,17 @@ jobs:
         run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
 
       - name: Build shielder_bindings
-        run: cd crates/shielder_bindings && make wasm && make wasm-without-circuits
+        run: cd crates/shielder_bindings && make ${{ inputs.target }}
 
       - name: Upload generated wasm to artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: wasm-pkg
-          path: crates/shielder_bindings/pkg
-          retention-days: 1
-
-      - name: Upload generated wasm without circuits to artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: wasm-pkg-without-circuits
-          path: crates/shielder_bindings/pkg-without-circuits
+          name: ${{ inputs.artifact-name }}
+          path: ${{ inputs.artifact-path }}
           retention-days: 1
 
       - name: Upload generated proving keys to artifacts
+        if: ${{ inputs.upload-proving-keys }}
         uses: actions/upload-artifact@v4
         with:
           name: proving-keys-pkg

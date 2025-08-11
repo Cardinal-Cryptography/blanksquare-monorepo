@@ -5,16 +5,20 @@ on:
   workflow_call:
   workflow_dispatch:
 
+# Run formatter and linter for all crates, and unit tests for all simple crates, that,
+# in particular, do not require anvil node to be running.
+# For shielder-circuit crate, we run tests and build the binary for measuring circuits.
 jobs:
-  # Run formatter and linter for all crates, and unit tests for all simple crates, that,
-  # in particular, do not require anvil node to be running.
-  # For shielder-circuit crate, we run tests and build the binary for measuring circuits.
-  rust-checks-and-unit-tests:
-    name: Run lints and tests
-    runs-on: [self-hosted, Linux, X64, large]
-    timeout-minutes: 60
-    env:
-      RUSTC_WRAPPER: sccache
+  lint-and-format-rust:
+    name: Run lints and format for ${{ matrix.workspace }}
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        workspace:
+          - .
+          - tee
     steps:
       - name: Checkout source code
         uses: actions/checkout@v4
@@ -40,49 +44,71 @@ jobs:
       - name: Prepare Rust env
         uses: ./.github/actions/prepare-rust-env
 
-      # NOTE: integration tests use vanilla solc compiler for compiling Solidity
+      - name: Run linter and formatter
+        run: |
+          cd ${{ matrix.workspace }} && make lint-rust && make format-rust
+
+  test-rust-crates:
+    name: Run tests for ${{ matrix.crate }}
+    runs-on: ubuntu-22.04
+    timeout-minutes: 6
+    strategy:
+      fail-fast: false
+      matrix:
+        crate:
+          - crates/halo2-verifier
+          - crates/shielder-circuits
+          - crates/shielder-cli
+          - crates/shielder_bindings
+          - crates/powers-of-tau
+          - crates/shielder-account
+          - crates/shielder-contract
+          - crates/shielder-setup
+          - tee
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      - name: Download generated contracts from artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: generated-contracts
+          path: contracts
+
+      - name: Download compiled contracts from artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: contract-artifacts
+          path: artifacts
+
+      - name: Download generated build cache
+        uses: actions/download-artifact@v4
+        with:
+          name: generated-build-cache
+          path: cache
+
+      - name: Prepare Rust env
+        uses: ./.github/actions/prepare-rust-env
+
+      # crates/halo2-verifier tests use vanilla solc compiler for compiling Solidity
       - name: Install solc compiler
         uses: ./.github/actions/install-solc
         with:
           solc-version: 0.8.26
 
-      - name: Run linter
-        run: |
-          make lint-rust
-          make format-rust
+      - name: Run tests
+        run: cd ${{ matrix.crate }} && make test
 
-      - name: Run tests for halo2-verifier
-        run: cd crates/halo2-verifier && make test
-
-      - name: Run tests for shielder-cli
-        run: cd crates/shielder-cli && make test
-
-      - name: Run tests for shielder_bindings
-        run: cd crates/shielder_bindings && make test
-
-      - name: Run tests for powers of tau
-        run: cd crates/powers-of-tau && cargo test
-
-      - name: Run tests for other Shielder libs
-        run: |
-          cargo test --release -p shielder-account --all-features
-          cargo test --release -p shielder-contract --all-features
-          cargo test --release -p shielder-setup --all-features
-
-      - name: Run integration tests
-        run: make deps && cargo test --release -p integration-tests
-
-      - name: Check tee crates
-        run: |
-          cd tee && cargo check --workspace
-
-  # Run heavy tests for shielder-relayer and e2e tooling tests.
-  full-testing:
-    name: Run heavy tests
-    runs-on: [self-hosted, Linux, X64, large]
-    timeout-minutes: 60
-    env:
-      RUSTC_WRAPPER: sccache
+  run-heavy-tests:
+    name: Run heavy tests for ${{ matrix.crate }}
+    runs-on: github-large-runner-x64-16-cpu-64-gb-ram-600-gb-disk
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        crate:
+          - crates/integration-tests
+          - crates/shielder-relayer
     steps:
       - name: Checkout source code
         uses: actions/checkout@v4
@@ -111,11 +137,83 @@ jobs:
       - name: Prepare Solidity environment
         uses: ./.github/actions/prepare-sol-env
 
-      - name: Run tests for shielder-relayer
-        run: cd crates/shielder-relayer && BUILD=client make test
+      - name: Install dependencies
+        if: matrix.crate == 'crates/integration-tests'
+        run: make deps
+
+      - name: Install solc compiler
+        if: matrix.crate == 'crates/integration-tests'
+        uses: ./.github/actions/install-solc
+        with:
+          solc-version: 0.8.26
+
+      - name: Run tests
+        run: cd ${{ matrix.crate }} && BUILD=docker make test
+
+  e2e-tests:
+    name: Run E2E tests
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      - name: Download generated contracts from artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: generated-contracts
+          path: contracts
+
+      - name: Download compiled contracts from artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: contract-artifacts
+          path: artifacts
+
+      - name: Download generated build cache
+        uses: actions/download-artifact@v4
+        with:
+          name: generated-build-cache
+          path: cache
+
+      - name: Prepare Rust env
+        uses: ./.github/actions/prepare-rust-env
+
+      - name: Prepare Solidity environment
+        uses: ./.github/actions/prepare-sol-env
+
+      - name: Build shielder-relayer
+        run: cd crates/shielder-relayer && make build-image
 
       - name: Run e2e tooling tests
         run: |
           NO_FORMATTING=true ./tooling-e2e-tests/full_scenario.sh
           NO_FORMATTING=true ./tooling-e2e-tests/recovery_scenario.sh
           NO_FORMATTING=true ./tooling-e2e-tests/many_actors.sh
+
+  all-jobs-completed:
+    name: All jobs completed
+    runs-on: ubuntu-22.04
+    if: ${{ always() }}
+    needs: [lint-and-format-rust, test-rust-crates, run-heavy-tests, e2e-tests]
+    steps:
+      - name: Check job status
+        run: |
+          if [[ "${{ needs.lint-and-format-rust.result }}" != "success" ]]; then
+            echo "Required job failed: lint-and-format-rust" \
+                 "(${{ needs.lint-and-format-rust.result }})"
+            exit 1
+          fi
+          if [[ "${{ needs.test-rust-crates.result }}" != "success" ]]; then
+            echo "Required job failed: test-rust-crates (${{ needs.test-rust-crates.result }})"
+            exit 1
+          fi
+          if [[ "${{ needs.run-heavy-tests.result }}" != "success" ]]; then
+            echo "Required job failed: run-heavy-tests (${{ needs.run-heavy-tests.result }})"
+            exit 1
+          fi
+          if [[ "${{ needs.e2e-tests.result }}" != "success" ]]; then
+            echo "Required job failed: e2e-tests (${{ needs.e2e-tests.result }})"
+            exit 1
+          fi
+          echo "All required jobs completed successfully"

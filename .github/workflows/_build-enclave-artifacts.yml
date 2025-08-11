@@ -23,7 +23,7 @@ jobs:
         working-directory: "tee/nix"
     outputs:
       artifact-name-eif: ${{ steps.get-artifact-names.outputs.eif }}
-      artifact-name-measurements: ${{ steps.steps.get-artifact-names.outputs.measurements }}
+      artifact-name-measurements: ${{ steps.get-artifact-names.outputs.measurements }}
     steps:
       - name: Checkout source code
         uses: actions/checkout@v4
@@ -45,7 +45,7 @@ jobs:
         # yamllint disable rule:line-length
         run: |
           mkdir out
-          nix build --override-input zkOS-monorepo "github:${GITHUB_REPOSITORY}/${{ steps.get-ref-properties.outputs.full-sha }}"
+          nix build --override-input blanksquare-monorepo "github:${GITHUB_REPOSITORY}/${{ steps.get-ref-properties.outputs.full-sha }}"
           cp result/shielderProverTEE/image.eif out/shielder-prover-tee-${{ steps.get-ref-properties.outputs.sha }}.eif
           cp result/shielderProverTEE/pcr.json out/pcr-${{ steps.get-ref-properties.outputs.sha }}.json
 

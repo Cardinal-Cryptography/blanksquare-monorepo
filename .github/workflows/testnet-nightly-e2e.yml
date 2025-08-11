@@ -46,6 +46,17 @@ jobs:
       - name: Prepare Solidity environment
         uses: ./.github/actions/prepare-sol-env
 
+      - name: Setup Prover Server
+        id: setup-prover
+        uses: ./.github/actions/setup-prover-server
+        with:
+          proxy_image: public.ecr.aws/p5g6f1p8/shielder-prover:latest
+          eif_url: https://prover-server-eif-storage.s3.eu-west-1.amazonaws.com/shielder-prover-tee-f584eb1.eif
+          create: "true"
+          ssh_private_key: ${{ secrets.TF_MODULES_PROVER_SERVER_PRIVATE_KEY }}
+          aws_access_key_id: ${{ secrets.AWS_PROVERSERVER_DEVSTAGE_ACCESS_KEY }}
+          aws_secret_access_key: ${{ secrets.AWS_PROVERSERVER_DEVSTAGE_SECRET_ACCESS_KEY }}
+
       - name: Generate Solidity contracts
         run: make generate-verifier-contracts && make generate-poseidon-contracts
 
@@ -75,17 +86,6 @@ jobs:
       - name: Build all (workspace)
         run: pnpm build
         working-directory: ts
-
-      - name: Setup Prover Server
-        id: setup-prover
-        uses: ./.github/actions/setup-prover-server
-        with:
-          proxy_image: public.ecr.aws/p5g6f1p8/shielder-prover:latest
-          eif_url: https://prover-server-eif-storage.s3.eu-west-1.amazonaws.com/shielder-prover-tee-f584eb1.eif
-          create: "true"
-          ssh_private_key: ${{ secrets.TF_MODULES_PROVER_SERVER_PRIVATE_KEY }}
-          aws_access_key_id: ${{ secrets.AWS_PROVERSERVER_DEVSTAGE_ACCESS_KEY }}
-          aws_secret_access_key: ${{ secrets.AWS_PROVERSERVER_DEVSTAGE_SECRET_ACCESS_KEY }}
 
       # TODO: Uncomment when finished test of prover server
       # - name: Run e2e tooling tests (full wasm)

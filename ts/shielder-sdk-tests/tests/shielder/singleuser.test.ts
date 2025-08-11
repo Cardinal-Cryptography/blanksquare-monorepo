@@ -5,6 +5,7 @@ import { sdkTest } from "@tests/playwrightTestConfig";
 import {
   clearStorageOp,
   recoverOp,
+  shieldGasOp,
   shieldOp,
   withdrawManualOp,
   withdrawOp,
@@ -24,11 +25,11 @@ const ercTokenLowercase = erc20Token(
     actions: [
       // create native account, deposit, withdraw manually and via relayer
       {
-        op: shieldOp(nativeToken(), 100n, memo),
+        op: shieldOp(nativeToken(), 200n, memo),
         actor: "alice"
       },
       {
-        op: shieldOp(nativeToken(), 10n ** 13n, memo),
+        op: shieldGasOp(nativeToken(), memo),
         actor: "alice"
       },
       {
@@ -43,7 +44,7 @@ const ercTokenLowercase = erc20Token(
       // create ERC20 account, deposit, withdraw manually and via relayer
       { op: shieldOp(ercToken, 100n, memo), actor: "alice" },
       {
-        op: shieldOp(ercTokenLowercase, 10n ** 13n, memo),
+        op: shieldGasOp(ercTokenLowercase, memo),
         actor: "alice"
       },
       {
@@ -64,7 +65,15 @@ const ercTokenLowercase = erc20Token(
         op: shieldOp(nativeToken(), 100n, memo),
         actor: "alice"
       },
+      {
+        op: shieldGasOp(nativeToken(), memo),
+        actor: "alice"
+      },
       { op: shieldOp(ercToken, 100n, memo), actor: "alice" },
+      {
+        op: shieldGasOp(ercTokenLowercase, memo),
+        actor: "alice"
+      },
 
       // withdraw again via relayer
       {

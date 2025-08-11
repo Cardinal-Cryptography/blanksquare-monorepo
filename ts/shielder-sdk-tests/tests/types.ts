@@ -12,6 +12,12 @@ export type ShieldOp = {
   memo: Uint8Array;
 };
 
+export type ShieldGasOp = {
+  type: "shieldGas";
+  token: Token;
+  memo: Uint8Array;
+};
+
 export type WithdrawOp = {
   type: "withdraw";
   token: Token;
@@ -38,7 +44,13 @@ export type RecoverOp = {
 };
 
 export type TestAction = {
-  op: ShieldOp | WithdrawOp | ClearStorageOp | RecoverOp | WithdrawManualOp;
+  op:
+    | ShieldOp
+    | ShieldGasOp
+    | WithdrawOp
+    | ClearStorageOp
+    | RecoverOp
+    | WithdrawManualOp;
   actor: AccountNames;
 };
 
@@ -55,6 +67,14 @@ export function shieldOp(
   return {
     type: "shield",
     amount,
+    token,
+    memo
+  };
+}
+
+export function shieldGasOp(token: Token, memo: Uint8Array): ShieldGasOp {
+  return {
+    type: "shieldGas",
     token,
     memo
   };

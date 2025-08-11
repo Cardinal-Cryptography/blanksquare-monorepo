@@ -5,6 +5,7 @@ import { sdkTest } from "@tests/playwrightTestConfig";
 import {
   clearStorageOp,
   recoverOp,
+  shieldGasOp,
   shieldOp,
   withdrawOp,
   type TestDescription
@@ -18,16 +19,16 @@ const memo = new Uint8Array();
     id: 1,
     actions: [
       {
-        op: shieldOp(nativeToken(), 10n ** 13n, memo),
+        op: shieldGasOp(nativeToken(), memo),
         actor: "alice"
       },
-      { op: shieldOp(ercToken, 10n ** 13n, memo), actor: "alice" },
+      { op: shieldGasOp(ercToken, memo), actor: "alice" },
       {
-        op: shieldOp(nativeToken(), 10n ** 13n, memo),
+        op: shieldGasOp(nativeToken(), memo),
         actor: "bob"
       },
       {
-        op: shieldOp(ercToken, 10n ** 13n, memo),
+        op: shieldGasOp(ercToken, memo),
         actor: "bob"
       },
       { op: clearStorageOp(), actor: "alice" },
@@ -64,11 +65,11 @@ const memo = new Uint8Array();
         actor: "charlie"
       },
       {
-        op: shieldOp(nativeToken(), 10n ** 13n, memo),
+        op: shieldGasOp(nativeToken(), memo),
         actor: "charlie"
       },
       {
-        op: shieldOp(ercToken, 10n ** 13n, memo),
+        op: shieldGasOp(ercToken, memo),
         actor: "charlie"
       },
       {

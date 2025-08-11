@@ -60,7 +60,6 @@ mtzero() {
 deploy_shielder_contracts() {
   SHIELDER_CONTRACT_ADDRESS=$(
     PRIVATE_KEY="${DEPLOYER_PRIVATE_KEY}" \
-    IS_ARBITRUM_CHAIN=false \
     NETWORK="${NODE_RPC_URL}" \
 	  ./scripts/deploy-shielder.sh \
       2> output.log \

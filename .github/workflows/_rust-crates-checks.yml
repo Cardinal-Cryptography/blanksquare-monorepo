@@ -12,7 +12,7 @@ jobs:
   lint-and-format-rust:
     name: Run lints and format for ${{ matrix.workspace }}
     runs-on: ubuntu-22.04
-    timeout-minutes: 10
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:

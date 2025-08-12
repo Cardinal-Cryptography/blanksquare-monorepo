@@ -9,6 +9,7 @@ categories = { workspace = true }
 repository = { workspace = true }
 
 [dependencies]
+ecies-encryption-lib = { workspace = true }
 futures = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }

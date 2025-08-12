@@ -1,12 +1,15 @@
+import { verifyAttestation } from "@/nitro-attestation";
+import {
+  decrypt,
+  encrypt,
+  generateKeypair
+} from "@cardinal-cryptography/ecies-encryption-lib";
 import {
   base64ToBytes,
   bytesToBase64,
-  uint8ToHex,
-  verifyAttestation
-} from "@/nitro-attestation";
-import * as secp from "@noble/secp256k1";
-import { decrypt, encrypt, generateKeypair } from "./crypto";
-import { objectToBytes } from "@/utils";
+  bytesToObject,
+  objectToBytes
+} from "@/utils";
 
 type TeePublicKeyResponse = {
   TeePublicKey: {
@@ -20,7 +23,7 @@ type TeePublicKeyResponse = {
 export class TeeClient {
   provingServiceUrl: string | undefined;
 
-  provingServicePublicKey: secp.Point | undefined;
+  provingServicePublicKey: string | undefined;
 
   async init(
     provingServiceUrl: string,
@@ -52,12 +55,9 @@ export class TeeClient {
       throw new Error("Invalid response from TEE service: missing public key");
     }
 
-    if (withoutAttestation) {
-      this.provingServicePublicKey = secp.Point.fromHex(
-        data.TeePublicKey.public_key
-      );
-      return;
-    }
+    this.provingServicePublicKey = data.TeePublicKey.public_key;
+
+    if (withoutAttestation) return;
 
     if (!data.TeePublicKey.attestation_document) {
       throw new Error(
@@ -66,10 +66,6 @@ export class TeeClient {
     }
 
     await verifyAttestation(data.TeePublicKey.attestation_document);
-
-    this.provingServicePublicKey = secp.Point.fromHex(
-      data.TeePublicKey.public_key
-    );
   }
 
   async prove(
@@ -87,12 +83,17 @@ export class TeeClient {
 
     const { sk, pk } = generateKeypair();
 
+    // Payload must be a JSON object with the following fields:
+    // - circuit_type: string, one of "NewAccount", "Deposit", "Withdraw"
+    // - circuit_inputs: base64-encoded Uint8Array
+    // - user_public_key: base64-encoded secp256k1 public key
     const payload = objectToBytes({
       circuit_type: circuitType,
-      circuit_inputs: witness,
-      user_public_key: pk
+      circuit_inputs: bytesToBase64(witness),
+      user_public_key: bytesToBase64(pk)
     });
 
+    // Encrypt the payload with the TEE service public key
     const encryptedPayload = await encrypt(
       payload,
       this.provingServicePublicKey
@@ -100,15 +101,14 @@ export class TeeClient {
       throw new Error(`Failed to encrypt payload: ${e}`);
     });
 
-    const base64Payload = bytesToBase64(encryptedPayload);
-
+    // Then encode it to base64 for transmission
     const response = await fetch(`${this.provingServiceUrl}/proof`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        payload: base64Payload
+        payload: bytesToBase64(encryptedPayload)
       })
     });
 
@@ -119,8 +119,7 @@ export class TeeClient {
     }
     const data = (await response.json()) as {
       EncryptedProof: {
-        proof: string;
-        pub_inputs: string;
+        payload: string;
       };
     };
 
@@ -129,22 +128,30 @@ export class TeeClient {
         "Invalid response from TEE service: missing EncryptedProof"
       );
     }
-    if (!data.EncryptedProof.proof) {
-      throw new Error("Invalid response from TEE service: missing proof");
-    }
-    if (!data.EncryptedProof.pub_inputs) {
-      throw new Error("Invalid response from TEE service: missing pub_inputs");
+    if (!data.EncryptedProof.payload) {
+      throw new Error("Invalid response from TEE service: missing payload");
     }
 
+    // Decrypt the payload with the user private key
+    // We expect the payload to be base64-encoded
+    const decryptedPayload = await decrypt(
+      base64ToBytes(data.EncryptedProof.payload),
+      sk
+    ).catch((e) => {
+      throw new Error(`Failed to decrypt payload: ${e}`);
+    });
+
+    // The decrypted payload should be a JSON object with the following fields:
+    // - proof: base64-encoded Uint8Array
+    // - pub_inputs: base64-encoded Uint8Array
+    const decryptedData = bytesToObject(decryptedPayload) as {
+      proof: string;
+      pub_inputs: string;
+    };
+
     return {
-      proof: await decrypt(
-        base64ToBytes(data.EncryptedProof.proof),
-        uint8ToHex(sk)
-      ),
-      pubInputs: await decrypt(
-        base64ToBytes(data.EncryptedProof.pub_inputs),
-        uint8ToHex(sk)
-      )
+      proof: base64ToBytes(decryptedData.proof),
+      pubInputs: base64ToBytes(decryptedData.pub_inputs)
     };
   }
 }

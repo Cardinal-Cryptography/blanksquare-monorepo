@@ -17,6 +17,9 @@ pub enum VsockError {
     #[error("Protocol error: {0}")]
     Protocol(String),
 
+    #[error("Encryption error: {0}")]
+    Encryption(#[from] ecies_encryption_lib::error::Error),
+
     #[error("Connection closed")]
     Closed,
 }

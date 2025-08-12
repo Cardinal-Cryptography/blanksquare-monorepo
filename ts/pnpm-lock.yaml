@@ -39,8 +39,8 @@ importers:
   shielder-sdk:
     dependencies:
       '@cardinal-cryptography/ecies-encryption-lib':
-        specifier: ^0.1.6
-        version: 0.1.6
+        specifier: ^0.2.0
+        version: 0.2.0
       '@cardinal-cryptography/shielder-sdk-crypto':
         specifier: workspace:*
         version: link:../shielder-sdk-crypto
@@ -188,6 +188,9 @@ importers:
 
   shielder-sdk-crypto-wasm-light:
     dependencies:
+      '@cardinal-cryptography/ecies-encryption-lib':
+        specifier: ^0.2.0
+        version: 0.2.0
       '@cardinal-cryptography/shielder-sdk-crypto':
         specifier: workspace:*
         version: link:../shielder-sdk-crypto
@@ -254,8 +257,8 @@ importers:
         version: 2.22.22(typescript@5.7.3)(zod@3.24.1)
     devDependencies:
       '@cardinal-cryptography/ecies-encryption-lib':
-        specifier: ^0.1.6
-        version: 0.1.6
+        specifier: ^0.2.0
+        version: 0.2.0
       '@cardinal-cryptography/shielder-sdk':
         specifier: workspace:*
         version: link:../shielder-sdk
@@ -418,8 +421,8 @@ packages:
     resolution: {integrity: sha512-6zABk/ECA/QYSCQ1NGiVwwbQerUCZ+TQbp64Q3AgmfNvurHH0j8TtXa1qbShXA6qqkpAj4V5W8pP6mLe1mcMqA==}
     engines: {node: '>=18'}
 
-  '@cardinal-cryptography/ecies-encryption-lib@0.1.6':
-    resolution: {integrity: sha512-K7oWV++2hLczzw7YKkxU3YXVa7gn6CDlKWrDK8wwjyf7p0/6uVfaqb65VR+Usw2Q5OdytJa6SdHk8W+9vvwrag==}
+  '@cardinal-cryptography/ecies-encryption-lib@0.2.0':
+    resolution: {integrity: sha512-SomnJz/n0mRg1Ovl0+Gbf+Gzpa8Jsdfke4XVM5dBSP0wTSZZYqYWeRJmMyEGGeZZYunm/kcNlehC4m4JcUs/4w==}
 
   '@esbuild/aix-ppc64@0.21.5':
     resolution: {integrity: sha512-1SDgH6ZSPTlggy1yI6+Dbkiz8xzpHJEVAlF/AM1tHPLsf5STom9rwtjE4hKAF20FfXXNTFqEYXyJNWh1GiZedQ==}
@@ -2495,7 +2498,7 @@ snapshots:
 
   '@bcoe/v8-coverage@1.0.2': {}
 
-  '@cardinal-cryptography/ecies-encryption-lib@0.1.6':
+  '@cardinal-cryptography/ecies-encryption-lib@0.2.0':
     dependencies:
       '@noble/secp256k1': 1.7.2
 

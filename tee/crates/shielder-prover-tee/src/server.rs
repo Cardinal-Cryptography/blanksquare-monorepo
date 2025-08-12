@@ -11,7 +11,10 @@ use log::{debug, info};
 use serde::Deserialize;
 use serde_json::Deserializer as JsonDeserializer;
 use shielder_prover_common::{
-    protocol::{CircuitType, Payload, ProverServer, Request, Response},
+    protocol::{
+        CircuitType, ProverServer, Request, RequestGenerateProofPayload, Response,
+        ResponseGenerateProofPayload,
+    },
     vsock::VsockError,
 };
 use tokio_vsock::{VsockAddr, VsockListener, VsockStream, VMADDR_CID_ANY};
@@ -80,10 +83,7 @@ impl Server {
                 .handle_request(|request| match request {
                     Request::Ping => Ok(Response::Pong),
                     Request::TeePublicKey => self.public_key_response(),
-                    Request::GenerateProof { payload } => {
-                        let (proof, pub_inputs) = self.encrypted_proof_response(payload)?;
-                        Ok(Response::EncryptedProof { proof, pub_inputs })
-                    }
+                    Request::GenerateProof { payload } => self.encrypted_proof_response(payload),
                 })
                 .await?;
         }
@@ -125,32 +125,31 @@ impl Server {
         }
     }
 
-    fn encrypted_proof_response(
-        &self,
-        request_payload: Vec<u8>,
-    ) -> Result<(Vec<u8>, Vec<u8>), VsockError> {
+    fn encrypted_proof_response(&self, request_payload: Vec<u8>) -> Result<Response, VsockError> {
         let decrypted_payload = self.decrypt_using_servers_private_key(&request_payload)?;
 
-        let decrypted_payload = String::from_utf8(decrypted_payload).map_err(|_| {
-            VsockError::Protocol(String::from("Failed to decode decrypted payload as UTF-8."))
-        })?;
-        let deserialized_payload: Payload = serde_json::from_str(&decrypted_payload)?;
+        let deserialized_payload: RequestGenerateProofPayload =
+            serde_json::from_slice(&decrypted_payload)?;
 
         let (proof, pub_inputs) = Self::compute_proof(
             &deserialized_payload.circuit_inputs,
             deserialized_payload.circuit_type,
         )?;
-        let encrypted_proof = Self::encrypt_bytes(&deserialized_payload.user_public_key, proof)?;
-        let encrypted_pub_inputs =
-            Self::encrypt_bytes(&deserialized_payload.user_public_key, pub_inputs)?;
 
-        Ok((encrypted_proof, encrypted_pub_inputs))
+        let response_payload =
+            serde_json::to_vec(&ResponseGenerateProofPayload { proof, pub_inputs })?;
+
+        let encrypted_payload =
+            Self::encrypt_bytes(&deserialized_payload.user_public_key, response_payload)?;
+
+        Ok(Response::EncryptedProof {
+            payload: encrypted_payload,
+        })
     }
 
     fn encrypt_bytes(user_public_key: &[u8], bytes: Vec<u8>) -> Result<Vec<u8>, VsockError> {
-        let pub_key = PubKey::from_bytes(user_public_key)
-            .map_err(|error| VsockError::Protocol(error.to_string()))?;
-        let encrypted_bytes = ecies_encryption_lib::encrypt(bytes.as_slice(), &pub_key);
+        let pub_key = PubKey::from_bytes(user_public_key)?;
+        let encrypted_bytes = ecies_encryption_lib::encrypt(&bytes, &pub_key)?;
         Ok(encrypted_bytes)
     }
 
@@ -198,10 +197,8 @@ impl Server {
         &self,
         request_payload: &[u8],
     ) -> Result<Vec<u8>, VsockError> {
-        let private_key = PrivKey::from_bytes(self.private_key.as_slice())
-            .map_err(|error| VsockError::Protocol(error.to_string()))?;
-        let decrypted_payload = ecies_encryption_lib::decrypt(request_payload, &private_key)
-            .map_err(|error| VsockError::Protocol(error.to_string()))?;
+        let private_key = PrivKey::from_bytes(self.private_key.as_slice())?;
+        let decrypted_payload = ecies_encryption_lib::decrypt(request_payload, &private_key)?;
         Ok(decrypted_payload)
     }
 

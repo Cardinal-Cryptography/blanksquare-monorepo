@@ -78,11 +78,12 @@ export const validateShielderHistory =
           `Tx to mismatch at index ${i}: expected ${expectedTx.to}, got ${tx.to}`
         );
       }
-      const historyReferralId = await decryptPadded(
-        tx.memo,
-        referralEncryptionPrivateKey,
-        crypto,
-        referralPaddedLength
+      const historyReferralId = new TextDecoder().decode(
+        await decryptPadded(
+          tx.memo,
+          referralEncryptionPrivateKey,
+          referralPaddedLength
+        )
       );
       if (historyReferralId !== referralId) {
         throw new Error(

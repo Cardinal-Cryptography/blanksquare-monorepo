@@ -176,12 +176,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "anyhow"
-version = "1.0.98"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e16d2d3311acee920a9eb8d33b8cbc1787ce4a264e85f964c2404b969bdcd487"
-
-[[package]]
 name = "ark-ff"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -974,16 +968,16 @@ dependencies = [
 
 [[package]]
 name = "ecies-encryption-lib"
-version = "0.1.0"
-source = "git+https://github.com/Cardinal-Cryptography/ecies-encryption-lib?rev=a03b55e37d610aa9babf4719ffaea6e61fe7655a#a03b55e37d610aa9babf4719ffaea6e61fe7655a"
+version = "0.2.0"
+source = "git+https://github.com/Cardinal-Cryptography/ecies-encryption-lib?tag=v0.2.0#151527f791b3908a1794d67c111acd21ebc18268"
 dependencies = [
  "aes-gcm",
- "anyhow",
  "hex",
  "hkdf",
  "k256",
  "rand_core 0.6.4",
  "sha2",
+ "thiserror",
 ]
 
 [[package]]
@@ -2872,6 +2866,7 @@ name = "shielder-prover-common"
 version = "0.1.0"
 dependencies = [
  "base64",
+ "ecies-encryption-lib",
  "futures",
  "serde",
  "serde_json",

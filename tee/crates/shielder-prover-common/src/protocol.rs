@@ -7,6 +7,15 @@ use crate::{
 
 pub const VSOCK_PORT: u16 = 5000;
 
+/// Padding constant for decrypting incoming payloads.
+/// The value is chosen to be large enough to accommodate typical payloads while also being efficient for transmission.
+/// This constant is used to ensure that the payloads are indistinguishable depending on the type of proof generation request.
+pub const REQUEST_PAYLOAD_PADDING: usize = 15000;
+/// Padding constant for encrypting outgoing payloads.
+/// The value is chosen to be large enough to accommodate typical payloads while also being efficient for transmission.
+/// This constant is used to ensure that the payloads are indistinguishable depending on the type of proof generation request.
+pub const RESPONSE_PAYLOAD_PADDING: usize = 10000;
+
 /// Request to generate proof. A `payload` is encrypted `ciphertext=(pub_sk, circuit_type, circuit_inputs)`, where
 /// * `pub_sk` is a user public key, expressed as a vector of bytes, compatible with [ecies-encryption-lib](https://github.com/Cardinal-Cryptography/ecies-encryption-lib),
 /// * `circuit_type` is a byte (u8), see [`CircuitType`]. This field is required to decode `circuit_inputs`

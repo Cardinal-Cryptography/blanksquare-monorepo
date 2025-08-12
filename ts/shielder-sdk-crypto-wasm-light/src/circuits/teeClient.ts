@@ -1,7 +1,7 @@
 import { verifyAttestation } from "@/nitro-attestation";
 import {
-  decrypt,
-  encrypt,
+  decryptPadded,
+  encryptPadded,
   generateKeypair
 } from "@cardinal-cryptography/ecies-encryption-lib";
 import {
@@ -21,6 +21,19 @@ type TeePublicKeyResponse = {
 };
 
 export class TeeClient {
+  /**
+   * Padding constant for decrypting incoming payloads.
+   * The value is chosen to be large enough to accommodate typical payloads while also being efficient for transmission.
+   * This constant is used to ensure that the payloads are indistinguishable depending on the type of proof generation request.
+   */
+  static readonly REQUEST_PAYLOAD_PADDING: number = 15000;
+  /**
+   * Padding constant for encrypting outgoing payloads.
+   * The value is chosen to be large enough to accommodate typical payloads while also being efficient for transmission.
+   * This constant is used to ensure that the payloads are indistinguishable depending on the type of proof generation request.
+   */
+  static readonly RESPONSE_PAYLOAD_PADDING: number = 10000;
+
   provingServiceUrl: string | undefined;
 
   provingServicePublicKey: string | undefined;
@@ -94,9 +107,10 @@ export class TeeClient {
     });
 
     // Encrypt the payload with the TEE service public key
-    const encryptedPayload = await encrypt(
+    const encryptedPayload = await encryptPadded(
       payload,
-      this.provingServicePublicKey
+      this.provingServicePublicKey,
+      TeeClient.REQUEST_PAYLOAD_PADDING
     ).catch((e) => {
       throw new Error(`Failed to encrypt payload: ${e}`);
     });
@@ -134,9 +148,10 @@ export class TeeClient {
 
     // Decrypt the payload with the user private key
     // We expect the payload to be base64-encoded
-    const decryptedPayload = await decrypt(
+    const decryptedPayload = await decryptPadded(
       base64ToBytes(data.EncryptedProof.payload),
-      sk
+      sk,
+      TeeClient.RESPONSE_PAYLOAD_PADDING
     ).catch((e) => {
       throw new Error(`Failed to decrypt payload: ${e}`);
     });

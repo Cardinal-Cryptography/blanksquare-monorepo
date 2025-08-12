@@ -6,14 +6,16 @@ use aws_nitro_enclaves_nsm_api::{
     api::Response as NsmResponse,
     driver::{nsm_exit, nsm_init, nsm_process_request},
 };
-use ecies_encryption_lib::{generate_keypair, utils::to_hex, PrivKey, PubKey};
+use ecies_encryption_lib::{
+    decrypt_padded, encrypt_padded, generate_keypair, utils::to_hex, PrivKey, PubKey,
+};
 use log::{debug, info};
 use serde::Deserialize;
 use serde_json::Deserializer as JsonDeserializer;
 use shielder_prover_common::{
     protocol::{
         CircuitType, ProverServer, Request, RequestGenerateProofPayload, Response,
-        ResponseGenerateProofPayload,
+        ResponseGenerateProofPayload, REQUEST_PAYLOAD_PADDING, RESPONSE_PAYLOAD_PADDING,
     },
     vsock::VsockError,
 };
@@ -149,7 +151,7 @@ impl Server {
 
     fn encrypt_bytes(user_public_key: &[u8], bytes: Vec<u8>) -> Result<Vec<u8>, VsockError> {
         let pub_key = PubKey::from_bytes(user_public_key)?;
-        let encrypted_bytes = ecies_encryption_lib::encrypt(&bytes, &pub_key)?;
+        let encrypted_bytes = encrypt_padded(&bytes, &pub_key, RESPONSE_PAYLOAD_PADDING)?;
         Ok(encrypted_bytes)
     }
 
@@ -198,7 +200,8 @@ impl Server {
         request_payload: &[u8],
     ) -> Result<Vec<u8>, VsockError> {
         let private_key = PrivKey::from_bytes(self.private_key.as_slice())?;
-        let decrypted_payload = ecies_encryption_lib::decrypt(request_payload, &private_key)?;
+        let decrypted_payload =
+            decrypt_padded(request_payload, &private_key, REQUEST_PAYLOAD_PADDING)?;
         Ok(decrypted_payload)
     }
 

@@ -81,31 +81,32 @@ jobs:
         uses: ./.github/actions/setup-prover-server
         with:
           proxy_image: public.ecr.aws/p5g6f1p8/shielder-prover:latest
-          eif_url: https://prover-server-eif-storage.s3.eu-west-1.amazonaws.com/shielder-prover-tee-f584eb1.eif
+          eif_url: >-
+            https://prover-server-eif-storage.s3.eu-west-1.amazonaws.com/
+            shielder-prover-tee-f584eb1.eif
           create: "true"
           ssh_private_key: ${{ secrets.TF_MODULES_PROVER_SERVER_PRIVATE_KEY }}
           aws_access_key_id: ${{ secrets.AWS_PROVERSERVER_DEVSTAGE_ACCESS_KEY }}
           aws_secret_access_key: ${{ secrets.AWS_PROVERSERVER_DEVSTAGE_SECRET_ACCESS_KEY }}
 
-      # TODO: Uncomment when finished test of prover server
-      # - name: Run e2e tooling tests (full wasm)
-      #   env:
-      #     DEPLOYER_PRIVATE_KEY: ${{ secrets.CI_TESTNET_DEPLOYER_PRIVATE_KEY }}
-      #     ALICE_PUBLIC_KEY: ${{ vars.CI_TESTNET_ALICE_PUBLIC_KEY }}
-      #     ALICE_PRIVATE_KEY: ${{ secrets.CI_TESTNET_ALICE_PRIVATE_KEY }}
-      #     BOB_PUBLIC_KEY: ${{ vars.CI_TESTNET_BOB_PUBLIC_KEY }}
-      #     BOB_PRIVATE_KEY: ${{ secrets.CI_TESTNET_BOB_PRIVATE_KEY }}
-      #     CHARLIE_PUBLIC_KEY: ${{ vars.CI_TESTNET_CHARLIE_PUBLIC_KEY }}
-      #     CHARLIE_PRIVATE_KEY: ${{ secrets.CI_TESTNET_CHARLIE_PRIVATE_KEY }}
-      #     TS_SDK_PUBLIC_KEY: ${{ vars.CI_TESTNET_TS_SDK_PUBLIC_KEY }}
-      #     TS_SDK_PRIVATE_KEY: ${{ secrets.CI_TESTNET_TS_SDK_PRIVATE_KEY }}
-      #     FEE_DESTINATION: ${{ vars.CI_TESTNET_FEE_DESTINATION }}
-      #     FEE_DESTINATION_KEY: ${{ secrets.CI_TESTNET_FEE_DESTINATION_KEY }}
-      #     RELAYER_SIGNER_ADDRESSES: ${{ vars.CI_TESTNET_RELAYER_SIGNER_ADDRESSES }}
-      #     RELAYER_SIGNING_KEYS: ${{ secrets.CI_TESTNET_RELAYER_SIGNING_KEYS }}
-      #     CRYPTO_CLIENT_TYPE: "wasm-full"
-      #   run: |
-      #     NO_FORMATTING=true TESTNET=true ./tooling-e2e-tests/ts_sdk_tests.sh
+      - name: Run e2e tooling tests (full wasm)
+        env:
+          DEPLOYER_PRIVATE_KEY: ${{ secrets.CI_TESTNET_DEPLOYER_PRIVATE_KEY }}
+          ALICE_PUBLIC_KEY: ${{ vars.CI_TESTNET_ALICE_PUBLIC_KEY }}
+          ALICE_PRIVATE_KEY: ${{ secrets.CI_TESTNET_ALICE_PRIVATE_KEY }}
+          BOB_PUBLIC_KEY: ${{ vars.CI_TESTNET_BOB_PUBLIC_KEY }}
+          BOB_PRIVATE_KEY: ${{ secrets.CI_TESTNET_BOB_PRIVATE_KEY }}
+          CHARLIE_PUBLIC_KEY: ${{ vars.CI_TESTNET_CHARLIE_PUBLIC_KEY }}
+          CHARLIE_PRIVATE_KEY: ${{ secrets.CI_TESTNET_CHARLIE_PRIVATE_KEY }}
+          TS_SDK_PUBLIC_KEY: ${{ vars.CI_TESTNET_TS_SDK_PUBLIC_KEY }}
+          TS_SDK_PRIVATE_KEY: ${{ secrets.CI_TESTNET_TS_SDK_PRIVATE_KEY }}
+          FEE_DESTINATION: ${{ vars.CI_TESTNET_FEE_DESTINATION }}
+          FEE_DESTINATION_KEY: ${{ secrets.CI_TESTNET_FEE_DESTINATION_KEY }}
+          RELAYER_SIGNER_ADDRESSES: ${{ vars.CI_TESTNET_RELAYER_SIGNER_ADDRESSES }}
+          RELAYER_SIGNING_KEYS: ${{ secrets.CI_TESTNET_RELAYER_SIGNING_KEYS }}
+          CRYPTO_CLIENT_TYPE: "wasm-full"
+        run: |
+          NO_FORMATTING=true TESTNET=true ./tooling-e2e-tests/ts_sdk_tests.sh
 
       - name: Run e2e tooling tests (proving server)
         env:
@@ -133,7 +134,9 @@ jobs:
         uses: ./.github/actions/setup-prover-server
         with:
           proxy_image: public.ecr.aws/p5g6f1p8/shielder-prover:latest
-          eif_url: https://prover-server-eif-storage.s3.eu-west-1.amazonaws.com/shielder-prover-tee-f584eb1.eif
+          eif_url: >-
+            https://prover-server-eif-storage.s3.eu-west-1.amazonaws.com/
+            shielder-prover-tee-f584eb1.eif
           destroy: "true"
           ssh_private_key: ${{ secrets.TF_MODULES_PROVER_SERVER_PRIVATE_KEY }}
           aws_access_key_id: ${{ secrets.AWS_PROVERSERVER_DEVSTAGE_ACCESS_KEY }}

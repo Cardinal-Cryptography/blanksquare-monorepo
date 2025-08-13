@@ -46,19 +46,6 @@ jobs:
       - name: Prepare Solidity environment
         uses: ./.github/actions/prepare-sol-env
 
-      - name: Generate Solidity contracts
-        run: make generate-verifier-contracts && make generate-poseidon-contracts
-
-      - name: Compile eth contracts
-        shell: bash
-        run: make compile-contracts
-
-      - name: Install wasm-pack
-        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
-
-      - name: Build shielder_bindings
-        run: cd crates/shielder_bindings && make wasm && make wasm-without-circuits
-
       - name: Install Node.js
         uses: actions/setup-node@v4
         with:
@@ -67,14 +54,6 @@ jobs:
       - uses: pnpm/action-setup@v4
         with:
           version: 10.2.0
-
-      - name: Install dependencies (workspace)
-        run: pnpm install-deps
-        working-directory: ts
-
-      - name: Build all (workspace)
-        run: pnpm build
-        working-directory: ts
 
       - name: Setup Prover Server
         id: setup-prover
@@ -88,6 +67,27 @@ jobs:
           ssh_private_key: ${{ secrets.TF_MODULES_PROVER_SERVER_PRIVATE_KEY }}
           aws_access_key_id: ${{ secrets.AWS_PROVERSERVER_DEVSTAGE_ACCESS_KEY }}
           aws_secret_access_key: ${{ secrets.AWS_PROVERSERVER_DEVSTAGE_SECRET_ACCESS_KEY }}
+
+      - name: Generate Solidity contracts
+        run: make generate-verifier-contracts && make generate-poseidon-contracts
+
+      - name: Compile eth contracts
+        shell: bash
+        run: make compile-contracts
+
+      - name: Install wasm-pack
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+
+      - name: Build shielder_bindings
+        run: cd crates/shielder_bindings && make wasm && make wasm-without-circuits
+
+      - name: Install dependencies (workspace)
+        run: pnpm install-deps
+        working-directory: ts
+
+      - name: Build all (workspace)
+        run: pnpm build
+        working-directory: ts
 
       - name: Run e2e tooling tests (full wasm)
         env:

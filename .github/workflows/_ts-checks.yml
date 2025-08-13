@@ -94,7 +94,7 @@ jobs:
   e2e-tests:
     name: Run E2E tests on local anvil node (${{ matrix.fee_scenario }} fee)
     runs-on: ubuntu-22.04
-    timeout-minutes: 15
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:

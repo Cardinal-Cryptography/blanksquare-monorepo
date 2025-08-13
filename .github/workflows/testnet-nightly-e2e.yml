@@ -80,7 +80,7 @@ jobs:
         id: setup-prover
         uses: ./.github/actions/setup-prover-server
         with:
-          proxy_image: public.ecr.aws/p5g6f1p8/shielder-prover:latest
+          proxy_image: public.ecr.aws/p5g6f1p8/shielder-prover:f584eb1
           eif_url: >-
             https://prover-server-eif-storage.s3.eu-west-1.amazonaws.com/
             shielder-prover-tee-f584eb1.eif

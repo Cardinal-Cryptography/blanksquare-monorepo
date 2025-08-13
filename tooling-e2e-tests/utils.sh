@@ -81,7 +81,7 @@ deploy_erc20_token() {
       2> output.log \
     | jq -r '.deployedTo'
   )
-  sleep 5
+  sleep 10
 }
 
 deploy_erc20_tokens() {
@@ -131,7 +131,7 @@ mint_erc20_tokens() {
         ${key} \
         ${AMOUNT} \
         &>> output.log
-      sleep 5
+      sleep 10
     done
   done
 

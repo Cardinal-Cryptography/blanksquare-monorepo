@@ -65,7 +65,7 @@ runs:
       working-directory: tee/terragrunt
       run: |
         terragrunt init
-        terragrunt apply -auto-approve
+        terragrunt apply -auto-approve -lock=false
         terragrunt output -json > outputs.json
 
     - name: Set output
@@ -83,4 +83,4 @@ runs:
       working-directory: tee/terragrunt
       run: |
         terragrunt init
-        terragrunt destroy -auto-approve
+        terragrunt destroy -auto-approve -lock=false

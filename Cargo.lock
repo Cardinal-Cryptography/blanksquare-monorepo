@@ -1972,7 +1972,7 @@ dependencies = [
 [[package]]
 name = "ecies-encryption-cli"
 version = "0.1.0"
-source = "git+https://github.com/Cardinal-Cryptography/ecies-encryption-lib?tag=v0.1.6#36aa4b595975eb939939d16cbad7221314e15ee5"
+source = "git+https://github.com/Cardinal-Cryptography/ecies-encryption-lib?tag=v0.2.0#151527f791b3908a1794d67c111acd21ebc18268"
 dependencies = [
  "anyhow",
  "clap",
@@ -1981,8 +1981,8 @@ dependencies = [
 
 [[package]]
 name = "ecies-encryption-lib"
-version = "0.1.6"
-source = "git+https://github.com/Cardinal-Cryptography/ecies-encryption-lib?tag=v0.1.6#36aa4b595975eb939939d16cbad7221314e15ee5"
+version = "0.2.0"
+source = "git+https://github.com/Cardinal-Cryptography/ecies-encryption-lib?tag=v0.2.0#151527f791b3908a1794d67c111acd21ebc18268"
 dependencies = [
  "aes-gcm",
  "hex",

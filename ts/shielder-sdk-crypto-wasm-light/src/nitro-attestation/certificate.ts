@@ -5,7 +5,7 @@
 import * as asn1js from "asn1js";
 import * as pkijs from "pkijs";
 import { AWS_NITRO_ROOT_CERTIFICATE } from "./constants";
-import { getCrypto } from "@/utils";
+import { getCrypto } from "@cardinal-cryptography/ecies-encryption-lib";
 
 /**
  * Validate certificate chain against AWS Nitro root certificate

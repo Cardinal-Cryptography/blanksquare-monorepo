@@ -8,7 +8,7 @@ import {
   CBOR_SIGNATURE_FIX_POSITION,
   CBOR_SIGNATURE_FIX_VALUE
 } from "./constants";
-import { getCrypto } from "@/utils";
+import { getCrypto } from "@cardinal-cryptography/ecies-encryption-lib";
 
 /**
  * Decode CBOR-encoded COSE_Sign1 signature structure

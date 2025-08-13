@@ -24,7 +24,7 @@ import { keyToToken, tokenToKey } from "@/testUtils";
 import { nativeToken } from "@cardinal-cryptography/shielder-sdk";
 import {
   generateKeypair,
-  toHex
+  toHexString
 } from "@cardinal-cryptography/ecies-encryption-lib";
 
 export interface ShielderTestFixture {
@@ -35,8 +35,8 @@ export interface ShielderTestFixture {
 }
 
 const { sk, pk } = generateKeypair();
-export const referralEncryptionPrivateKey = toHex(sk) as `0x${string}`;
-export const referralEncryptionPublicKey = toHex(pk) as `0x${string}`;
+export const referralEncryptionPrivateKey = toHexString(sk) as `0x${string}`;
+export const referralEncryptionPublicKey = toHexString(pk) as `0x${string}`;
 export const referralId = "test-referral-id";
 
 export const setupShielderTest = async (globalConfig: GlobalConfigFixture) => {

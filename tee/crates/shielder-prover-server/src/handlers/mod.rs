@@ -30,18 +30,9 @@ async fn request(state: Arc<AppState>, request: Request) -> Result<Json<Response
 }
 
 /// When requesting proof generation, user sends this struct as a JSON
+/// For `payload` schema, see [`RequestGenerateProofPayload`].
 #[derive(Debug, Deserialize, Serialize)]
 pub struct GenerateProofPayload {
-    /// Encrypted payload. See [`shielder_prover_common::protocol::Payload`]
     #[serde(with = "base64_serialization")]
     payload: Vec<u8>,
-}
-
-#[allow(dead_code)]
-#[derive(PartialEq, Debug)]
-#[repr(u8)]
-pub enum CircuitType {
-    NewAccount = 1,
-    Deposit = 2,
-    Withdraw = 4,
 }

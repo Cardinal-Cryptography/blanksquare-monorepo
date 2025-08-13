@@ -1,6 +1,6 @@
 {
   "name": "@cardinal-cryptography/shielder-sdk-crypto-wasm-light",
-  "version": "0.3.0-rc.1",
+  "version": "0.3.0-rc.2",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -46,6 +46,7 @@
     "typescript-eslint": "^8.16.0"
   },
   "dependencies": {
+    "@cardinal-cryptography/ecies-encryption-lib": "^0.2.0",
     "@cardinal-cryptography/shielder-sdk-crypto": "workspace:*",
     "@noble/secp256k1": "^2.3.0",
     "asn1js": "^3.0.6",

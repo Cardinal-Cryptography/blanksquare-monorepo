@@ -129,8 +129,16 @@ jobs:
         run: |
           NO_FORMATTING=true TESTNET=true ./tooling-e2e-tests/ts_sdk_tests.sh
 
+  destroy-prover-server:
+    name: Destroy Prover Server
+    runs-on: ubuntu-22.04
+    if: always()
+    needs: e2e-tests
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
       - name: Destroy Prover Server
-        if: always()
         uses: ./.github/actions/setup-prover-server
         with:
           proxy_image: public.ecr.aws/p5g6f1p8/shielder-prover:latest

@@ -5,6 +5,7 @@ import { sdkTest } from "@tests/playwrightTestConfig";
 import {
   clearStorageOp,
   recoverOp,
+  shieldGasOp,
   shieldOp,
   withdrawManualOp,
   withdrawOp,
@@ -23,34 +24,34 @@ const ercTokenLowercase = erc20Token(
     actions: [
       // create native account, deposit, withdraw manually and via relayer
       {
-        op: shieldOp(nativeToken(), 10n ** 17n),
+        op: shieldOp(nativeToken(), 200n),
         actor: "alice"
       },
       {
-        op: shieldOp(nativeToken(), 2n * 10n ** 17n),
+        op: shieldGasOp(nativeToken()),
         actor: "alice"
       },
       {
-        op: withdrawManualOp(nativeToken(), 5n ** 17n, "bob"),
+        op: withdrawManualOp(nativeToken(), 50n, "bob"),
         actor: "alice"
       },
       {
-        op: withdrawOp(nativeToken(), 7n ** 17n, "bob", 0n),
+        op: withdrawOp(nativeToken(), 70n, "bob", 0n),
         actor: "alice"
       },
 
       // create ERC20 account, deposit, withdraw manually and via relayer
-      { op: shieldOp(ercToken, 10n ** 17n), actor: "alice" },
+      { op: shieldOp(ercToken, 100n), actor: "alice" },
       {
-        op: shieldOp(ercTokenLowercase, 2n * 10n ** 17n),
+        op: shieldGasOp(ercTokenLowercase),
         actor: "alice"
       },
       {
-        op: withdrawManualOp(ercToken, 5n ** 17n, "bob"),
+        op: withdrawManualOp(ercToken, 50n, "bob"),
         actor: "alice"
       },
       {
-        op: withdrawOp(ercToken, 7n ** 17n, "bob", 10n ** 17n),
+        op: withdrawOp(ercToken, 70n, "bob", 0n),
         actor: "alice"
       },
 
@@ -60,18 +61,26 @@ const ercTokenLowercase = erc20Token(
 
       // shield again
       {
-        op: shieldOp(nativeToken(), 10n ** 17n),
+        op: shieldOp(nativeToken(), 100n),
         actor: "alice"
       },
-      { op: shieldOp(ercToken, 10n ** 17n), actor: "alice" },
+      {
+        op: shieldGasOp(nativeToken()),
+        actor: "alice"
+      },
+      { op: shieldOp(ercToken, 100n), actor: "alice" },
+      {
+        op: shieldGasOp(ercTokenLowercase),
+        actor: "alice"
+      },
 
       // withdraw again via relayer
       {
-        op: withdrawOp(nativeToken(), 10n ** 17n, "charlie", 0n),
+        op: withdrawOp(nativeToken(), 100n, "charlie", 0n),
         actor: "alice"
       },
       {
-        op: withdrawOp(ercToken, 10n ** 17n, "charlie", 0n),
+        op: withdrawOp(ercToken, 100n, "charlie", 0n),
         actor: "alice"
       }
     ]

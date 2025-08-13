@@ -46,6 +46,29 @@ jobs:
       - name: Prepare Solidity environment
         uses: ./.github/actions/prepare-sol-env
 
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 23
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.2.0
+
+      # yamllint disable rule:line-length
+      - name: Setup Prover Server
+        id: setup-prover
+        uses: ./.github/actions/setup-prover-server
+        with:
+          proxy_image: public.ecr.aws/p5g6f1p8/shielder-prover:f584eb1
+          eif_url: https://prover-server-eif-storage.s3.eu-west-1.amazonaws.com/shielder-prover-tee-f584eb1.eif
+          create: "true"
+          ssh_private_key: ${{ secrets.TF_MODULES_PROVER_SERVER_PRIVATE_KEY }}
+          aws_access_key_id: ${{ secrets.AWS_PROVERSERVER_DEVSTAGE_ACCESS_KEY }}
+          aws_secret_access_key: ${{ secrets.AWS_PROVERSERVER_DEVSTAGE_SECRET_ACCESS_KEY }}
+
+      # yamllint enable rule:line-length
+
       - name: Generate Solidity contracts
         run: make generate-verifier-contracts && make generate-poseidon-contracts
 
@@ -53,7 +76,21 @@ jobs:
         shell: bash
         run: make compile-contracts
 
-      - name: Run e2e tooling tests
+      - name: Install wasm-pack
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+
+      - name: Build shielder_bindings
+        run: cd crates/shielder_bindings && make wasm && make wasm-without-circuits
+
+      - name: Install dependencies (workspace)
+        run: pnpm install-deps
+        working-directory: ts
+
+      - name: Build all (workspace)
+        run: pnpm build
+        working-directory: ts
+
+      - name: Run e2e tooling tests (full wasm)
         env:
           DEPLOYER_PRIVATE_KEY: ${{ secrets.CI_TESTNET_DEPLOYER_PRIVATE_KEY }}
           ALICE_PUBLIC_KEY: ${{ vars.CI_TESTNET_ALICE_PUBLIC_KEY }}
@@ -68,10 +105,52 @@ jobs:
           FEE_DESTINATION_KEY: ${{ secrets.CI_TESTNET_FEE_DESTINATION_KEY }}
           RELAYER_SIGNER_ADDRESSES: ${{ vars.CI_TESTNET_RELAYER_SIGNER_ADDRESSES }}
           RELAYER_SIGNING_KEYS: ${{ secrets.CI_TESTNET_RELAYER_SIGNING_KEYS }}
+          CRYPTO_CLIENT_TYPE: "wasm-full"
         run: |
-          NO_FORMATTING=true TESTNET=true ./tooling-e2e-tests/full_scenario.sh
-          NO_FORMATTING=true TESTNET=true ./tooling-e2e-tests/recovery_scenario.sh
-          NO_FORMATTING=true TESTNET=true ./tooling-e2e-tests/many_actors.sh
+          NO_FORMATTING=true TESTNET=true ./tooling-e2e-tests/ts_sdk_tests.sh
+
+      - name: Run e2e tooling tests (proving server)
+        env:
+          DEPLOYER_PRIVATE_KEY: ${{ secrets.CI_TESTNET_DEPLOYER_PRIVATE_KEY }}
+          ALICE_PUBLIC_KEY: ${{ vars.CI_TESTNET_ALICE_PUBLIC_KEY }}
+          ALICE_PRIVATE_KEY: ${{ secrets.CI_TESTNET_ALICE_PRIVATE_KEY }}
+          BOB_PUBLIC_KEY: ${{ vars.CI_TESTNET_BOB_PUBLIC_KEY }}
+          BOB_PRIVATE_KEY: ${{ secrets.CI_TESTNET_BOB_PRIVATE_KEY }}
+          CHARLIE_PUBLIC_KEY: ${{ vars.CI_TESTNET_CHARLIE_PUBLIC_KEY }}
+          CHARLIE_PRIVATE_KEY: ${{ secrets.CI_TESTNET_CHARLIE_PRIVATE_KEY }}
+          TS_SDK_PUBLIC_KEY: ${{ vars.CI_TESTNET_TS_SDK_PUBLIC_KEY }}
+          TS_SDK_PRIVATE_KEY: ${{ secrets.CI_TESTNET_TS_SDK_PRIVATE_KEY }}
+          FEE_DESTINATION: ${{ vars.CI_TESTNET_FEE_DESTINATION }}
+          FEE_DESTINATION_KEY: ${{ secrets.CI_TESTNET_FEE_DESTINATION_KEY }}
+          RELAYER_SIGNER_ADDRESSES: ${{ vars.CI_TESTNET_RELAYER_SIGNER_ADDRESSES }}
+          RELAYER_SIGNING_KEYS: ${{ secrets.CI_TESTNET_RELAYER_SIGNING_KEYS }}
+          CRYPTO_CLIENT_TYPE: "wasm-light"
+          SKIP_NITRO_ATTESTATION: true
+          PROVER_SERVER_URL: ${{ steps.setup-prover.outputs.proxy_url }}
+        run: |
+          NO_FORMATTING=true TESTNET=true ./tooling-e2e-tests/ts_sdk_tests.sh
+
+  destroy-prover-server:
+    name: Destroy Prover Server
+    runs-on: ubuntu-22.04
+    if: always()
+    needs: e2e-tests
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      # yamllint disable rule:line-length
+      - name: Destroy Prover Server
+        uses: ./.github/actions/setup-prover-server
+        with:
+          proxy_image: public.ecr.aws/p5g6f1p8/shielder-prover:f584eb1
+          eif_url: https://prover-server-eif-storage.s3.eu-west-1.amazonaws.com/shielder-prover-tee-f584eb1.eif
+          destroy: "true"
+          ssh_private_key: ${{ secrets.TF_MODULES_PROVER_SERVER_PRIVATE_KEY }}
+          aws_access_key_id: ${{ secrets.AWS_PROVERSERVER_DEVSTAGE_ACCESS_KEY }}
+          aws_secret_access_key: ${{ secrets.AWS_PROVERSERVER_DEVSTAGE_SECRET_ACCESS_KEY }}
+
+      # yamllint enable rule:line-length
 
   slack-notification:
     name: Slack notification

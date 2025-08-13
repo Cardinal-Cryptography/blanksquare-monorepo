@@ -12,23 +12,23 @@ const ercToken = erc20Token(tokenContractAddresses[0] as `0x${string}`);
     actions: [
       // create native account
       {
-        op: shieldOp(nativeToken(), 10n ** 17n),
+        op: shieldOp(nativeToken(), 100n),
         actor: "alice"
       },
       // create erc20 account
       {
-        op: shieldOp(ercToken, 2n * 10n ** 17n),
+        op: shieldOp(ercToken, 200n),
         actor: "alice"
       },
       // clear storage, don't recover
       { op: clearStorageOp(), actor: "alice" },
       // new shield will throw
       {
-        op: shieldOp(nativeToken(), 10n ** 17n),
+        op: shieldOp(nativeToken(), 100n),
         actor: "alice"
       },
       {
-        op: shieldOp(ercToken, 2n * 10n ** 17n),
+        op: shieldOp(ercToken, 200n),
         actor: "alice"
       }
     ]
@@ -38,33 +38,33 @@ const ercToken = erc20Token(tokenContractAddresses[0] as `0x${string}`);
     actions: [
       // create native account
       {
-        op: shieldOp(nativeToken(), 10n ** 17n),
+        op: shieldOp(nativeToken(), 100n),
         actor: "alice"
       },
       // deposit into native account
       {
-        op: shieldOp(nativeToken(), 2n * 10n ** 17n),
+        op: shieldOp(nativeToken(), 200n),
         actor: "alice"
       },
       // create erc20 account
       {
-        op: shieldOp(ercToken, 2n * 10n ** 17n),
+        op: shieldOp(ercToken, 200n),
         actor: "alice"
       },
       // deposit into erc20 account
       {
-        op: shieldOp(ercToken, 2n * 10n ** 17n),
+        op: shieldOp(ercToken, 200n),
         actor: "alice"
       },
       // clear storage, don't recover
       { op: clearStorageOp(), actor: "alice" },
       // new shield will throw
       {
-        op: shieldOp(nativeToken(), 10n ** 17n),
+        op: shieldOp(nativeToken(), 100n),
         actor: "alice"
       },
       {
-        op: shieldOp(ercToken, 2n * 10n ** 17n),
+        op: shieldOp(ercToken, 200n),
         actor: "alice"
       }
     ]

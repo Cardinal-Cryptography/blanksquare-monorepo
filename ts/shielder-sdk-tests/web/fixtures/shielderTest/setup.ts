@@ -26,6 +26,7 @@ import {
   generateKeypair,
   toHexString
 } from "@cardinal-cryptography/ecies-encryption-lib";
+import { createPublicClient, http } from "viem";
 
 export interface ShielderTestFixture {
   executeAction: (action: TestAction) => Promise<void>;
@@ -78,9 +79,31 @@ export const setupShielderTest = async (globalConfig: GlobalConfigFixture) => {
           action.op.token,
           action.op.amount
         );
+        // wait for 2 seconds to ensure all actions are processed
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+        await shielderClient.shielderClient.syncShielder();
         registrar.registerShield(
           action.op.token,
           action.op.amount + protocolFee,
+          protocolFee
+        );
+        usedTokens.add(tokenToKey(action.op.token));
+      } else if (action.op.type === "shieldGas") {
+        const publicClient = createPublicClient({
+          transport: http(globalConfig.chainConfig.rpcHttpEndpoint)
+        });
+        const gasPrice = await publicClient.getGasPrice();
+        const amount = (2_000_000n * gasPrice * 120n) / 100n;
+        const { protocolFee } = await shielderClient.shield(
+          action.op.token,
+          amount
+        );
+        // wait for 2 seconds to ensure all actions are processed
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+        await shielderClient.shielderClient.syncShielder();
+        registrar.registerShield(
+          action.op.token,
+          amount + protocolFee,
           protocolFee
         );
         usedTokens.add(tokenToKey(action.op.token));
@@ -91,6 +114,9 @@ export const setupShielderTest = async (globalConfig: GlobalConfigFixture) => {
           withdrawalAccounts[action.op.to].address,
           action.op.pocketMoney
         );
+        // wait for 2 seconds to ensure all actions are processed
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+        await shielderClient.shielderClient.syncShielder();
         registrar.registerWithdrawal(
           action.op.token,
           withdrawalAccounts[action.op.to].address,
@@ -113,6 +139,9 @@ export const setupShielderTest = async (globalConfig: GlobalConfigFixture) => {
           action.op.amount,
           withdrawalAccounts[action.op.to].address
         );
+        // wait for 2 seconds to ensure all actions are processed
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+        await shielderClient.shielderClient.syncShielder();
         registrar.registerWithdrawal(
           action.op.token,
           withdrawalAccounts[action.op.to].address,

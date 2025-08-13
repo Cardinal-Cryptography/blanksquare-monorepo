@@ -38,8 +38,8 @@ export const proverServerUrl =
   (() => {
     throw new Error("PROVER_SERVER_URL env not defined");
   })();
-export const checkNitroAttestation =
-  process.env.CHECK_NITRO_ATTESTATION === "true" ||
+export const skipNitroAttestation =
+  process.env.SKIP_NITRO_ATTESTATION === "true" ||
   (cryptoClientType === "wasm-light" ? true : false);
 
 export const getChainConfig = () => {

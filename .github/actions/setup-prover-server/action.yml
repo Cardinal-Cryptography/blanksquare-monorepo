@@ -1,44 +1,41 @@
 ---
-name: 'Deploy Prover Server Action'
+name: "Deploy Prover Server Action"
 
-description: 'Deploys or destroys the prover server using Terragrunt'
+description: "Deploys or destroys the prover server using Terragrunt"
 
 inputs:
   proxy_image:
-    description: 'Proxy Docker image URI'
+    description: "Proxy Docker image URI"
     required: true
   eif_url:
-    description: 'Enclave Image File (EIF) URL'
+    description: "Enclave Image File (EIF) URL"
     required: true
   create:
-    description: 'Create resources'
+    description: "Create resources"
     required: false
-    default: 'false'
+    default: "false"
   destroy:
-    description: 'Destroy resources'
+    description: "Destroy resources"
     required: false
-    default: 'false'
+    default: "false"
   ssh_private_key:
-    description: 'SSH private key for Git access'
+    description: "SSH private key for Git access"
     required: true
   aws_access_key_id:
-    description: 'AWS Access Key ID'
+    description: "AWS Access Key ID"
     required: true
   aws_secret_access_key:
-    description: 'AWS Secret Access Key'
+    description: "AWS Secret Access Key"
     required: true
 
 outputs:
   proxy_url:
-    description: 'The proxy URL'
+    description: "The proxy URL"
     value: ${{ steps.set-output.outputs.proxy_url }}
 
 runs:
-  using: 'composite'
+  using: "composite"
   steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
     - name: Setup SSH Agent
       uses: webfactory/ssh-agent@v0.9.0
       with:
@@ -68,7 +65,7 @@ runs:
       working-directory: tee/terragrunt
       run: |
         terragrunt init
-        terragrunt apply -auto-approve
+        terragrunt apply -auto-approve -lock=false
         terragrunt output -json > outputs.json
 
     - name: Set output
@@ -86,4 +83,4 @@ runs:
       working-directory: tee/terragrunt
       run: |
         terragrunt init
-        terragrunt destroy -auto-approve
+        terragrunt destroy -auto-approve -lock=false

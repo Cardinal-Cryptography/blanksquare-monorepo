@@ -29,23 +29,29 @@ jobs:
         id: get-ref-properties
         uses: Cardinal-Cryptography/github-actions/get-ref-properties@v7
 
-      - name: Download enclave artifacts - EIF
-        uses: ./.github/actions/download-artifact-by-sha
+      - name: Get workflow run ID
+        id: get-workflow-run-id
+        uses: ./.github/actions/get-workflow-run-id
         with:
           workflow-name: on-push-main.yml
           full-sha: ${{ steps.get-ref-properties.outputs.full-sha }}
           github_token: ${{ secrets.CI_GH_TOKEN }}
-          artifact-name: shielder-prover-tee-eif
-          artifact-path: artifacts
+
+      - name: Download enclave artifacts - EIF
+        uses: actions/download-artifact@v5
+        with:
+          name: shielder-prover-tee-eif
+          path: artifacts
+          run-id: ${{ steps.get-workflow-run-id.outputs.workflow-run-id }}
+          github-token: ${{ secrets.CI_GH_TOKEN }}
 
       - name: Download enclave artifacts - Measurements
-        uses: ./.github/actions/download-artifact-by-sha
+        uses: actions/download-artifact@v5
         with:
-          workflow-name: on-push-main.yml
-          full-sha: ${{ steps.get-ref-properties.outputs.full-sha }}
-          github_token: ${{ secrets.CI_GH_TOKEN }}
-          artifact-name: shielder-prover-tee-measurements
-          artifact-path: artifacts
+          name: shielder-prover-tee-measurements
+          path: artifacts
+          run-id: ${{ steps.get-workflow-run-id.outputs.workflow-run-id }}
+          github-token: ${{ secrets.CI_GH_TOKEN }}
 
       - name: Generate release artifacts checksum (SHA256)
         uses: jmgilman/actions-generate-checksum@v1

@@ -63,6 +63,7 @@ jobs:
           github_token: ${{ secrets.CI_GH_TOKEN }}
           artifact-name: shielder-prover-tee-eif
 
+      # yamllint disable rule:line-length
       - name: Build artifact download URL
         id: build-download-url
         shell: bash
@@ -72,7 +73,6 @@ jobs:
           echo "Built download URL: $DOWNLOAD_URL"
           echo "download-url=$DOWNLOAD_URL" >> $GITHUB_OUTPUT
 
-      # yamllint disable rule:line-length
       - name: Setup Prover Server
         id: setup-prover
         uses: ./.github/actions/setup-prover-server
@@ -85,7 +85,6 @@ jobs:
           aws_secret_access_key: ${{ secrets.AWS_PROVERSERVER_DEVSTAGE_SECRET_ACCESS_KEY }}
 
       # yamllint enable rule:line-length
-
       - name: Generate Solidity contracts
         run: make generate-verifier-contracts && make generate-poseidon-contracts
 

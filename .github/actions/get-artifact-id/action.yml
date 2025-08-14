@@ -24,20 +24,20 @@ runs:
       shell: bash
       run: |
         echo "Getting artifacts for run ID ${{ inputs.workflow-run-id }}"
-        
+
         # Get artifacts for the workflow run
         ARTIFACTS_RESPONSE=$(curl -s -H "Authorization: Bearer ${{ inputs.github_token }}" \
           "https://api.github.com/repos/${{ github.repository }}/actions/runs/${{ inputs.workflow-run-id }}/artifacts")
-        
+
         echo "Artifacts response: $ARTIFACTS_RESPONSE"
-        
+
         # Find the specific artifact by name
         ARTIFACT_ID=$(echo "$ARTIFACTS_RESPONSE" | jq -r ".artifacts[] | select(.name==\"${{ inputs.artifact-name }}\") | .id")
-        
+
         if [[ -z "$ARTIFACT_ID" || "$ARTIFACT_ID" == "null" ]]; then
           echo "Error: Artifact '${{ inputs.artifact-name }}' not found in workflow run ${{ inputs.workflow-run-id }}"
           exit 1
         fi
-        
+
         echo "Found artifact ID: $ARTIFACT_ID"
         echo "artifact-id=$ARTIFACT_ID" >> $GITHUB_OUTPUT

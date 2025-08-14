@@ -3,6 +3,11 @@ name: Nightly E2E tests run on testnet
 
 on:
   workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Git reference to checkout'
+        required: false
+        default: 'main'
 
 concurrency:
   group: "${{ github.ref }}-${{ github.workflow }}"
@@ -19,26 +24,13 @@ jobs:
     steps:
       - name: Checkout source code
         uses: actions/checkout@v4
-
-      - name: Restore rust cache
-        uses: actions/cache@v4
         with:
-          key: "${{ runner.os }}\
-            -rust\
-            -${{ env.CACHE_VERSION }}\
-            -build\
-            -${{ hashFiles('**/Cargo.toml') }}"
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            ~/.cache/sccache/
-            ~/.rustup/
-            target/
-          restore-keys: |
-            ${{ runner.os }}-rust-${{ env.CACHE_VERSION }}-build-
-            ${{ runner.os }}-rust-${{ env.CACHE_VERSION }}
+          ref: ${{ inputs.ref }}
+          fetch-depth: 0
+
+      - name: Call action get-ref-properties
+        id: get-ref-properties
+        uses: Cardinal-Cryptography/github-actions/get-ref-properties@v7
 
       - name: Prepare Rust env
         uses: ./.github/actions/prepare-rust-env
@@ -55,13 +47,37 @@ jobs:
         with:
           version: 10.2.0
 
+      - name: Get workflow run ID
+        id: get-workflow-run-id
+        uses: ./.github/actions/get-workflow-run-id
+        with:
+          workflow-name: on-push-main.yml
+          full-sha: ${{ steps.get-ref-properties.outputs.sha }}
+          github_token: ${{ secrets.CI_GH_TOKEN }}
+
+      - name: Get artifact ID
+        id: get-artifact-id
+        uses: ./.github/actions/get-artifact-id
+        with:
+          workflow-run-id: ${{ steps.get-workflow-run-id.outputs.workflow-run-id }}
+          github_token: ${{ secrets.CI_GH_TOKEN }}
+          artifact-name: shielder-prover-tee-eif
+
+      - name: Build artifact download URL
+        id: build-download-url
+        shell: bash
+        run: |
+          DOWNLOAD_URL="https://api.github.com/repos/${{ github.repository }}/actions/artifacts/${{ steps.get-artifact-id.outputs.artifact-id }}/zip"
+          echo "Built download URL: $DOWNLOAD_URL"
+          echo "download-url=$DOWNLOAD_URL" >> $GITHUB_OUTPUT
+
       # yamllint disable rule:line-length
       - name: Setup Prover Server
         id: setup-prover
         uses: ./.github/actions/setup-prover-server
         with:
-          proxy_image: public.ecr.aws/p5g6f1p8/shielder-prover:f584eb1
-          eif_url: https://prover-server-eif-storage.s3.eu-west-1.amazonaws.com/shielder-prover-tee-f584eb1.eif
+          proxy_image: public.ecr.aws/p5g6f1p8/shielder-prover:${{ steps.get-ref-properties.outputs.sha }}
+          eif_url: ${{ steps.build-download-url.outputs.download-url }}
           create: "true"
           ssh_private_key: ${{ secrets.TF_MODULES_PROVER_SERVER_PRIVATE_KEY }}
           aws_access_key_id: ${{ secrets.AWS_PROVERSERVER_DEVSTAGE_ACCESS_KEY }}
@@ -138,13 +154,16 @@ jobs:
     steps:
       - name: Checkout source code
         uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+          fetch-depth: 0
 
       # yamllint disable rule:line-length
       - name: Destroy Prover Server
         uses: ./.github/actions/setup-prover-server
         with:
-          proxy_image: public.ecr.aws/p5g6f1p8/shielder-prover:f584eb1
-          eif_url: https://prover-server-eif-storage.s3.eu-west-1.amazonaws.com/shielder-prover-tee-f584eb1.eif
+          proxy_image: "not applicable"
+          eif_url: "not applicable"
           destroy: "true"
           ssh_private_key: ${{ secrets.TF_MODULES_PROVER_SERVER_PRIVATE_KEY }}
           aws_access_key_id: ${{ secrets.AWS_PROVERSERVER_DEVSTAGE_ACCESS_KEY }}

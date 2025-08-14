@@ -67,7 +67,8 @@ jobs:
         id: build-download-url
         shell: bash
         run: |
-          DOWNLOAD_URL="https://api.github.com/repos/${{ github.repository }}/actions/artifacts/${{ steps.get-artifact-id.outputs.artifact-id }}/zip"
+          ARTIFACT_ID="${{ steps.get-artifact-id.outputs.artifact-id }}"
+          DOWNLOAD_URL="https://api.github.com/repos/${{ github.repository }}/actions/artifacts/${ARTIFACT_ID}/zip"
           echo "Built download URL: $DOWNLOAD_URL"
           echo "download-url=$DOWNLOAD_URL" >> $GITHUB_OUTPUT
 

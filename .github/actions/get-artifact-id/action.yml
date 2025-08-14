@@ -17,6 +17,7 @@ outputs:
     value: ${{ steps.get-artifact-id.outputs.artifact-id }}
 runs:
   using: "composite"
+  # yamllint disable rule:line-length
   steps:
     - name: Get artifact ID from run
       id: get-artifact-id

@@ -52,7 +52,7 @@ jobs:
         uses: ./.github/actions/get-workflow-run-id
         with:
           workflow-name: on-push-main.yml
-          full-sha: ${{ steps.get-ref-properties.outputs.sha }}
+          full-sha: ${{ steps.get-ref-properties.outputs.full-sha }}
           github_token: ${{ secrets.CI_GH_TOKEN }}
 
       - name: Get artifact ID

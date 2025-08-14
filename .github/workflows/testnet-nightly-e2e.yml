@@ -3,11 +3,6 @@ name: Nightly E2E tests run on testnet
 
 on:
   workflow_dispatch:
-    inputs:
-      ref:
-        description: 'Git reference to checkout'
-        required: false
-        default: 'main'
 
 concurrency:
   group: "${{ github.ref }}-${{ github.workflow }}"
@@ -24,9 +19,6 @@ jobs:
     steps:
       - name: Checkout source code
         uses: actions/checkout@v4
-        with:
-          ref: ${{ inputs.ref }}
-          fetch-depth: 0
 
       - name: Call action get-ref-properties
         id: get-ref-properties
@@ -154,9 +146,6 @@ jobs:
     steps:
       - name: Checkout source code
         uses: actions/checkout@v4
-        with:
-          ref: ${{ inputs.ref }}
-          fetch-depth: 0
 
       # yamllint disable rule:line-length
       - name: Destroy Prover Server

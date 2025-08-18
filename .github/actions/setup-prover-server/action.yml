@@ -56,7 +56,6 @@ runs:
       run: |
         echo "TF_VAR_proxy_image=${{ inputs.proxy_image }}" >> $GITHUB_ENV
         echo "TF_VAR_eif_url=${{ inputs.eif_url }}" >> $GITHUB_ENV
-        echo "TF_VAR_use_github_token=true" >> $GITHUB_ENV
         echo "AWS_ACCESS_KEY_ID=${{ inputs.aws_access_key_id }}" >> $GITHUB_ENV
         echo "AWS_SECRET_ACCESS_KEY=${{ inputs.aws_secret_access_key }}" >> $GITHUB_ENV
 

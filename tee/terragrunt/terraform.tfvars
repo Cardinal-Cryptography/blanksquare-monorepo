@@ -1,1 +1,2 @@
 enable_instance_connect=true
+use_github_token=true

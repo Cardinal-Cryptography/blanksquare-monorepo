@@ -152,7 +152,8 @@ jobs:
         uses: ./.github/actions/setup-prover-server
         with:
           proxy_image: "not applicable"
-          eif_url: "not applicable"
+          proxy_image: "unused-for-destroy"
+          eif_url: "unused-for-destroy"
           destroy: "true"
           ssh_private_key: ${{ secrets.TF_MODULES_PROVER_SERVER_PRIVATE_KEY }}
           aws_access_key_id: ${{ secrets.AWS_PROVERSERVER_DEVSTAGE_ACCESS_KEY }}

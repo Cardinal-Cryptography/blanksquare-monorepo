@@ -151,7 +151,6 @@ jobs:
       - name: Destroy Prover Server
         uses: ./.github/actions/setup-prover-server
         with:
-          proxy_image: "not applicable"
           proxy_image: "unused-for-destroy"
           eif_url: "unused-for-destroy"
           destroy: "true"

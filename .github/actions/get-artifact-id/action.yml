@@ -1,0 +1,43 @@
+---
+name: 'Get Artifact ID'
+description: 'Gets artifact ID from a workflow run by artifact name'
+inputs:
+  workflow-run-id:
+    description: 'The workflow run ID'
+    required: true
+  github_token:
+    description: 'GitHub token for API access'
+    required: true
+  artifact-name:
+    description: 'Name of the artifact'
+    required: true
+outputs:
+  artifact-id:
+    description: 'The artifact ID'
+    value: ${{ steps.get-artifact-id.outputs.artifact-id }}
+runs:
+  using: "composite"
+  # yamllint disable rule:line-length
+  steps:
+    - name: Get artifact ID from run
+      id: get-artifact-id
+      shell: bash
+      run: |
+        echo "Getting artifacts for run ID ${{ inputs.workflow-run-id }}"
+
+        # Get artifacts for the workflow run
+        ARTIFACTS_RESPONSE=$(curl -s -H "Authorization: Bearer ${{ inputs.github_token }}" \
+          "https://api.github.com/repos/${{ github.repository }}/actions/runs/${{ inputs.workflow-run-id }}/artifacts")
+
+        echo "Artifacts response: $ARTIFACTS_RESPONSE"
+
+        # Find the specific artifact by name
+        ARTIFACT_ID=$(echo "$ARTIFACTS_RESPONSE" | jq -r ".artifacts[] | select(.name==\"${{ inputs.artifact-name }}\") | .id")
+
+        if [[ -z "$ARTIFACT_ID" || "$ARTIFACT_ID" == "null" ]]; then
+          echo "Error: Artifact '${{ inputs.artifact-name }}' not found in workflow run ${{ inputs.workflow-run-id }}"
+          exit 1
+        fi
+
+        echo "Found artifact ID: $ARTIFACT_ID"
+        echo "artifact-id=$ARTIFACT_ID" >> $GITHUB_OUTPUT

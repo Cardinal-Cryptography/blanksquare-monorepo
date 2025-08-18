@@ -123,7 +123,7 @@ mint_erc20_tokens() {
 
   for key in "${keys[@]}"; do
     for token in $(echo ${TOKEN_CONTRACT_ADDRESSES} | sed "s/,/ /g"); do
-      cast send \
+      cast send -vvvvv \
         --rpc-url "${NODE_RPC_URL}" \
         --private-key "${DEPLOYER_PRIVATE_KEY}" \
         ${token} \

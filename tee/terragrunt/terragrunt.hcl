@@ -1,5 +1,5 @@
 terraform {
-  source = "git@github.com:Cardinal-Cryptography/tf-modules-prover-server.git?ref=v1.0.2"
+  source = "git@github.com:Cardinal-Cryptography/tf-modules-prover-server.git?ref=v1.0.3"
 
   extra_arguments "conditional_vars" {
     commands = [

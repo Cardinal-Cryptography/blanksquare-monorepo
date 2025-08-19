@@ -17,8 +17,8 @@ pub const VSOCK_PORT: u16 = 5000;
 pub struct Payload {
     pub account_id: U256,
     pub account_old_balance: U256,
-    pub nullfier_old: U256,
-    pub nullfier_new: U256,
+    pub nullifier_old: U256,
+    pub nullifier_new: U256,
     pub last_note_index: U256,
 
     pub mac_salt: U256,

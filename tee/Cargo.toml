@@ -43,3 +43,6 @@ ecies-encryption-lib = { git = "https://github.com/Cardinal-Cryptography/ecies-e
 shielder-circuits =  { git = "https://github.com/Cardinal-Cryptography/blanksquare-monorepo", rev = "fa55a8e23b5450bcce916290745f5c4635299a02" }
 type-conversions = { git = "https://github.com/Cardinal-Cryptography/blanksquare-monorepo", rev = "fa55a8e23b5450bcce916290745f5c4635299a02" }
 powers-of-tau = { git = "https://github.com/Cardinal-Cryptography/blanksquare-monorepo", rev = "fa55a8e23b5450bcce916290745f5c4635299a02" }
+
+#[profile.release]
+lto = "fat"

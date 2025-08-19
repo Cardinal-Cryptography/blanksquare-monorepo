@@ -5235,67 +5235,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "scheduler-common"
-version = "0.1.0"
-dependencies = [
- "alloy-primitives",
- "base64 0.22.1",
- "futures",
- "serde",
- "serde_json",
- "shielder-relayer",
- "shielder-setup",
- "thiserror 2.0.12",
- "tokio",
- "tokio-util",
- "tokio-vsock",
-]
-
-[[package]]
-name = "scheduler-server"
-version = "0.1.0"
-dependencies = [
- "alloy-primitives",
- "axum",
- "clap",
- "enum-map",
- "lazy_static",
- "metrics",
- "metrics-exporter-prometheus",
- "scheduler-common",
- "serde",
- "strum 0.27.2",
- "thiserror 2.0.12",
- "tokio",
- "tokio-task-pool",
- "tower-http",
- "tracing",
- "tracing-subscriber",
- "vsock",
-]
-
-[[package]]
-name = "scheduler-tee"
-version = "0.1.0"
-dependencies = [
- "alloy-primitives",
- "aws-nitro-enclaves-nsm-api",
- "hex",
- "log",
- "powers-of-tau",
- "rand 0.8.5",
- "scheduler-common",
- "serde",
- "serde_json",
- "shielder-circuits",
- "shielder-setup",
- "tokio",
- "tokio-vsock",
- "tracing-subscriber",
- "type-conversions",
-]
-
-[[package]]
 name = "schnellru"
 version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5751,6 +5690,70 @@ dependencies = [
  "utoipa-axum",
  "utoipa-swagger-ui",
  "zip",
+]
+
+[[package]]
+name = "shielder-scheduler-common"
+version = "0.1.0"
+dependencies = [
+ "alloy-primitives",
+ "base64 0.22.1",
+ "enum-map",
+ "futures",
+ "lazy_static",
+ "metrics",
+ "serde",
+ "serde_json",
+ "shielder-relayer",
+ "shielder-setup",
+ "strum 0.27.2",
+ "thiserror 2.0.12",
+ "tokio",
+ "tokio-util",
+ "tokio-vsock",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
+name = "shielder-scheduler-server"
+version = "0.1.0"
+dependencies = [
+ "alloy-primitives",
+ "axum",
+ "clap",
+ "metrics",
+ "metrics-exporter-prometheus",
+ "serde",
+ "shielder-scheduler-common",
+ "thiserror 2.0.12",
+ "tokio",
+ "tokio-task-pool",
+ "tower-http",
+ "tracing",
+ "tracing-subscriber",
+ "vsock",
+]
+
+[[package]]
+name = "shielder-scheduler-tee"
+version = "0.1.0"
+dependencies = [
+ "alloy-primitives",
+ "aws-nitro-enclaves-nsm-api",
+ "hex",
+ "log",
+ "powers-of-tau",
+ "rand 0.8.5",
+ "serde",
+ "serde_json",
+ "shielder-circuits",
+ "shielder-scheduler-common",
+ "shielder-setup",
+ "tokio",
+ "tokio-vsock",
+ "tracing-subscriber",
+ "type-conversions",
 ]
 
 [[package]]

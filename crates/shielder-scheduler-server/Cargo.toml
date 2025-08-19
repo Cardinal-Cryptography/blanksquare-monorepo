@@ -1,5 +1,5 @@
 [package]
-name = "scheduler-server"
+name = "shielder-scheduler-server"
 version = "0.1.0"
 edition = { workspace = true }
 authors = { workspace = true }
@@ -12,13 +12,10 @@ repository = { workspace = true }
 alloy-primitives = { workspace = true, features = ["serde"] }
 axum = { workspace = true, features = ["tokio", "macros"] }
 clap = { workspace = true, features = ["derive", "env"] }
-enum-map = { workspace = true }
-lazy_static = { workspace = true }
 metrics = { workspace = true }
 metrics-exporter-prometheus = { workspace = true }
 serde = { workspace = true }
-scheduler-common = { workspace = true }
-strum = { workspace = true, features = ["derive"] }
+shielder-scheduler-common = { workspace = true }
 thiserror = { workspace = true }
 tokio = { workspace = true, features = ["net", "rt", "rt-multi-thread"] }
 tokio-task-pool = { workspace = true, features = ["log"] }

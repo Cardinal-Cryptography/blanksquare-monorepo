@@ -12,6 +12,7 @@ use axum::{
 use clap::Parser;
 use error::SchedulerServerError as Error;
 use metrics_exporter_prometheus::PrometheusBuilder;
+use shielder_scheduler_common::metrics::FutureHistogramLayer;
 use tokio::net::TcpListener;
 use tower_http::cors::CorsLayer;
 use tracing::info;
@@ -19,7 +20,7 @@ use tracing_subscriber::{fmt, layer::SubscriberExt, util::SubscriberInitExt, Env
 
 use crate::{
     command_line_args::CommandLineArgs,
-    handlers::{self as server_handlers, metrics::FutureHistogramLayer},
+    handlers::{self as server_handlers},
 };
 
 #[derive(Debug)]

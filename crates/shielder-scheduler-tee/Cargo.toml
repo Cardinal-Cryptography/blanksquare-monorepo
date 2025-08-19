@@ -1,5 +1,5 @@
 [package]
-name = "scheduler-tee"
+name = "shielder-scheduler-tee"
 version = "0.1.0"
 edition = { workspace = true }
 authors = { workspace = true }
@@ -13,7 +13,7 @@ alloy-primitives = { workspace = true, features = ["serde"] }
 aws-nitro-enclaves-nsm-api = { workspace = true, optional = true }
 hex = { workspace = true }
 log = { workspace = true }
-scheduler-common = { workspace = true }
+shielder-scheduler-common = { workspace = true }
 tokio = { workspace = true, features = [
     "rt",
     "rt-multi-thread",

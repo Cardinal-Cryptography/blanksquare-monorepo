@@ -1,16 +1,16 @@
 use std::sync::Arc;
 
 use axum::Json;
-use scheduler_common::{
+use shielder_scheduler_common::{
+    metrics::FutureTimingMetric::*,
     protocol::{Request, Response, SchedulerClient},
     vsock::VsockError,
 };
 use tracing::{info_span, Instrument as _};
 
-use crate::{handlers::metrics::FutureTimingMetric::*, AppState};
+use crate::AppState;
 
 pub mod health;
-pub mod metrics;
 pub mod schedule_withdraw;
 pub mod tee_public_key;
 

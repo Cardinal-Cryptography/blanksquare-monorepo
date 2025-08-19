@@ -2,7 +2,7 @@ use axum::{
     http::StatusCode,
     response::{IntoResponse, Response as AxumResponse},
 };
-use scheduler_common::vsock::VsockError;
+use shielder_scheduler_common::vsock::VsockError;
 use tokio::task::JoinError;
 use tracing::error;
 

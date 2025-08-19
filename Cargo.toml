@@ -124,4 +124,4 @@ shielder-relayer = { path = "crates/shielder-relayer" }
 shielder-setup = { path = "crates/shielder-setup" }
 type-conversions = { path = "crates/type-conversions" }
 transcript = { path = "crates/transcript" }
-scheduler-common = { path = "crates/scheduler-common" }
+shielder-scheduler-common = { path = "crates/shielder-scheduler-common" }

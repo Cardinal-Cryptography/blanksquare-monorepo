@@ -12,7 +12,7 @@ pub struct CommandLineArgs {
 
     /// Internal port on which host and tee applications talks to each other
     /// This is the part of the vsock endpoint, which is tee_cid:tee_port
-    #[arg(short, long, default_value_t = scheduler_common::protocol::VSOCK_PORT, env = "TEE_PORT")]
+    #[arg(short, long, default_value_t = shielder_scheduler_common::protocol::VSOCK_PORT, env = "TEE_PORT")]
     pub tee_port: u16,
 
     /// Local IPv4 address on which this server listens to incoming HTTP connections

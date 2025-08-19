@@ -8,7 +8,7 @@ use aws_nitro_enclaves_nsm_api::{
     driver::{nsm_exit, nsm_init, nsm_process_request},
 };
 use log::{debug, info};
-use scheduler_common::{
+use shielder_scheduler_common::{
     protocol::{Payload, Request, Response, SchedulerServer},
     vsock::VsockError,
 };

@@ -2,15 +2,15 @@ use std::sync::Arc;
 
 use alloy_primitives::U256;
 use axum::{extract::State, response::IntoResponse, Json};
-use scheduler_common::base64_serialization;
 use serde::{Deserialize, Serialize};
+use shielder_scheduler_common::base64_serialization;
 
 use crate::AppState;
 
 /// When requesting a withdraw schedule, user sends this struct as a JSON
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ScheduleWithdrawRequest {
-    /// For `payload` schema, see [`scheduler_common::protocol::Payload`].
+    /// For `payload` schema, see [`shielder_scheduler_common::protocol::Payload`].
     #[serde(with = "base64_serialization")]
     payload: Vec<u8>,
 

@@ -1,6 +1,6 @@
 mod server;
 use log::info;
-use scheduler_common::{protocol::VSOCK_PORT, vsock::VsockError};
+use shielder_scheduler_common::{protocol::VSOCK_PORT, vsock::VsockError};
 
 #[tokio::main]
 async fn main() -> Result<(), VsockError> {

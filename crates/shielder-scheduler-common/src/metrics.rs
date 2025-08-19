@@ -14,14 +14,14 @@ lazy_static! {
         FutureTimingMetric::BuildingVsocksConnection => histogram!(format!("{}_busy", <&str>::from(FutureTimingMetric::BuildingVsocksConnection))),
         FutureTimingMetric::SendingTeeRequest => histogram!(format!("{}_busy", <&str>::from(FutureTimingMetric::SendingTeeRequest))),
         FutureTimingMetric::Health => histogram!(format!("{}_busy", <&str>::from(FutureTimingMetric::Health))),
-        FutureTimingMetric::GenerateProof => histogram!(format!("{}_busy", <&str>::from(FutureTimingMetric::GenerateProof))),
+        FutureTimingMetric::ScheduleWithdraw => histogram!(format!("{}_busy", <&str>::from(FutureTimingMetric::ScheduleWithdraw))),
         FutureTimingMetric::TeePublicKey => histogram!(format!("{}_busy", <&str>::from(FutureTimingMetric::TeePublicKey))),
     };
     static ref IDLE_HISTOGRAMS: EnumMap<FutureTimingMetric, Histogram> = enum_map! {
         FutureTimingMetric::BuildingVsocksConnection => histogram!(format!("{}_idle", <&str>::from(FutureTimingMetric::BuildingVsocksConnection))),
         FutureTimingMetric::SendingTeeRequest => histogram!(format!("{}_idle", <&str>::from(FutureTimingMetric::SendingTeeRequest))),
         FutureTimingMetric::Health => histogram!(format!("{}_idle", <&str>::from(FutureTimingMetric::Health))),
-        FutureTimingMetric::GenerateProof => histogram!(format!("{}_idle", <&str>::from(FutureTimingMetric::GenerateProof))),
+        FutureTimingMetric::ScheduleWithdraw => histogram!(format!("{}_idle", <&str>::from(FutureTimingMetric::ScheduleWithdraw))),
         FutureTimingMetric::TeePublicKey => histogram!(format!("{}_idle", <&str>::from(FutureTimingMetric::TeePublicKey))),
     };
 }
@@ -34,8 +34,8 @@ pub enum FutureTimingMetric {
     SendingTeeRequest,
     #[strum(serialize = "health")]
     Health,
-    #[strum(serialize = "generate_proof")]
-    GenerateProof,
+    #[strum(serialize = "schedule_withdraw")]
+    ScheduleWithdraw,
     #[strum(serialize = "tee_public_key")]
     TeePublicKey,
 }
@@ -50,7 +50,7 @@ impl FutureTimingMetric {
             FutureTimingMetric::BuildingVsocksConnection => "Building_VSOCK_connection",
             FutureTimingMetric::SendingTeeRequest => "Sending_TEE_request",
             FutureTimingMetric::Health => "health",
-            FutureTimingMetric::GenerateProof => "generate_proof",
+            FutureTimingMetric::ScheduleWithdraw => "schedule_withdraw",
             FutureTimingMetric::TeePublicKey => "tee_public_key",
         }
     }

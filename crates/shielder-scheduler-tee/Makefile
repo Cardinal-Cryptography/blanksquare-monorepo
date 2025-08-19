@@ -1,10 +1,14 @@
 .PHONY: format-rust
-format-rust: # Format all rust crates
+format-rust:
 	cargo fmt --all -- --check
 
 .PHONY: lint-rust
-lint-rust: # Lint all rust crates
+lint-rust:
 	cargo clippy --release -- -D warnings
+
+.PHONY: test
+test:
+	cargo check --all-features
 
 run-without-attestation:
 	RUST_LOG=info cargo run --release --features without_attestation

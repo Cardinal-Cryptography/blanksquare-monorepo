@@ -64,6 +64,9 @@ jobs:
           - crates/shielder-account
           - crates/shielder-contract
           - crates/shielder-setup
+          - crates/shielder-scheduler-common
+          - crates/shielder-scheduler-server
+          - crates/shielder-scheduler-tee
           - tee
     steps:
       - name: Checkout source code

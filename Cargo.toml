@@ -28,7 +28,9 @@ anyhow = { version = "1.0.86", default-features = false }
 askama = { version = "0.12.0", default-features = false }
 assert2 = { version = "0.3.15" }
 async-channel = { version = "2.3.1" }
+aws-nitro-enclaves-nsm-api = { version = "0.4.0" }
 axum = { version = "0.8.1" }
+base64 = { version = "0.22.1" }
 byteorder = { version = "1.4.3" }
 chacha20poly1305 = { version = "0.10.1", default-features = false }
 clap = { version = "4.5.8" }
@@ -37,6 +39,8 @@ darling = { version = "0.20.11" }
 ecies-encryption-cli = { git = "https://github.com/Cardinal-Cryptography/ecies-encryption-lib", tag = "v0.2.0" }
 # below dependency is also used in tee/Cargo.toml workspace
 ecies-encryption-lib = { git = "https://github.com/Cardinal-Cryptography/ecies-encryption-lib", tag = "v0.2.0" }
+enum-map = { version = "2.7.3" }
+futures = { version = "0.3.31" }
 getrandom = { version = "0.2" }
 halo2_poseidon = { git = "https://github.com/Cardinal-Cryptography/poseidon-gadget", rev = "ce317a6" }
 halo2_proofs = { git = "https://github.com/privacy-scaling-explorations/halo2", tag = "v0.3.0", default-features = false }
@@ -47,7 +51,7 @@ inquire = { version = "0.7.5" }
 itertools = { version = "0.13.0" }
 lazy_static = { version = "1.5.0" }
 metrics = { version = "0.24.1", default-features = false }
-metrics-exporter-prometheus = { version = "0.16.0", default-features = false }
+metrics-exporter-prometheus = { version = "0.17.2" }
 num-bigint = { version = "0.4.3" }
 once_cell = { version = "1.21.3" }
 openssl = { version = "0.10.59" }
@@ -84,10 +88,14 @@ syn = { version = "2.0.100" }
 testcontainers = { version = "0.19.0" }
 thiserror = { version = "2.0.12" }
 time = { version = "0.3.37" }
-tokio = { version = "1.38.0" }
-tower-http = { version = "0.6.1" }
+tokio = { version = "1.47.1" }
+tower-http = { version = "0.6.6" }
+tokio-task-pool = "0.1.5"
+tokio-util = "0.7.16"
+tokio-vsock = "0.7.1"
+vsock = "0.5.1"
 tracing = { version = "0.1.40" }
-tracing-subscriber = { version = "0.3.18" }
+tracing-subscriber = { version = "0.3.19", features = ["env-filter", "fmt", "chrono"] }
 uniffi = { version = "0.28.3" }
 utoipa = { version = "5.3.1" }
 utoipa-axum = { version = "0.2.0" }
@@ -116,3 +124,4 @@ shielder-relayer = { path = "crates/shielder-relayer" }
 shielder-setup = { path = "crates/shielder-setup" }
 type-conversions = { path = "crates/type-conversions" }
 transcript = { path = "crates/transcript" }
+shielder-scheduler-common = { path = "crates/shielder-scheduler-common" }

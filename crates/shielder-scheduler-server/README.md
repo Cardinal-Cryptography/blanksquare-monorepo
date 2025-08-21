@@ -102,7 +102,7 @@ The service can be configured using environment variables or command-line argume
 
 ### Database Configuration
 - `DB_HOST`: Database host (default: localhost)
-- `DB_PORT`: Database port (default: 5440)
+- `DB_PORT`: Database port (default: 5432)
 - `DB_NAME`: Database name (default: scheduler-db)
 - `DB_USER`: Database user (default: postgres)
 - `DB_PASS`: Database password (default: postgres)

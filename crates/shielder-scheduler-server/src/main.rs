@@ -40,15 +40,9 @@ async fn main() -> Result<(), Error> {
 
     // Initialize logging
     tracing_subscriber::registry()
-        .with(
-            fmt::layer()
-                .with_ansi(true)
-                .with_timer(fmt::time::ChronoUtc::new("%Y-%m-%dT%H:%M:%S%.3fZ".into()))
-                .with_span_events(fmt::format::FmtSpan::CLOSE)
-                .with_filter(EnvFilter::from_default_env()),
-        )
+        .with(fmt::layer().with_filter(EnvFilter::from_default_env()))
         // Initialize metrics collection
-        .with(FutureHistogramLayer.with_filter(EnvFilter::new("info")))
+        .with(FutureHistogramLayer::new().with_filter(EnvFilter::new("info")))
         .init();
 
     // Initialize Prometheus metrics

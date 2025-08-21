@@ -1,73 +1,12 @@
-use enum_map::{enum_map, Enum, EnumMap};
-use lazy_static::lazy_static;
-use metrics::{histogram, Histogram};
-use strum::{EnumIter, EnumString, IntoEnumIterator as _, IntoStaticStr};
+use std::collections::HashSet;
+
+use metrics::histogram;
 use tokio::time::Instant;
 use tracing::{
     span::{Attributes, Id},
     Subscriber,
 };
 use tracing_subscriber::{layer::Context, registry::LookupSpan, Layer};
-
-lazy_static! {
-    static ref BUSY_HISTOGRAMS: EnumMap<FutureTimingMetric, Histogram> = enum_map! {
-        FutureTimingMetric::BuildingVsocksConnection => histogram!(format!("{}_busy", <&str>::from(FutureTimingMetric::BuildingVsocksConnection))),
-        FutureTimingMetric::SendingTeeRequest => histogram!(format!("{}_busy", <&str>::from(FutureTimingMetric::SendingTeeRequest))),
-        FutureTimingMetric::Health => histogram!(format!("{}_busy", <&str>::from(FutureTimingMetric::Health))),
-        FutureTimingMetric::ScheduleWithdraw => histogram!(format!("{}_busy", <&str>::from(FutureTimingMetric::ScheduleWithdraw))),
-        FutureTimingMetric::ProcessSingleRequest => histogram!(format!("{}_busy", <&str>::from(FutureTimingMetric::ProcessSingleRequest))),
-        FutureTimingMetric::TeePublicKey => histogram!(format!("{}_busy", <&str>::from(FutureTimingMetric::TeePublicKey))),
-    };
-    static ref IDLE_HISTOGRAMS: EnumMap<FutureTimingMetric, Histogram> = enum_map! {
-        FutureTimingMetric::BuildingVsocksConnection => histogram!(format!("{}_idle", <&str>::from(FutureTimingMetric::BuildingVsocksConnection))),
-        FutureTimingMetric::SendingTeeRequest => histogram!(format!("{}_idle", <&str>::from(FutureTimingMetric::SendingTeeRequest))),
-        FutureTimingMetric::Health => histogram!(format!("{}_idle", <&str>::from(FutureTimingMetric::Health))),
-        FutureTimingMetric::ScheduleWithdraw => histogram!(format!("{}_idle", <&str>::from(FutureTimingMetric::ScheduleWithdraw))),
-        FutureTimingMetric::ProcessSingleRequest => histogram!(format!("{}_idle", <&str>::from(FutureTimingMetric::ProcessSingleRequest))),
-        FutureTimingMetric::TeePublicKey => histogram!(format!("{}_idle", <&str>::from(FutureTimingMetric::TeePublicKey))),
-    };
-}
-
-#[derive(Debug, Clone, Copy, EnumIter, EnumString, IntoStaticStr, Enum)]
-pub enum FutureTimingMetric {
-    #[strum(serialize = "Building_VSOCK_connection")]
-    BuildingVsocksConnection,
-    #[strum(serialize = "Sending_TEE_request")]
-    SendingTeeRequest,
-    #[strum(serialize = "health")]
-    Health,
-    #[strum(serialize = "schedule_withdraw")]
-    ScheduleWithdraw,
-    #[strum(serialize = "process_single_request")]
-    ProcessSingleRequest,
-    #[strum(serialize = "tee_public_key")]
-    TeePublicKey,
-}
-
-impl FutureTimingMetric {
-    pub fn by_name(name: &str) -> Option<Self> {
-        name.parse().ok()
-    }
-
-    pub const fn name(&self) -> &'static str {
-        match self {
-            FutureTimingMetric::BuildingVsocksConnection => "Building_VSOCK_connection",
-            FutureTimingMetric::SendingTeeRequest => "Sending_TEE_request",
-            FutureTimingMetric::Health => "health",
-            FutureTimingMetric::ScheduleWithdraw => "schedule_withdraw",
-            FutureTimingMetric::ProcessSingleRequest => "process_single_request",
-            FutureTimingMetric::TeePublicKey => "tee_public_key",
-        }
-    }
-
-    pub fn busy_histogram(&self) -> &'static Histogram {
-        &BUSY_HISTOGRAMS[*self]
-    }
-
-    pub fn idle_histogram_name(&self) -> &'static Histogram {
-        &IDLE_HISTOGRAMS[*self]
-    }
-}
 
 /// A tracing_subscriber layer that collects timing metrics for spans.
 ///
@@ -76,8 +15,63 @@ impl FutureTimingMetric {
 /// for asynchronous operations.
 ///
 /// The metrics are submitted to the metrics crate as histograms.
+/// ```rust
+/// use shielder_scheduler_common::metrics::{FutureHistogramLayer, span_names};
+/// use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
+///
+///     // Option 1: Track all instrumented spans
+///     tracing_subscriber::registry()
+///         .with(FutureHistogramLayer::new().with_filter(EnvFilter::new("info")))
+///         .init();
+///
+///     // Option 2: Track only specific spans
+///     tracing_subscriber::registry()
+///         .with(
+///             FutureHistogramLayer::with_spans(&[
+///                 "my_custom_span",
+///                 "another_span",
+///                 "database_operation",
+///             ])
+///             .with_filter(EnvFilter::new("info"))
+///         )
+///         .init();
+/// ```
 #[derive(Debug, Clone)]
-pub struct FutureHistogramLayer;
+pub struct FutureHistogramLayer {
+    /// Optional set of span names to track. If None, all spans are tracked.
+    tracked_spans: Option<HashSet<String>>,
+}
+
+impl FutureHistogramLayer {
+    /// Create a new layer that tracks all instrumented spans
+    pub fn new() -> Self {
+        Self {
+            tracked_spans: None,
+        }
+    }
+
+    /// Create a new layer that tracks only the specified span names
+    pub fn with_spans<S: AsRef<str>>(spans: &[S]) -> Self {
+        let tracked_spans = spans.iter().map(|s| s.as_ref().to_string()).collect();
+        Self {
+            tracked_spans: Some(tracked_spans),
+        }
+    }
+
+    /// Check if a span should be tracked
+    fn should_track_span(&self, span_name: &str) -> bool {
+        match &self.tracked_spans {
+            None => true, // Track all spans
+            Some(tracked) => tracked.contains(span_name),
+        }
+    }
+}
+
+impl Default for FutureHistogramLayer {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 struct Timings {
     idle: u64,
@@ -103,7 +97,7 @@ where
         &self,
         metadata: &'static tracing::Metadata<'static>,
     ) -> tracing::subscriber::Interest {
-        if FutureTimingMetric::iter().any(|metric| metadata.name() == metric.name()) {
+        if self.should_track_span(metadata.name()) {
             tracing::subscriber::Interest::always()
         } else {
             tracing::subscriber::Interest::never()
@@ -150,10 +144,15 @@ where
             } = *timing;
             idle += (Instant::now() - last).as_micros() as u64;
 
-            let metric =
-                FutureTimingMetric::by_name(span.metadata().name()).expect("Invalid metric name");
-            metric.busy_histogram().record(micros_to_secs(busy));
-            metric.idle_histogram_name().record(micros_to_secs(idle));
+            let span_name = span.metadata().name();
+
+            // Record busy histogram
+            let busy_histogram = histogram!(format!("{}_busy", span_name));
+            busy_histogram.record(micros_to_secs(busy));
+
+            // Record idle histogram
+            let idle_histogram = histogram!(format!("{}_idle", span_name));
+            idle_histogram.record(micros_to_secs(idle));
         }
     }
 }

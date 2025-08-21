@@ -1,5 +1,6 @@
 use sqlx::postgres::PgPoolOptions;
 pub use sqlx::PgPool;
+use tracing::info;
 
 use crate::{command_line_args::CommandLineArgs, error::SchedulerServerError as Error};
 
@@ -19,6 +20,7 @@ pub async fn connect_to_db(options: &CommandLineArgs) -> Result<PgPool, Error> {
         ssl_mode
     );
 
+    info!("Connecting to database...");
     // Create database connection pool
     PgPoolOptions::new()
         .max_connections(5)

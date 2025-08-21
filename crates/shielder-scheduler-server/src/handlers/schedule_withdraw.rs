@@ -25,7 +25,7 @@ pub struct ScheduleWithdrawRequest {
     /// Maximum fee that the relayer can charge for this transaction.
     max_relayer_fee: U256,
     /// Timestamp after which the relay is allowed (Unix timestamp in seconds).
-    relay_after: u64,
+    relay_after: i64,
 }
 
 #[derive(Debug, Serialize)]
@@ -47,23 +47,22 @@ pub async fn schedule_withdraw(
     );
 
     // Convert Unix timestamp to DateTime<Utc>
-    let relay_after =
-        match DateTime::from_timestamp(schedule_withdraw_request.relay_after as i64, 0) {
-            Some(dt) => dt,
-            None => {
-                error!(
-                    "Invalid relay_after timestamp: {}",
-                    schedule_withdraw_request.relay_after
-                );
-                return (
-                    axum::http::StatusCode::BAD_REQUEST,
-                    Json(serde_json::json!({
-                        "error": "Invalid relay_after timestamp"
-                    })),
-                )
-                    .into_response();
-            }
-        };
+    let relay_after = match DateTime::from_timestamp(schedule_withdraw_request.relay_after, 0) {
+        Some(dt) => dt,
+        None => {
+            error!(
+                "Invalid relay_after timestamp: {}",
+                schedule_withdraw_request.relay_after
+            );
+            return (
+                axum::http::StatusCode::BAD_REQUEST,
+                Json(serde_json::json!({
+                    "error": "Invalid relay_after timestamp"
+                })),
+            )
+                .into_response();
+        }
+    };
 
     // Basic validation
     // TBD: more comprehensive validation

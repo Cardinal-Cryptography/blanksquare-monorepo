@@ -4,15 +4,15 @@ use clap::Parser;
 pub struct CommandLineArgs {
     // Server configuration
     /// A port on which this server listens to incoming HTTP connections.
-    #[arg(short, long, default_value = "3000", env = "PUBLIC_PORT")]
+    #[clap(short, long, default_value = "3000", env = "PUBLIC_PORT")]
     pub public_port: u16,
 
     /// A port on which this server exposes its metrics endpoint.
-    #[arg(short, long, default_value = "3001", env = "METRICS_PORT")]
+    #[clap(short, long, default_value = "3001", env = "METRICS_PORT")]
     pub metrics_port: u16,
 
     /// Local IPv4 address on which this server listens to incoming HTTP connections
-    #[arg(short, long, default_value = "0.0.0.0", env = "BIND_ADDRESS")]
+    #[clap(short, long, default_value = "0.0.0.0", env = "BIND_ADDRESS")]
     pub bind_address: String,
 
     /// Maximum request size (in bytes) sent to server
@@ -31,7 +31,7 @@ pub struct CommandLineArgs {
     // TEE configuration
     /// Internal port on which host and tee applications talks to each other
     /// This is the part of the vsock endpoint, which is tee_cid:tee_port
-    #[arg(short, long, default_value_t = shielder_scheduler_common::protocol::VSOCK_PORT, env = "TEE_PORT")]
+    #[clap(short, long, default_value_t = shielder_scheduler_common::protocol::VSOCK_PORT, env = "TEE_PORT")]
     pub tee_port: u16,
 
     /// A context identifier on which this server and TEE server communicate with each other
@@ -69,22 +69,22 @@ pub struct CommandLineArgs {
 
     // Database connection parameters
     /// Database host
-    #[arg(short, long, default_value = "localhost", env = "DB_HOST")]
+    #[clap(long, default_value = "localhost", env = "DB_HOST")]
     pub db_host: String,
     /// Database port
-    #[arg(short, long, default_value = "5440", env = "DB_PORT")]
+    #[clap(long, default_value = "5432", env = "DB_PORT")]
     pub db_port: u16,
     /// Database name
-    #[arg(short, long, default_value = "scheduler-db", env = "DB_NAME")]
+    #[clap(long, default_value = "scheduler-db", env = "DB_NAME")]
     pub db_name: String,
     /// Database user
-    #[arg(short, long, default_value = "postgres", env = "DB_USER")]
+    #[clap(long, default_value = "postgres", env = "DB_USER")]
     pub db_user: String,
     /// Database password
-    #[arg(short, long, default_value = "postgres", env = "DB_PASS")]
+    #[clap(long, default_value = "postgres", env = "DB_PASS")]
     pub db_pass: String,
     /// Use SSL for database connection
     /// If set to true, the server will use SSL to connect to the database
-    #[arg(short, long, default_value = "false", env = "DB_USE_SSL")]
+    #[clap(long, default_value_t = false, env = "DB_USE_SSL")]
     pub db_ssl: bool,
 }

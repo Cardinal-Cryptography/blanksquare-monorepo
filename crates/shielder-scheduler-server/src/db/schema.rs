@@ -205,16 +205,19 @@ pub async fn update_retry_attempt(
     pool: &PgPool,
     id: i64,
     new_relay_after: DateTime<Utc>,
+    new_error_message: Option<&str>,
 ) -> Result<(), Error> {
     sqlx::query(
         r#"
         UPDATE scheduled_requests 
-        SET retry_count = retry_count + 1, status = 'failed', relay_after = $2
+        SET retry_count = retry_count + 1, relay_after = $2, status = $3, error_message = $4
         WHERE id = $1
         "#,
     )
     .bind(id)
     .bind(new_relay_after)
+    .bind(RequestStatus::Failed)
+    .bind(new_error_message)
     .execute(pool)
     .await?;
 

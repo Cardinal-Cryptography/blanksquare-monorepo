@@ -121,13 +121,11 @@ impl SchedulerProcessor {
                 let new_relay_after = relay_after
                     + Duration::from_secs(self.app_state.options.scheduler_retry_delay_secs);
 
-                update_retry_attempt(&self.app_state.db_pool, request_id, new_relay_after).await?;
-
-                // Mark request as failed
-                update_request_status(
+                // Mark request as failed and update retry attempt
+                update_retry_attempt(
                     &self.app_state.db_pool,
                     request_id,
-                    RequestStatus::Failed,
+                    new_relay_after,
                     Some(&e.to_string()),
                 )
                 .await?;
@@ -147,8 +145,6 @@ struct ProcessingResult {
 async fn process_request_logic(
     request: ScheduledRequest,
 ) -> Result<ProcessingResult, Box<dyn std::error::Error + Send + Sync>> {
-    info!("Processing request logic for ID: {}", request.id);
-
     // Parse the U256 values
     let last_note_index = request
         .last_note_index_as_u256()

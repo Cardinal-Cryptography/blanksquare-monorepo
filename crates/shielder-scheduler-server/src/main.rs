@@ -42,7 +42,7 @@ async fn main() -> Result<(), Error> {
     tracing_subscriber::registry()
         .with(fmt::layer().with_filter(EnvFilter::from_default_env()))
         // Initialize metrics collection
-        .with(FutureHistogramLayer::new().with_filter(EnvFilter::new("info")))
+        .with(FutureHistogramLayer::with_all_spans().with_filter(EnvFilter::new("info")))
         .init();
 
     // Initialize Prometheus metrics

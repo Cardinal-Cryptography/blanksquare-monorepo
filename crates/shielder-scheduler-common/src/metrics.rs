@@ -8,6 +8,27 @@ use tracing::{
 };
 use tracing_subscriber::{layer::Context, registry::LookupSpan, Layer};
 
+#[derive(Debug, Clone)]
+pub enum TrackedSpans {
+    All,
+    Specific(HashSet<&'static str>),
+}
+
+impl TrackedSpans {
+    pub fn contains(&self, span_name: &str) -> bool {
+        match self {
+            TrackedSpans::All => true,
+            TrackedSpans::Specific(tracked) => tracked.contains(span_name),
+        }
+    }
+}
+
+impl From<&[&'static str]> for TrackedSpans {
+    fn from(spans: &[&'static str]) -> Self {
+        TrackedSpans::Specific(spans.iter().copied().collect())
+    }
+}
+
 /// A tracing_subscriber layer that collects timing metrics for spans.
 ///
 /// Based on tracing_subscriber::fmt. Handles spans that are entered and exited
@@ -15,61 +36,64 @@ use tracing_subscriber::{layer::Context, registry::LookupSpan, Layer};
 /// for asynchronous operations.
 ///
 /// The metrics are submitted to the metrics crate as histograms.
-/// ```rust
-/// use shielder_scheduler_common::metrics::{FutureHistogramLayer, span_names};
-/// use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
+///
+/// ## Example usage:
+/// ```
+/// # use shielder_scheduler_common::metrics::{FutureHistogramLayer, TrackedSpans};
+/// # use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 ///
 ///     // Option 1: Track all instrumented spans
 ///     tracing_subscriber::registry()
-///         .with(FutureHistogramLayer::new().with_filter(EnvFilter::new("info")))
+///         .with(FutureHistogramLayer::with_all_spans())
 ///         .init();
-///
+/// ```
+/// ```
+/// # use shielder_scheduler_common::metrics::{FutureHistogramLayer, TrackedSpans};
+/// # use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 ///     // Option 2: Track only specific spans
 ///     tracing_subscriber::registry()
-///         .with(
-///             FutureHistogramLayer::with_spans(&[
-///                 "my_custom_span",
-///                 "another_span",
-///                 "database_operation",
-///             ])
-///             .with_filter(EnvFilter::new("info"))
-///         )
-///         .init();
+///        .with(FutureHistogramLayer::with_specific_spans([
+///            "specific_span_name_1",
+///            "specific_span_name_2",
+///        ]))
+///        .init();
 /// ```
 #[derive(Debug, Clone)]
 pub struct FutureHistogramLayer {
     /// Optional set of span names to track. If None, all spans are tracked.
-    tracked_spans: Option<HashSet<String>>,
+    tracked_spans: TrackedSpans,
 }
 
 impl FutureHistogramLayer {
-    /// Create a new layer that tracks all instrumented spans
-    pub fn new() -> Self {
-        Self {
-            tracked_spans: None,
-        }
+    pub fn new(tracked_spans: TrackedSpans) -> Self {
+        Self { tracked_spans }
     }
 
-    /// Create a new layer that tracks only the specified span names
-    pub fn with_spans<S: AsRef<str>>(spans: &[S]) -> Self {
-        let tracked_spans = spans.iter().map(|s| s.as_ref().to_string()).collect();
-        Self {
-            tracked_spans: Some(tracked_spans),
-        }
+    /// Create a new layer that tracks all instrumented spans.
+    ///
+    /// Equivalent to
+    /// ```
+    /// # use shielder_scheduler_common::metrics::{FutureHistogramLayer, TrackedSpans};
+    /// FutureHistogramLayer::new(TrackedSpans::All);
+    /// ```
+    pub fn with_all_spans() -> Self {
+        Self::new(TrackedSpans::All)
+    }
+
+    /// Create a new layer that tracks only specific spans.
+    ///
+    /// Equivalent to
+    /// ```
+    /// # use shielder_scheduler_common::metrics::{FutureHistogramLayer, TrackedSpans};
+    /// FutureHistogramLayer::new(TrackedSpans::Specific([ "specific_span_name_1", "specific_span_name_2"].into()));
+    /// ```
+    pub fn with_specific_spans(spans: &[&'static str]) -> Self {
+        Self::new(TrackedSpans::from(spans))
     }
 
     /// Check if a span should be tracked
-    fn should_track_span(&self, span_name: &str) -> bool {
-        match &self.tracked_spans {
-            None => true, // Track all spans
-            Some(tracked) => tracked.contains(span_name),
-        }
-    }
-}
-
-impl Default for FutureHistogramLayer {
-    fn default() -> Self {
-        Self::new()
+    fn is_span_tracked(&self, span_name: &str) -> bool {
+        self.tracked_spans.contains(span_name)
     }
 }
 
@@ -97,7 +121,7 @@ where
         &self,
         metadata: &'static tracing::Metadata<'static>,
     ) -> tracing::subscriber::Interest {
-        if self.should_track_span(metadata.name()) {
+        if self.is_span_tracked(metadata.name()) {
             tracing::subscriber::Interest::always()
         } else {
             tracing::subscriber::Interest::never()
@@ -106,10 +130,11 @@ where
 
     fn on_new_span(&self, _: &Attributes<'_>, id: &Id, ctx: Context<'_, S>) {
         let span = ctx.span(id).expect("Span not found, this is a bug");
-        let mut extensions = span.extensions_mut();
-
-        if extensions.get_mut::<Timings>().is_none() {
-            extensions.insert(Timings::new());
+        if self.is_span_tracked(span.metadata().name()) {
+            let mut extensions = span.extensions_mut();
+            if extensions.get_mut::<Timings>().is_none() {
+                extensions.insert(Timings::new());
+            }
         }
     }
 

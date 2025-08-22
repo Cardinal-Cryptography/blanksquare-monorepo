@@ -26,7 +26,6 @@ pub enum RequestStatus {
     Processing,
     Completed,
     Failed,
-    Cancelled,
 }
 
 impl ScheduledRequest {
@@ -49,8 +48,7 @@ pub async fn create_tables(pool: &PgPool) -> Result<(), Error> {
                 'pending', 
                 'processing', 
                 'completed', 
-                'failed', 
-                'cancelled'
+                'failed'
             );
         EXCEPTION
             WHEN duplicate_object THEN null;
@@ -70,24 +68,14 @@ pub async fn create_tables(pool: &PgPool) -> Result<(), Error> {
             max_relayer_fee TEXT NOT NULL,
             relay_after TIMESTAMPTZ NOT NULL,
             status request_status NOT NULL DEFAULT 'pending',
-            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            created_at TIMESTAMPTZ NOT NULL DEFAULT &1,
             processed_at TIMESTAMPTZ,
             retry_count INTEGER NOT NULL DEFAULT 0,
             error_message TEXT
         )
         "#,
     )
-    .execute(pool)
-    .await?;
-
-    // Create an index on relay_after for efficient querying
-    sqlx::query(
-        r#"
-        CREATE INDEX IF NOT EXISTS idx_scheduled_requests_relay_after_status 
-        ON scheduled_requests(relay_after, status) 
-        WHERE status IN ('pending', 'failed')
-        "#,
-    )
+    .bind(Utc::now())
     .execute(pool)
     .await?;
 
@@ -118,21 +106,6 @@ pub async fn insert_scheduled_request(
     Ok(row.get("id"))
 }
 
-#[allow(dead_code)]
-pub async fn remove_scheduled_request(pool: &PgPool, id: i64) -> Result<(), Error> {
-    sqlx::query(
-        r#"
-        DELETE FROM scheduled_requests 
-        WHERE id = $1
-        "#,
-    )
-    .bind(id)
-    .execute(pool)
-    .await?;
-
-    Ok(())
-}
-
 pub async fn get_pending_requests(
     pool: &PgPool,
     limit: i64,
@@ -142,13 +115,14 @@ pub async fn get_pending_requests(
         SELECT id, payload, last_note_index, max_relayer_fee, relay_after, 
                status, created_at, processed_at, retry_count, error_message
         FROM scheduled_requests
-        WHERE status IN ('pending', 'failed') 
-        AND relay_after <= NOW()
+        WHERE status IN ('pending', 'processing') 
+        AND relay_after <= $2
         ORDER BY relay_after ASC
         LIMIT $1
         "#,
     )
     .bind(limit)
+    .bind(Utc::now())
     .fetch_all(pool)
     .await?;
 
@@ -178,7 +152,7 @@ pub async fn update_request_status(
     error_message: Option<&str>,
 ) -> Result<(), Error> {
     let processed_at = match status {
-        RequestStatus::Completed | RequestStatus::Failed | RequestStatus::Cancelled => {
+        RequestStatus::Completed | RequestStatus::Failed | RequestStatus::Processing => {
             Some(Utc::now())
         }
         _ => None,
@@ -216,7 +190,7 @@ pub async fn update_retry_attempt(
     )
     .bind(id)
     .bind(new_relay_after)
-    .bind(RequestStatus::Failed)
+    .bind(RequestStatus::Processing)
     .bind(new_error_message)
     .execute(pool)
     .await?;

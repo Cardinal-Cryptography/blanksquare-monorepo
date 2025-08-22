@@ -54,10 +54,9 @@ Schedule a withdrawal request to be processed at a future time.
 ## Request Statuses
 
 - **Pending**: Request is waiting to be processed
-- **Processing**: Request is currently being processed
+- **Processing**: Request failed but did not reach max retry attemps count
 - **Completed**: Request has been successfully processed
-- **Failed**: Request processing failed
-- **Cancelled**: Request has been cancelled
+- **Failed**: Request processing failed and reached max retry attemps count
 
 ## Background Processing
 
@@ -144,7 +143,7 @@ The service is built with clear separation of concerns:
 3. **Scheduler Processor** (`scheduler_processor.rs`):
    - Background processing of scheduled requests
    - Batch processing with configurable limits
-   - Retry logic with exponential backoff
+   - Retry logic with backoff
 
 4. **TEE Communication**:
    - Managed through a bounded task pool

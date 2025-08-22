@@ -1,5 +1,6 @@
 use std::{sync::Arc, time::Duration};
 
+use chrono::Utc;
 use tokio::time::interval;
 use tracing::{error, info, instrument, warn};
 
@@ -70,39 +71,12 @@ impl SchedulerProcessor {
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         info!("Processing request ID: {}", request.id);
         let request_id = request.id;
-        let relay_after = request.relay_after;
-
-        if request.retry_count > self.app_state.options.scheduler_max_retry_count as i32 {
-            warn!(
-                "Request ID {} has reached maximum retry count, marking as cancelled",
-                request_id
-            );
-            // TODO: Should we remove the failed request from DB after instead of marking as cancelled?
-            // Mark request as cancelled
-            update_request_status(
-                &self.app_state.db_pool,
-                request_id,
-                RequestStatus::Cancelled,
-                None,
-            )
-            .await?;
-            return Ok(());
-        }
-
-        // Mark request as processing
-        update_request_status(
-            &self.app_state.db_pool,
-            request_id,
-            RequestStatus::Processing,
-            None,
-        )
-        .await?;
+        let request_retry_count = request.retry_count;
 
         match process_request_logic(request).await {
             Ok(result) => {
                 info!("Successfully processed request ID: {}", result.request_id);
                 // Mark request as completed
-                // TODO: Should we remove the request from DB after processing?
                 update_request_status(
                     &self.app_state.db_pool,
                     result.request_id,
@@ -117,18 +91,33 @@ impl SchedulerProcessor {
                     request_id, e
                 );
 
-                // Increment retry count
-                let new_relay_after = relay_after
-                    + Duration::from_secs(self.app_state.options.scheduler_retry_delay_secs);
+                if request_retry_count < self.app_state.options.scheduler_max_retry_count as i32 {
+                    // Increment retry count
+                    let new_relay_after = Utc::now()
+                        + Duration::from_secs(self.app_state.options.scheduler_retry_delay_secs);
 
-                // Mark request as failed and update retry attempt
-                update_retry_attempt(
-                    &self.app_state.db_pool,
-                    request_id,
-                    new_relay_after,
-                    Some(&e.to_string()),
-                )
-                .await?;
+                    // Update retry attempt
+                    update_retry_attempt(
+                        &self.app_state.db_pool,
+                        request_id,
+                        new_relay_after,
+                        Some(&e.to_string()),
+                    )
+                    .await?;
+                } else {
+                    warn!(
+                        "Request ID {} has reached maximum retry count, marking as Failed",
+                        request_id
+                    );
+                    // Mark request as failed
+                    update_request_status(
+                        &self.app_state.db_pool,
+                        request_id,
+                        RequestStatus::Failed,
+                        Some(&e.to_string()),
+                    )
+                    .await?;
+                }
             }
         }
 

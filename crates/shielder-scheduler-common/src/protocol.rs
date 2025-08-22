@@ -78,5 +78,5 @@ pub enum Response {
     PrepareRelayCalldata { calldata: RelayCalldata },
 }
 
-pub type SchedulerServer = VsockServer<Request, Response>;
-pub type SchedulerClient = VsockClient<Request, Response>;
+pub type TEEServer = VsockServer<Request, Response>;
+pub type TEEClient = VsockClient<Request, Response>;

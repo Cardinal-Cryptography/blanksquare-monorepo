@@ -25,6 +25,9 @@ pub enum SchedulerServerError {
 
     #[error("Failed to parse commandline arguments: {0}")]
     ParseError(String),
+
+    #[error("Database error: {0}")]
+    DatabaseError(#[from] sqlx::Error),
 }
 
 impl IntoResponse for SchedulerServerError {

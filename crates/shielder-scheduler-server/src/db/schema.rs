@@ -184,7 +184,7 @@ pub async fn update_retry_attempt(
     sqlx::query(
         r#"
         UPDATE scheduled_requests 
-        SET retry_count = retry_count + 1, relay_after = $2, status = $3, error_message = $4
+        SET retry_count = retry_count + 1, relay_after = $2, status = $3, error_message = $4, processed_at = $5
         WHERE id = $1
         "#,
     )
@@ -192,6 +192,7 @@ pub async fn update_retry_attempt(
     .bind(new_relay_after)
     .bind(RequestStatus::Processing)
     .bind(new_error_message)
+    .bind(Utc::now())
     .execute(pool)
     .await?;
 

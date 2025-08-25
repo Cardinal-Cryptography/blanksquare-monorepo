@@ -43,7 +43,8 @@ impl Prices {
         for token in tokens {
             token_map.insert(token.kind, token.clone());
             let price = match &token.price_provider {
-                PriceProvider::Url(_) => None,
+                PriceProvider::Dia(_) => None,
+                PriceProvider::Pyth(_) => None,
                 PriceProvider::Static(price) => Some(Price::static_price(*price, token.decimals())),
             };
             inner.insert(token.kind, Arc::new(Mutex::new(price)));
@@ -92,11 +93,7 @@ impl Prices {
 
     async fn update(&self) {
         for token in self.tokens.values() {
-            let PriceProvider::Url(url) = &token.price_provider else {
-                continue;
-            };
-
-            let price_info = fetch_price(url).await;
+            let price_info = fetch_price(&token.price_provider).await;
 
             if let Err(err) = price_info {
                 warn!("Failed to update prices: {err}");
@@ -135,7 +132,7 @@ mod tests {
     fn token_with_url_price() -> TokenInfo {
         TokenInfo {
             kind: TokenKind::Native,
-            price_provider: PriceProvider::Url(
+            price_provider: PriceProvider::Dia(
                 "https://api.diadata.org/v1/assetQuotation/Ethereum/0x0000000000000000000000000000000000000000".to_string(),
             ),
         }

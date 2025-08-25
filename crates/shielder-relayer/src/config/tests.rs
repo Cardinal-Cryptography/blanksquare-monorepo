@@ -32,7 +32,7 @@ fn config_resolution() {
     let token_config = vec![
         TokenInfo {
             kind: TokenKind::Native,
-            price_provider: PriceProvider::Url("https://price.feed".to_string()),
+            price_provider: PriceProvider::Dia("https://price.feed".to_string()),
         },
         TokenInfo {
             kind: TokenKind::ERC20 {
@@ -122,7 +122,7 @@ fn config_resolution() {
             "[
                 {
                     \"kind\":\"Native\",
-                    \"price_provider\":{\"Url\":\"https://price.feed\"}
+                    \"price_provider\":{\"Dia\":\"https://price.feed\"}
                 },
                 {
                     \"kind\":{\

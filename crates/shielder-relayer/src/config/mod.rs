@@ -1,10 +1,11 @@
 use std::{
+    collections::HashSet,
     fmt::{Debug, Formatter},
     str::FromStr,
     time::Duration,
 };
 
-use anyhow::anyhow;
+use anyhow::{anyhow, Result};
 use clap::Parser;
 use cli::CLIConfig;
 use defaults::*;
@@ -100,11 +101,11 @@ pub struct ServerConfig {
 
 /// Resolves the configuration for the Shielder relayer using the command line arguments,
 /// environment variables, and default values.
-pub fn resolve_config() -> ServerConfig {
+pub fn resolve_config() -> Result<ServerConfig> {
     resolve_config_from_cli_config(CLIConfig::parse())
 }
 
-fn resolve_config_from_cli_config(
+pub fn resolve_config_from_cli_config(
     CLIConfig {
         logging_format,
         host,
@@ -127,7 +128,7 @@ fn resolve_config_from_cli_config(
         quote_validity,
         max_pocket_money,
     }: CLIConfig,
-) -> ServerConfig {
+) -> Result<ServerConfig> {
     let to_address = |s: &str| Address::from_str(s).expect("Invalid address");
 
     let signing_keys = signing_keys.unwrap_or_else(|| {
@@ -166,7 +167,9 @@ fn resolve_config_from_cli_config(
     let token_config = token_config
         .or_else(|| std::env::var(TOKEN_CONFIG_ENV).ok())
         .expect("Missing token configuration");
-    let token_config = serde_json::from_str(&token_config).expect("Invalid token configuration");
+    let token_config: Vec<TokenInfo> =
+        serde_json::from_str(&token_config).expect("Invalid token configuration");
+    check_token_config(&token_config)?;
 
     let operational_config = OperationalConfig {
         balance_monitor_interval: resolve_value_map(
@@ -227,7 +230,7 @@ fn resolve_config_from_cli_config(
         ),
     };
 
-    ServerConfig {
+    Ok(ServerConfig {
         logging_format: resolve_value(
             logging_format,
             LOGGING_FORMAT_ENV,
@@ -237,7 +240,7 @@ fn resolve_config_from_cli_config(
         chain: chain_config,
         operations: operational_config,
         keys: key_config,
-    }
+    })
 }
 
 fn resolve_value<T: FromStr<Err: Debug>>(value: Option<T>, env_var: &str, default: Option<T>) -> T {
@@ -262,4 +265,19 @@ fn resolve_value_map<T, Map: Fn(&str) -> anyhow::Result<T>>(
             .or(default)
             .expect("Missing required configuration")
     })
+}
+
+fn check_token_config(token_config: &[TokenInfo]) -> Result<(), anyhow::Error> {
+    let mut kinds = HashSet::new();
+
+    for token in token_config {
+        if kinds.contains(&token.kind) {
+            return Err(anyhow!(
+                "Duplicate token kind {token:?} in token configuration"
+            ));
+        }
+        kinds.insert(token.kind);
+    }
+
+    Ok(())
 }

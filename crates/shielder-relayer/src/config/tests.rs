@@ -1,4 +1,5 @@
 use alloy_primitives::address;
+use anyhow::Result;
 use assert2::assert;
 use rust_decimal::Decimal;
 use shielder_relayer::{RELAYER_PORT_ENV, RELAYER_SIGNING_KEYS_ENV};
@@ -12,7 +13,7 @@ fn verify_cli() {
 }
 
 #[test]
-fn config_resolution() {
+fn config_resolution() -> Result<()> {
     // ---- Target configuration. --------------------------------------------------------------
     let logging_format = LoggingFormat::Json;
     let host = DEFAULT_HOST.to_string();
@@ -138,6 +139,8 @@ fn config_resolution() {
     }
 
     // ---- Test. ------------------------------------------------------------------------------
-    let resolved_config = resolve_config_from_cli_config(cli_config);
+    let resolved_config = resolve_config_from_cli_config(cli_config)?;
     assert!(resolved_config == expected_config);
+
+    Ok(())
 }

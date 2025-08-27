@@ -9,7 +9,7 @@ use aws_nitro_enclaves_nsm_api::{
 };
 use log::{debug, info};
 use shielder_scheduler_common::{
-    protocol::{Payload, Request, Response, SchedulerServer},
+    protocol::{Payload, RelayCalldata, Request, Response, TEEServer},
     vsock::VsockError,
 };
 use shielder_setup::consts::{ARITY, TREE_HEIGHT};
@@ -50,7 +50,8 @@ impl Server {
     }
 
     pub fn public_key(&self) -> Vec<u8> {
-        todo!("Implement public key retrieval logic here");
+        // TODO: Implement public key retrieval logic
+        vec![0; 32] // Placeholder for the public key
     }
 
     pub async fn handle_client(self: Arc<Self>, stream: VsockStream) {
@@ -59,7 +60,7 @@ impl Server {
     }
 
     async fn do_handle_client(&self, stream: VsockStream) -> Result<(), VsockError> {
-        let mut server: SchedulerServer = stream.into();
+        let mut server: TEEServer = stream.into();
 
         loop {
             server
@@ -71,7 +72,7 @@ impl Server {
                         relayer_address,
                         relayer_fee,
                         merkle_path,
-                    } => self.generate_proof_response(
+                    } => self.prepare_relay_calldata_response(
                         payload,
                         relayer_address,
                         relayer_fee,
@@ -98,7 +99,7 @@ impl Server {
         })
     }
 
-    fn generate_proof_response(
+    fn prepare_relay_calldata_response(
         &self,
         payload: Vec<u8>,
         _relayer_address: Address,
@@ -107,13 +108,32 @@ impl Server {
     ) -> Result<Response, VsockError> {
         let decrypted_payload = self.decrypt_payload(&payload)?;
 
-        let _deserialized_payload: Payload = serde_json::from_slice(&decrypted_payload)?;
+        let _deserialized_payload: Result<Payload, _> = serde_json::from_slice(&decrypted_payload);
 
-        todo!("Implement proof generation logic here");
+        // TODO: Implement proof generation logic here
+
+        Ok(Response::PrepareRelayCalldata {
+            calldata: RelayCalldata {
+                expected_contract_version: [0, 0, 0].into(),
+                amount: U256::from(0),
+                withdraw_address: Address::random(),
+                merkle_root: U256::from(0),
+                nullifier_hash: U256::from(0),
+                new_note: U256::from(0),
+                proof: Vec::new().into(),
+                fee_token: Default::default(),
+                fee_amount: U256::from(0),
+                mac_salt: U256::from(0),
+                mac_commitment: U256::from(0),
+                pocket_money: U256::from(0),
+                memo: Vec::new().into(),
+            },
+        }) // Placeholder response
     }
 
     fn decrypt_payload(&self, _payload: &[u8]) -> Result<Vec<u8>, VsockError> {
-        todo!("Implement decryption logic here");
+        // TODO: Implement decryption logic here
+        Ok(_payload.to_vec()) // Placeholder for decrypted payload
     }
 
     #[cfg(not(feature = "without_attestation"))]

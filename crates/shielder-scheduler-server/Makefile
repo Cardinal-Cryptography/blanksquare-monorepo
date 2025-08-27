@@ -9,6 +9,3 @@ lint-rust:
 .PHONY: test
 test:
 	cargo check
-
-run:
-	RUST_LOG=info cargo run --release

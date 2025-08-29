@@ -130,3 +130,7 @@ shielder-setup = { path = "crates/shielder-setup" }
 type-conversions = { path = "crates/type-conversions" }
 transcript = { path = "crates/transcript" }
 shielder-scheduler-common = { path = "crates/shielder-scheduler-common" }
+
+#[profile.release]
+lto = "fat"
+

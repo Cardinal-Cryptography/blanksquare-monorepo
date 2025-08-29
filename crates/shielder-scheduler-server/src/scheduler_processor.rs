@@ -4,7 +4,9 @@ use alloy_primitives::U256;
 use alloy_signer_local::PrivateKeySigner;
 use chrono::Utc;
 use shielder_contract::{merkle_path::get_current_merkle_path, ConnectionPolicy, ShielderUser};
-use shielder_setup::{consts::ARITY, shielder_circuits::consts::merkle_constants::NOTE_TREE_HEIGHT};
+use shielder_setup::{
+    consts::ARITY, shielder_circuits::consts::merkle_constants::NOTE_TREE_HEIGHT,
+};
 use tokio::time::interval;
 use tracing::{error, info, instrument, warn};
 
@@ -30,7 +32,6 @@ struct ProcessingResult {
     request_id: i64,
 }
 
-
 impl SchedulerProcessor {
     pub fn new(app_state: Arc<AppState>) -> Self {
         Self { app_state }
@@ -53,12 +54,12 @@ impl SchedulerProcessor {
     }
 
     async fn current_merkle_path(
-		&self,
-		leaf_index: U256,
-	) -> Result<(U256, [[U256; ARITY]; NOTE_TREE_HEIGHT])> {
-		let shielder_user = self.shielder_user_read_only();
-		Ok(get_current_merkle_path(leaf_index, &shielder_user).await?)
-	}
+        &self,
+        leaf_index: U256,
+    ) -> Result<(U256, [[U256; ARITY]; NOTE_TREE_HEIGHT])> {
+        let shielder_user = self.shielder_user_read_only();
+        Ok(get_current_merkle_path(leaf_index, &shielder_user).await?)
+    }
 
     fn shielder_user_read_only(&self) -> ShielderUser {
         ShielderUser::new(
@@ -73,9 +74,7 @@ Please check the SHIELDER_ADDRESS environment variable or --shielder-address arg
         )
     }
 
-    async fn process_pending_requests(
-        &self,
-    ) -> Result<()> {
+    async fn process_pending_requests(&self) -> Result<()> {
         let requests = get_pending_requests(
             &self.app_state.db_pool,
             self.app_state.options.scheduler_batch_size as i64,
@@ -98,10 +97,7 @@ Please check the SHIELDER_ADDRESS environment variable or --shielder-address arg
     }
 
     #[instrument(level = "info", skip_all)]
-    async fn process_single_request(
-        &self,
-        request: ScheduledRequest,
-    ) -> Result<()> {
+    async fn process_single_request(&self, request: ScheduledRequest) -> Result<()> {
         info!("Processing request ID: {}", request.id);
         let request_id = request.id;
         let request_retry_count = request.retry_count;
@@ -153,19 +149,15 @@ Please check the SHIELDER_ADDRESS environment variable or --shielder-address arg
         Ok(())
     }
 
-
     /// The actual processing logic for a scheduled request
-    async fn process_request_logic(
-        &self,
-        request: ScheduledRequest,
-    ) -> Result<ProcessingResult> {
+    async fn process_request_logic(&self, request: ScheduledRequest) -> Result<ProcessingResult> {
         // Parse the U256 values
-        let last_note_index = request
-            .last_note_index_as_u256()
-            .map_err(|e| SchedulerServerError::ValueParseError(format!("Failed to parse last_note_index: {}", e)))?;
-        let max_relayer_fee = request
-            .max_relayer_fee_as_u256()
-            .map_err(|e| SchedulerServerError::ValueParseError(format!("Failed to parse max_relayer_fee: {}", e)))?;
+        let last_note_index = request.last_note_index_as_u256().map_err(|e| {
+            SchedulerServerError::ValueParseError(format!("Failed to parse last_note_index: {}", e))
+        })?;
+        let max_relayer_fee = request.max_relayer_fee_as_u256().map_err(|e| {
+            SchedulerServerError::ValueParseError(format!("Failed to parse max_relayer_fee: {}", e))
+        })?;
 
         let (_, _merkle_path) = self.current_merkle_path(last_note_index).await?;
 

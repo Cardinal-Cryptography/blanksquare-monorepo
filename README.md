@@ -150,49 +150,7 @@ make deploy-contracts
 
 ### Integration Guide
 
-For developers wanting to integrate BlankSquare privacy into their applications:
-
-#### 1. Install the SDK
-
-```bash
-npm install @cardinal-cryptography/shielder-sdk@0.2.0-beta.10
-npm install @cardinal-cryptography/shielder-sdk-crypto@0.2.0-beta.4
-npm install @cardinal-cryptography/shielder-sdk-crypto-wasm@0.2.0-beta.4
-```
-
-#### 2. Initialize the Client
-
-```typescript
-import { createShielderClient } from '@cardinal-cryptography/shielder-sdk';
-
-const shielder = await createShielderClient({
-  shielderSeedPrivateKey: "0x...", // Your shielded account key
-  chainId: BigInt(84532), // Base Sepolia
-  contractAddress: "0x2098a5f59DAB63F1a2aB7C0715DA437D1efB012B",
-  relayerUrl: "https://shielder-relayer-v2.test.azero.dev/base-testnet",
-  // ... additional configuration
-});
-```
-
-#### 3. Shield and Transact
-
-```typescript
-// Shield tokens (deposit)
-await shielder.shield({
-  token: tokenAddress,
-  amount: "100000000", // 100 USDC (6 decimals)
-  recipient: recipientShieldedAddress
-});
-
-// Private withdrawal
-await shielder.withdraw({
-  token: tokenAddress,
-  amount: "50000000", // 50 USDC
-  recipient: publicEthereumAddress
-});
-```
-
-For complete integration examples, see our [integration documentation](https://docs.blanksquare.io/integration-guides/quickstart).
+For developers wanting to integrate BlankSquare privacy into their applications, see our [integration documentation](https://docs.blanksquare.io/integration-guides/quickstart).
 
 ## Development
 

@@ -164,10 +164,9 @@ impl SchedulerProcessor {
         let (_, _merkle_path) = self.current_merkle_path(last_note_index).await?;
 
         // TODO:
-        // 1. Get the current merkle path for the note
-        // 2. Get fee quote from the relayer
-        // 3. Prepare the relay calldata using the TEE
-        // 4. Submit to a relayer or relay directly to the blockchain
+        // 1. Get fee quote from the relayer
+        // 2. Prepare the relay calldata using the TEE
+        // 3. Submit to a relayer or relay directly to the blockchain
 
         // For now, we'll simulate the processing
         info!(

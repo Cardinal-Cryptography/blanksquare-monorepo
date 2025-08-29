@@ -2,6 +2,7 @@ use axum::{
     http::StatusCode,
     response::{IntoResponse, Response as AxumResponse},
 };
+use shielder_contract::ShielderContractError;
 use shielder_scheduler_common::vsock::VsockError;
 use tokio::task::JoinError;
 use tracing::error;
@@ -26,8 +27,14 @@ pub enum SchedulerServerError {
     #[error("Failed to parse commandline arguments: {0}")]
     ParseError(String),
 
+    #[error("Failed to parse value: {0}")]
+    ValueParseError(String),
+
     #[error("Database error: {0}")]
     DatabaseError(#[from] sqlx::Error),
+
+    #[error("Contract error: {0}")]
+    ContractError(#[from] ShielderContractError),
 }
 
 impl IntoResponse for SchedulerServerError {

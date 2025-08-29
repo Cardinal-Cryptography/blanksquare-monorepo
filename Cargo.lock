@@ -5869,6 +5869,7 @@ name = "shielder-scheduler-server"
 version = "0.1.0"
 dependencies = [
  "alloy-primitives",
+ "alloy-signer-local",
  "axum",
  "chrono",
  "clap",
@@ -5876,6 +5877,7 @@ dependencies = [
  "metrics-exporter-prometheus",
  "serde",
  "serde_json",
+ "shielder-contract",
  "shielder-scheduler-common",
  "shielder-setup",
  "sqlx",

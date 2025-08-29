@@ -18,7 +18,7 @@ pub struct ScheduleWithdrawRequest {
 
     // Unecrypted data useful for basic checks.
     // It should be consistent with the data in `payload`.
-    // TBD what exactly is needed
+    
     /// Index of the last leaf in the Merkle tree containing the account's note.
     /// Necessary to get the merkle path from this leaf to the current root.
     last_note_index: U256,

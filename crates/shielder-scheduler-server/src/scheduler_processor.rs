@@ -13,8 +13,11 @@ use crate::{
         get_pending_requests, update_request_status, update_retry_attempt, RequestStatus,
         ScheduledRequest,
     },
+    error::SchedulerServerError,
     AppState,
 };
+
+type Result<T> = std::result::Result<T, SchedulerServerError>;
 
 /// Background request scheduler that processes scheduled withdrawal requests
 #[derive(Debug)]
@@ -52,7 +55,7 @@ impl SchedulerProcessor {
     async fn current_merkle_path(
 		&self,
 		leaf_index: U256,
-	) -> Result<(U256, [[U256; ARITY]; NOTE_TREE_HEIGHT]), Box<dyn std::error::Error + Send + Sync>> {
+	) -> Result<(U256, [[U256; ARITY]; NOTE_TREE_HEIGHT])> {
 		let shielder_user = self.shielder_user_read_only();
 		Ok(get_current_merkle_path(leaf_index, &shielder_user).await?)
 	}
@@ -69,7 +72,7 @@ impl SchedulerProcessor {
 
     async fn process_pending_requests(
         &self,
-    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    ) -> Result<()> {
         let requests = get_pending_requests(
             &self.app_state.db_pool,
             self.app_state.options.scheduler_batch_size as i64,
@@ -95,7 +98,7 @@ impl SchedulerProcessor {
     async fn process_single_request(
         &self,
         request: ScheduledRequest,
-    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    ) -> Result<()> {
         info!("Processing request ID: {}", request.id);
         let request_id = request.id;
         let request_retry_count = request.retry_count;
@@ -152,14 +155,14 @@ impl SchedulerProcessor {
     async fn process_request_logic(
         &self,
         request: ScheduledRequest,
-    ) -> Result<ProcessingResult, Box<dyn std::error::Error + Send + Sync>> {
+    ) -> Result<ProcessingResult> {
         // Parse the U256 values
         let last_note_index = request
             .last_note_index_as_u256()
-            .map_err(|e| format!("Failed to parse last_note_index: {}", e))?;
+            .map_err(|e| SchedulerServerError::ValueParseError(format!("Failed to parse last_note_index: {}", e)))?;
         let max_relayer_fee = request
             .max_relayer_fee_as_u256()
-            .map_err(|e| format!("Failed to parse max_relayer_fee: {}", e))?;
+            .map_err(|e| SchedulerServerError::ValueParseError(format!("Failed to parse max_relayer_fee: {}", e)))?;
 
         let (_, _merkle_path) = self.current_merkle_path(last_note_index).await?;
 

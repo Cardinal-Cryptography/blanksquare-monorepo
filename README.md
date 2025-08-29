@@ -108,14 +108,16 @@ NETWORK=anvil make deploy-contracts
 Most of the Shielder is licensed under the Apache-2.0 License. See the LICENSE file for more details.
 
 Some of the crates are licensed with LICENSE-GPL-3.0-only-with-Classpath-exception:
-* `crates/shielder-circuits`
+
+- `crates/shielder-circuits`
 
 Some of the crates are licensed with MIT:
-* `crates/transcript`
+
+- `crates/transcript`
 
 ## Circuits
 
-Originally, `shielder-circuits` crate was placed in a different [repo](https://github.com/Cardinal-Cryptography/zkOS-circuits) and migrated without 
+Originally, `shielder-circuits` crate was placed in a different [repo](https://github.com/Cardinal-Cryptography/zkOS-circuits) and migrated without
 preserving git history to this repo, so in case one needs to check `git blame`, please visit original repo.
 
 [blanksquare-homepage]: https://blanksquare.io/

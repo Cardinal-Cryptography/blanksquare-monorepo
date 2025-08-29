@@ -74,7 +74,7 @@ struct ApiDoc;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let server_config = resolve_config();
+    let server_config = resolve_config()?;
     init_logging(server_config.logging_format)?;
 
     info!("Starting Shielder relayer.");

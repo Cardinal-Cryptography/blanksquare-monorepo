@@ -62,7 +62,10 @@ impl SchedulerProcessor {
 
     fn shielder_user_read_only(&self) -> ShielderUser {
         ShielderUser::new(
-            self.app_state.options.shielder_address.parse().expect("Invalid shielder address"),
+            self.app_state.options.shielder_address.parse().expect(
+                "Failed to parse shielder_address as a valid Ethereum address. \
+Please check the SHIELDER_ADDRESS environment variable or --shielder-address argument.",
+            ),
             ConnectionPolicy::OnDemand {
                 rpc_url: self.app_state.options.node_rpc_url.clone(),
                 signer: PrivateKeySigner::random(),

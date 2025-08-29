@@ -1,6 +1,6 @@
 ---
-name: 'Download Artifact by SHA'
-description: 'Downloads artifacts from a GitHub workflow run by workflow name and commit SHA'
+name: 'Get Workflow Run ID'
+description: 'Gets workflow run ID for a successful workflow run by workflow name and commit SHA'
 inputs:
   workflow-name:
     description: 'The workflow file name (e.g., on-push-main.yml)'
@@ -11,16 +11,15 @@ inputs:
   github_token:
     description: 'GitHub token for API access'
     required: true
-  artifact-name:
-    description: 'Name of the artifact to download'
-    required: false
-  artifact-path:
-    description: 'Path to download the artifact to'
-    required: false
+outputs:
+  workflow-run-id:
+    description: 'The workflow run ID'
+    value: ${{ steps.get-run-id.outputs.workflow-run-id }}
 runs:
   using: "composite"
   steps:
     - name: Get workflow run ID and verify completion
+      id: get-run-id
       shell: bash
       # yamllint disable rule:line-length
       run: |
@@ -60,14 +59,5 @@ runs:
         echo "Run ID: $RUN_ID"
         echo "Created at: $CREATED_AT"
 
-        # Save the run ID for next step
-        echo "RUN_ID=$RUN_ID" >> $GITHUB_ENV
-
-    - name: Download artifact
-      uses: actions/download-artifact@v5
-      with:
-        name: ${{ inputs.artifact-name }}
-        path: ${{ inputs.artifact-path }}
-        merge-multiple: true
-        run-id: ${{ env.RUN_ID }}
-        github-token: ${{ inputs.github_token }}
+        # Set output
+        echo "workflow-run-id=$RUN_ID" >> $GITHUB_OUTPUT

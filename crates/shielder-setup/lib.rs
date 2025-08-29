@@ -1,8 +1,8 @@
 pub use shielder_circuits;
 
 pub mod consts {
-    pub const ARITY: usize = 7;
-    pub const TREE_HEIGHT: usize = 13;
+    pub const ARITY: usize = shielder_circuits::consts::merkle_constants::ARITY;
+    pub const TREE_HEIGHT: usize = shielder_circuits::consts::merkle_constants::NOTE_TREE_HEIGHT;
 }
 
 pub mod native_token {

@@ -1776,7 +1776,7 @@ checksum = "13dc2df351e3202783a1fe0d44375f7295ffb4049267b0f3018346dc122a1d94"
 [[package]]
 name = "macros"
 version = "0.1.0"
-source = "git+https://github.com/Cardinal-Cryptography/blanksquare-monorepo?rev=fa55a8e23b5450bcce916290745f5c4635299a02#fa55a8e23b5450bcce916290745f5c4635299a02"
+source = "git+https://github.com/Cardinal-Cryptography/blanksquare-monorepo?rev=8d17e23ee807e2f1b40b31ffba27c1276afdb81f#8d17e23ee807e2f1b40b31ffba27c1276afdb81f"
 dependencies = [
  "darling",
  "proc-macro2",
@@ -2157,7 +2157,7 @@ checksum = "f84267b20a16ea918e43c6a88433c2d54fa145c92a811b5b047ccbe153674483"
 [[package]]
 name = "powers-of-tau"
 version = "0.1.0"
-source = "git+https://github.com/Cardinal-Cryptography/blanksquare-monorepo?rev=fa55a8e23b5450bcce916290745f5c4635299a02#fa55a8e23b5450bcce916290745f5c4635299a02"
+source = "git+https://github.com/Cardinal-Cryptography/blanksquare-monorepo?rev=8d17e23ee807e2f1b40b31ffba27c1276afdb81f#8d17e23ee807e2f1b40b31ffba27c1276afdb81f"
 dependencies = [
  "byteorder",
  "halo2_proofs",
@@ -2847,7 +2847,7 @@ dependencies = [
 [[package]]
 name = "shielder-circuits"
 version = "0.1.0"
-source = "git+https://github.com/Cardinal-Cryptography/blanksquare-monorepo?rev=fa55a8e23b5450bcce916290745f5c4635299a02#fa55a8e23b5450bcce916290745f5c4635299a02"
+source = "git+https://github.com/Cardinal-Cryptography/blanksquare-monorepo?rev=8d17e23ee807e2f1b40b31ffba27c1276afdb81f#8d17e23ee807e2f1b40b31ffba27c1276afdb81f"
 dependencies = [
  "halo2_poseidon",
  "halo2_proofs",
@@ -3314,7 +3314,7 @@ dependencies = [
 [[package]]
 name = "transcript"
 version = "0.2.0"
-source = "git+https://github.com/Cardinal-Cryptography/blanksquare-monorepo?rev=fa55a8e23b5450bcce916290745f5c4635299a02#fa55a8e23b5450bcce916290745f5c4635299a02"
+source = "git+https://github.com/Cardinal-Cryptography/blanksquare-monorepo?rev=8d17e23ee807e2f1b40b31ffba27c1276afdb81f#8d17e23ee807e2f1b40b31ffba27c1276afdb81f"
 dependencies = [
  "halo2_proofs",
  "itertools 0.13.0",
@@ -3331,7 +3331,7 @@ checksum = "e421abadd41a4225275504ea4d6566923418b7f05506fbc9c0fe86ba7396114b"
 [[package]]
 name = "type-conversions"
 version = "0.1.0"
-source = "git+https://github.com/Cardinal-Cryptography/blanksquare-monorepo?rev=fa55a8e23b5450bcce916290745f5c4635299a02#fa55a8e23b5450bcce916290745f5c4635299a02"
+source = "git+https://github.com/Cardinal-Cryptography/blanksquare-monorepo?rev=8d17e23ee807e2f1b40b31ffba27c1276afdb81f#8d17e23ee807e2f1b40b31ffba27c1276afdb81f"
 dependencies = [
  "alloy-primitives",
  "halo2curves",

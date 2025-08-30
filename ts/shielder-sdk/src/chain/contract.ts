@@ -35,21 +35,29 @@ export async function handleWrongContractVersionError<T>(
   }
 }
 
-export type NoteEvent = {
-  name: "NewAccount" | "Deposit" | "Withdraw";
+type NoteEventBase = {
   contractVersion: `0x${string}`;
   amount: bigint;
   newNoteIndex: bigint;
   newNote: bigint;
   txHash: Hash;
-  to?: Address;
-  relayerFee?: bigint;
   block: bigint;
   tokenAddress: `0x${string}`;
-  pocketMoney?: bigint;
   protocolFee: bigint;
   memo: `0x${string}`;
-};
+}
+
+export type NoteEvent = NoteEventBase & ({
+  name: "NewAccount" | "Deposit";
+  to?: undefined;
+  relayerFee?: undefined;
+  pocketMoney?: undefined;
+} | {
+  name: "Withdraw";
+  to: Address;
+  relayerFee: bigint;
+  pocketMoney: bigint;
+});
 
 export type NewAccountEvent = {
   prenullifier: bigint;

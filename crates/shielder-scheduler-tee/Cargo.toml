@@ -21,6 +21,7 @@ tokio = { workspace = true, features = [
     "time",
 ] }
 tokio-vsock = { workspace = true }
+shielder-account = { workspace = true }
 shielder-circuits = { workspace = true }
 shielder-setup = { workspace = true }
 rand = { workspace = true }

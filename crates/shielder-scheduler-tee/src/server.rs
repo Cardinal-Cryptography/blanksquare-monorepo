@@ -104,13 +104,33 @@ impl Server {
         payload: Vec<u8>,
         _relayer_address: Address,
         _relayer_fee: U256,
-        _merkle_path: Box<[[U256; ARITY]; TREE_HEIGHT]>,
+        merkle_path: Box<[[U256; ARITY]; TREE_HEIGHT]>,
     ) -> Result<Response, VsockError> {
         let decrypted_payload = self.decrypt_payload(&payload)?;
 
         let _deserialized_payload: Result<Payload, _> = serde_json::from_slice(&decrypted_payload);
 
         // TODO: Implement proof generation logic here
+
+
+		// let calldata = self.prepare_call::<WithdrawCallType>(
+		// 	&params,
+		// 	&pk,
+		// 	Token::Native,
+		// 	amount,
+		// 	&WithdrawExtra {
+		// 		merkle_path,
+		// 		to,
+		// 		relayer_address: chain.get_relayer_fee_address().await?,
+		// 		relayer_fee: quoted_fee.fee_details.total_cost_fee_token,
+		// 		contract_version: contract_version(),
+		// 		chain_id: U256::from(chain_id),
+		// 		mac_salt: get_salt(),
+		// 		pocket_money,
+		// 		protocol_fee,
+		// 		memo: Bytes::from(vec![]),
+		// 	},
+		// );
 
         Ok(Response::PrepareRelayCalldata {
             calldata: RelayCalldata {

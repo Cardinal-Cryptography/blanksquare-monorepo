@@ -2,13 +2,13 @@ use alloy_primitives::{Address, Bytes, FixedBytes, U256};
 use serde::{Deserialize, Serialize};
 pub use shielder_relayer::RelayCalldata;
 use shielder_setup::consts::{ARITY, TREE_HEIGHT};
+pub use tokio_vsock::VMADDR_CID_ANY;
 
 use crate::{
     base64_serialization,
     vsock::{VsockClient, VsockServer},
 };
-
-pub const VSOCK_PORT: u16 = 5000;
+pub const VSOCK_PORT: u32 = 5000;
 
 /// Payload for the `PrepareRelayCalldata` request.
 /// The payload is encrypted using the TEE Public Key.
@@ -48,6 +48,9 @@ pub enum Request {
 
     /// Request to prepare calldata for a relay transaction.
     PrepareRelayCalldata {
+        /// User generated symetric key used to encrypt the payload
+        #[serde(with = "base64_serialization")]
+        sealed_data_encryption_key: Vec<u8>,
         /// Encrypted payload, see [`Payload`].
         /// It is encrypted using TEE Public Key.
         #[serde(with = "base64_serialization")]
@@ -68,7 +71,8 @@ pub enum Response {
 
     /// TEE Server public key, used to encrypt payload sent in [`Request::PrepareRelayCalldata`]
     TeePublicKey {
-        public_key: String,
+        #[serde(with = "base64_serialization")]
+        public_key: Vec<u8>,
         #[serde(with = "base64_serialization")]
         attestation_document: Vec<u8>,
     },

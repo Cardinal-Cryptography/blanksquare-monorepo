@@ -1,3 +1,5 @@
+include .env
+
 .PHONY: format-rust
 format-rust:
 	cargo fmt --all -- --check
@@ -11,4 +13,7 @@ test:
 	cargo check --all-features
 
 run-without-attestation:
-	RUST_LOG=info cargo run --release --features without_attestation
+	RUST_LOG=info \
+	PUBLIC_KEY=$(PUBLIC_KEY) \
+	PRIVATE_KEY=$(PRIVATE_KEY) \
+	cargo run --release --features without_attestation

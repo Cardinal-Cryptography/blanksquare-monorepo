@@ -1053,6 +1053,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "aws-ne-sys"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d36b44c56da495a06bafa838f418023ac6b3d81fdb21ee5b7cd23f9182197b35"
+
+[[package]]
 name = "aws-nitro-enclaves-nsm-api"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5040,6 +5046,7 @@ dependencies = [
  "pkcs1",
  "pkcs8",
  "rand_core 0.6.4",
+ "sha2",
  "signature",
  "spki",
  "subtle",
@@ -5885,7 +5892,6 @@ dependencies = [
  "tower-http",
  "tracing",
  "tracing-subscriber",
- "vsock",
 ]
 
 [[package]]
@@ -5893,16 +5899,21 @@ name = "shielder-scheduler-tee"
 version = "0.1.0"
 dependencies = [
  "alloy-primitives",
+ "aws-ne-sys",
  "aws-nitro-enclaves-nsm-api",
+ "base64 0.22.1",
+ "clap",
  "hex",
  "log",
  "powers-of-tau",
  "rand 0.8.5",
+ "rsa",
  "serde",
  "serde_json",
  "shielder-circuits",
  "shielder-scheduler-common",
  "shielder-setup",
+ "thiserror 2.0.12",
  "tokio",
  "tokio-vsock",
  "tracing-subscriber",

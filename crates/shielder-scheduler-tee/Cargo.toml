@@ -11,6 +11,8 @@ repository = { workspace = true }
 [dependencies]
 alloy-primitives = { workspace = true, features = ["serde"] }
 aws-nitro-enclaves-nsm-api = { workspace = true, optional = true }
+base64 = { workspace = true }
+clap = { workspace = true, features = ["derive", "env"] }
 hex = { workspace = true }
 log = { workspace = true }
 shielder-scheduler-common = { workspace = true }
@@ -28,6 +30,9 @@ type-conversions = { workspace = true }
 tracing-subscriber = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
+thiserror = { workspace = true }
+aws-ne-sys = { workspace = true, optional = true }
+rsa = { workspace = true, features = ["sha2"] }
 
 [build-dependencies]
 powers-of-tau = { workspace = true }
@@ -35,6 +40,6 @@ rand = { workspace = true, features = ["small_rng"] }
 shielder-circuits = { workspace = true }
 
 [features]
-default = ["dep:aws-nitro-enclaves-nsm-api"]
+default = ["dep:aws-nitro-enclaves-nsm-api", "dep:aws-ne-sys"]
 # if enabled, TEE server does not query /dev/nsm driver, so enable this feature for local tests
 without_attestation = []

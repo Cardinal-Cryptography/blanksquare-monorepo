@@ -38,7 +38,8 @@ impl Display for TokenKind {
 
 #[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
 pub enum PriceProvider {
-    Url(String),
+    Dia(String),
+    Pyth(String),
     Static(Decimal),
 }
 

@@ -45,19 +45,23 @@ type NoteEventBase = {
   tokenAddress: `0x${string}`;
   protocolFee: bigint;
   memo: `0x${string}`;
-}
+};
 
-export type NoteEvent = NoteEventBase & ({
-  name: "NewAccount" | "Deposit";
-  to?: undefined;
-  relayerFee?: undefined;
-  pocketMoney?: undefined;
-} | {
-  name: "Withdraw";
-  to: Address;
-  relayerFee: bigint;
-  pocketMoney: bigint;
-});
+export type NoteEvent = NoteEventBase &
+  (
+    | {
+        name: "NewAccount" | "Deposit";
+        to?: undefined;
+        relayerFee?: undefined;
+        pocketMoney?: undefined;
+      }
+    | {
+        name: "Withdraw";
+        to: Address;
+        relayerFee: bigint;
+        pocketMoney: bigint;
+      }
+  );
 
 export type NewAccountEvent = {
   prenullifier: bigint;

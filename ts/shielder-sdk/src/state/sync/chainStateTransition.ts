@@ -99,17 +99,19 @@ const eventToTransaction = (
   token: Token
 ): ShielderTransaction => {
   return {
-    ...(event.name === "Withdraw" ? {
-      type: event.name,
-      to: event.to,
-      relayerFee: event.relayerFee,
-      pocketMoney: event.pocketMoney
-    }: {
-      type: event.name,
-      to: undefined,
-      relayerFee: undefined,
-      pocketMoney: undefined
-    }),
+    ...(event.name === "Withdraw"
+      ? {
+          type: event.name,
+          to: event.to,
+          relayerFee: event.relayerFee,
+          pocketMoney: event.pocketMoney
+        }
+      : {
+          type: event.name,
+          to: undefined,
+          relayerFee: undefined,
+          pocketMoney: undefined
+        }),
     amount: event.amount,
     txHash: event.txHash,
     block: event.block,

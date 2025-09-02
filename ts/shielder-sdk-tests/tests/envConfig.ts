@@ -39,7 +39,11 @@ export const proverServerUrl =
     throw new Error("PROVER_SERVER_URL env not defined");
   })();
 export const pcrs = process.env.VITE_PCRS
-  ? new Map<string, string>(Object.entries(JSON.parse(process.env.VITE_PCRS)))
+  ? new Map<string, string>(
+      Object.entries(
+        JSON.parse(process.env.VITE_PCRS) as Record<string, string>
+      )
+    )
   : undefined;
 
 export const getChainConfig = () => {

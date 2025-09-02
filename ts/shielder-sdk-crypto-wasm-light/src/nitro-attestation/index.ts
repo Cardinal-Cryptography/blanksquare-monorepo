@@ -16,10 +16,7 @@ export type {
 } from "./types";
 
 // Constants for external use
-export {
-  EXPECTED_PCR_MEASUREMENTS,
-  AWS_NITRO_ROOT_CERTIFICATE
-} from "./constants";
+export { AWS_NITRO_ROOT_CERTIFICATE } from "./constants";
 
 // Utility functions
 export { bytesToBase64, base64ToBytes, uint8ToHex } from "@/utils";

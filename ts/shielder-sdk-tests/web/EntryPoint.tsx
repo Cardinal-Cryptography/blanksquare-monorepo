@@ -15,11 +15,7 @@ import {
   setupShielderTest
 } from "./fixtures/shielderTest/setup";
 import { initFullWasm, initLightWasm } from "./cryptoClient";
-import {
-  skipNitroAttestation,
-  cryptoClientType,
-  proverServerUrl
-} from "./envConfig";
+import { pcrs, cryptoClientType, proverServerUrl } from "./envConfig";
 
 declare global {
   interface Window {
@@ -55,7 +51,7 @@ function EntryPoint() {
       window.wasmCryptoClient.cryptoClient =
         cryptoClientType === "wasm-full"
           ? initFullWasm()
-          : initLightWasm(proverServerUrl, skipNitroAttestation);
+          : initLightWasm(proverServerUrl, pcrs);
       // Expose shielder utilities
       window.shielder = window.shielder || {};
       window.shielder.createShielderClient = createShielderClient;

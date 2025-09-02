@@ -34,12 +34,12 @@ export class WasmClient implements CryptoClient {
 
   async init(
     proverServiceUrl: string,
-    withoutAttestation?: boolean,
+    expectedPCRs?: Map<string, string>,
     wasmUrl?: string
   ): Promise<void> {
     const time = Date.now();
     await singlethreaded_wasm.default(wasmUrl);
-    await this.teeClient.init(proverServiceUrl, withoutAttestation ?? false);
+    await this.teeClient.init(proverServiceUrl, expectedPCRs);
     this.initialized = true;
     console.log(`Initialized shielder_bindings in ${Date.now() - time}ms`);
   }

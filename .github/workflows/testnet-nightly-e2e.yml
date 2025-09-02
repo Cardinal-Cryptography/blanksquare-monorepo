@@ -135,7 +135,7 @@ jobs:
           RELAYER_SIGNER_ADDRESSES: ${{ vars.CI_TESTNET_RELAYER_SIGNER_ADDRESSES }}
           RELAYER_SIGNING_KEYS: ${{ secrets.CI_TESTNET_RELAYER_SIGNING_KEYS }}
           CRYPTO_CLIENT_TYPE: "wasm-light"
-          SKIP_NITRO_ATTESTATION: true
+          PCRS: ${{ vars.CI_TESTNET_PCRS }}
           PROVER_SERVER_URL: ${{ steps.setup-prover.outputs.proxy_url }}
         run: |
           NO_FORMATTING=true TESTNET=true ./tooling-e2e-tests/ts_sdk_tests.sh

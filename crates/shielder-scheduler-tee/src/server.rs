@@ -9,11 +9,15 @@ use aws_nitro_enclaves_nsm_api::{
 };
 use log::{debug, info};
 use shielder_scheduler_common::{
-    protocol::{Payload, RelayCalldata, Request, Response, TEEServer},
+    protocol::{Payload, Request, Response, TEEServer},
     vsock::VsockError,
 };
 use shielder_setup::consts::{ARITY, TREE_HEIGHT};
+
 use tokio_vsock::{VsockAddr, VsockListener, VsockStream, VMADDR_CID_ANY};
+
+
+use crate::withdraw::WithdrawCircuit;
 
 pub struct Server {
     #[cfg(not(feature = "without_attestation"))]
@@ -72,11 +76,13 @@ impl Server {
                         relayer_address,
                         relayer_fee,
                         merkle_path,
+                        merkle_root,
                     } => self.prepare_relay_calldata_response(
                         payload,
                         relayer_address,
                         relayer_fee,
                         merkle_path,
+                        merkle_root,
                     ),
                 })
                 .await?;
@@ -102,53 +108,40 @@ impl Server {
     fn prepare_relay_calldata_response(
         &self,
         payload: Vec<u8>,
-        _relayer_address: Address,
-        _relayer_fee: U256,
+        relayer_address: Address,
+        relayer_fee: U256,
         merkle_path: Box<[[U256; ARITY]; TREE_HEIGHT]>,
+        merkle_root: U256,
     ) -> Result<Response, VsockError> {
         let decrypted_payload = self.decrypt_payload(&payload)?;
 
-        let _deserialized_payload: Result<Payload, _> = serde_json::from_slice(&decrypted_payload);
+        let deserialized_payload : Payload = serde_json::from_slice(&decrypted_payload).map_err(|e| {
+            VsockError::Protocol(format!("Failed to deserialize payload: {}", e))
+        })?;
 
-        // TODO: Implement proof generation logic here
+        let token = match deserialized_payload.token_address {
+            Address::ZERO => shielder_account::Token::Native,
+            addr => shielder_account::Token::ERC20(addr),
+        };
+        let withdraw_circuit = WithdrawCircuit::new(deserialized_payload.account_id, 
+            token);
+        let relayer_calldata = withdraw_circuit.get_relayer_calldata(
+            deserialized_payload.withdrawal_value,
+            deserialized_payload.withdraw_address,
+            *merkle_path,
+            deserialized_payload.chain_id,
+            relayer_fee,
+            deserialized_payload.pocket_money,
+            relayer_address,
+            deserialized_payload.protocol_fee,
+            deserialized_payload.memo,
+            deserialized_payload.nullifier_old,
+            deserialized_payload.nullifier_new,
+            deserialized_payload.account_old_balance,
+            merkle_root,
+        );
 
-
-		// let calldata = self.prepare_call::<WithdrawCallType>(
-		// 	&params,
-		// 	&pk,
-		// 	Token::Native,
-		// 	amount,
-		// 	&WithdrawExtra {
-		// 		merkle_path,
-		// 		to,
-		// 		relayer_address: chain.get_relayer_fee_address().await?,
-		// 		relayer_fee: quoted_fee.fee_details.total_cost_fee_token,
-		// 		contract_version: contract_version(),
-		// 		chain_id: U256::from(chain_id),
-		// 		mac_salt: get_salt(),
-		// 		pocket_money,
-		// 		protocol_fee,
-		// 		memo: Bytes::from(vec![]),
-		// 	},
-		// );
-
-        Ok(Response::PrepareRelayCalldata {
-            calldata: RelayCalldata {
-                expected_contract_version: [0, 0, 0].into(),
-                amount: U256::from(0),
-                withdraw_address: Address::random(),
-                merkle_root: U256::from(0),
-                nullifier_hash: U256::from(0),
-                new_note: U256::from(0),
-                proof: Vec::new().into(),
-                fee_token: Default::default(),
-                fee_amount: U256::from(0),
-                mac_salt: U256::from(0),
-                mac_commitment: U256::from(0),
-                pocket_money: U256::from(0),
-                memo: Vec::new().into(),
-            },
-        }) // Placeholder response
+        Ok(Response::PrepareRelayCalldata { calldata: relayer_calldata })
     }
 
     fn decrypt_payload(&self, _payload: &[u8]) -> Result<Vec<u8>, VsockError> {

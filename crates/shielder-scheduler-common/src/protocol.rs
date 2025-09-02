@@ -58,6 +58,8 @@ pub enum Request {
         relayer_address: Address,
         /// Current merkle path
         merkle_path: Box<[[U256; ARITY]; TREE_HEIGHT]>,
+        /// Current merkle root
+        merkle_root: U256,
     },
 }
 

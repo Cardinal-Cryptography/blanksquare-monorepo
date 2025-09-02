@@ -12,6 +12,7 @@ repository = { workspace = true }
 alloy-primitives = { workspace = true, features = ["serde"] }
 aws-nitro-enclaves-nsm-api = { workspace = true, optional = true }
 hex = { workspace = true }
+halo2curves = { workspace = true }
 log = { workspace = true }
 shielder-scheduler-common = { workspace = true }
 tokio = { workspace = true, features = [
@@ -24,6 +25,8 @@ tokio-vsock = { workspace = true }
 shielder-account = { workspace = true }
 shielder-circuits = { workspace = true }
 shielder-setup = { workspace = true }
+shielder-contract = { workspace = true }
+shielder-relayer = { workspace = true }
 rand = { workspace = true }
 type-conversions = { workspace = true }
 tracing-subscriber = { workspace = true }

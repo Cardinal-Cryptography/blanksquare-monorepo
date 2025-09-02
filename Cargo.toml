@@ -13,6 +13,7 @@ categories = ["cryptography"]
 repository = "https://github.com/Cardinal-Cryptography/blanksquare-monorepo"
 
 [workspace.dependencies]
+aes-gcm = { version = "0.10.3" }
 alloy-contract = { version = "0.9.1" }
 alloy-network = { version = "0.9.1" }
 alloy-primitives = { version = "0.8.15" }

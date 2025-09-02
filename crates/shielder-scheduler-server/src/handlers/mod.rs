@@ -12,6 +12,7 @@ use crate::AppState;
 pub mod health;
 pub mod schedule_withdraw;
 pub mod tee_public_key;
+pub mod tee_prepare_relay_calldata;
 
 /// Sends a request to the TEE server and returns the response.
 async fn tee_request(state: Arc<AppState>, request: Request) -> Result<Json<Response>, VsockError> {

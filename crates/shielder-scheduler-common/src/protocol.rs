@@ -10,6 +10,8 @@ use crate::{
 };
 pub const VSOCK_PORT: u32 = 5000;
 
+pub type MerklePath = Box<[[U256; ARITY]; TREE_HEIGHT]>;
+
 /// Payload for the `PrepareRelayCalldata` request.
 /// The payload is encrypted using the TEE Public Key.
 /// The TEE Public Key can be retrieved using the `TeePublicKey` request.
@@ -38,29 +40,41 @@ pub struct Payload {
     pub relay_after: U256,
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct EncryptionEnvelope {
+    /// Encrypted payload, see [`Payload`].
+    /// It is encrypted using user generated DEK.
+    #[serde(with = "base64_serialization")]
+    pub encrypted_payload: Vec<u8>,
+    /// Encrypted data encryption key (DEK) using Tee Public Key.
+    #[serde(with = "base64_serialization")]
+    pub encrypted_dek: Vec<u8>,
+    #[serde(with = "base64_serialization")]
+    pub iv: Vec<u8>,
+    #[serde(with = "base64_serialization")]
+    pub auth_tag: Vec<u8>,
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub enum Request {
     /// Message used to determine if TEE server is healthy
     Ping,
 
     /// Retrieves TEE Public Key, ie key which is used by the user to encrypt inputs to a circuit
-    TeePublicKey,
+    TeePublicKey {
+        #[serde(with = "base64_serialization")]
+        public_key: Vec<u8>,
+    },
 
     /// Request to prepare calldata for a relay transaction.
     PrepareRelayCalldata {
-        /// User generated symetric key used to encrypt the payload
-        #[serde(with = "base64_serialization")]
-        sealed_data_encryption_key: Vec<u8>,
-        /// Encrypted payload, see [`Payload`].
-        /// It is encrypted using TEE Public Key.
-        #[serde(with = "base64_serialization")]
-        payload: Vec<u8>,
+        encryption_envelope: EncryptionEnvelope,
         /// Relayer fee
         relayer_fee: U256,
         /// Address of the relayer which will receive the relayer fee
         relayer_address: Address,
         /// Current merkle path
-        merkle_path: Box<[[U256; ARITY]; TREE_HEIGHT]>,
+        merkle_path: MerklePath,
     },
 }
 

@@ -12,27 +12,23 @@ pub struct CommandLineArgs {
     #[clap(long, default_value_t = shielder_scheduler_common::protocol::VMADDR_CID_ANY, env = "TEE_CID")]
     pub tee_cid: u32,
 
-    // Base64-encoded DER
-    #[clap(long, env = "PUBLIC_KEY")]
-    pub public_key: String,
-
     #[cfg(feature = "without_attestation")]
     #[clap(long, env = "PRIVATE_KEY")]
     pub private_key: String,
 
     #[cfg(not(feature = "without_attestation"))]
-    #[clap(long, env = "AWS_REGION")]
+    #[clap(long, default_value = "", env = "AWS_REGION")]
     pub kms_region: String,
 
     #[cfg(not(feature = "without_attestation"))]
-    #[clap(long, env = "AWS_ACCESS_KEY_ID")]
+    #[clap(long, default_value = "", env = "AWS_ACCESS_KEY_ID")]
     pub kms_access_key: String,
 
     #[cfg(not(feature = "without_attestation"))]
-    #[clap(long, env = "AWS_SECRET_ACCESS_KEY")]
+    #[clap(long, default_value = "", env = "AWS_SECRET_ACCESS_KEY")]
     pub kms_secret_key: String,
 
     #[cfg(not(feature = "without_attestation"))]
-    #[clap(long, env = "AWS_SESSION_TOKEN")]
+    #[clap(long, default_value = None, env = "AWS_SESSION_TOKEN")]
     pub kms_session_token: Option<String>,
 }

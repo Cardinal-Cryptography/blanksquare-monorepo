@@ -11,6 +11,7 @@ repository = { workspace = true }
 [dependencies]
 alloy-primitives = { workspace = true, features = ["serde"] }
 axum = { workspace = true, features = ["tokio", "macros"] }
+base64 = { workspace = true }
 chrono = { workspace = true, features = ["serde"] }
 clap = { workspace = true, features = ["derive", "env"] }
 metrics = { workspace = true }

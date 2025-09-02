@@ -7,19 +7,16 @@ use aws_nitro_enclaves_nsm_api::{
     api::Response as NsmResponse,
     driver::{nsm_exit, nsm_init, nsm_process_request},
 };
-use base64::{engine::general_purpose, Engine as _};
 use log::{debug, info};
 use shielder_scheduler_common::{
-    protocol::{Payload, RelayCalldata, Request, Response, TEEServer},
+    protocol::{EncryptionEnvelope, MerklePath, Payload, RelayCalldata, Request, Response, TEEServer},
     vsock::VsockError,
 };
-use shielder_setup::consts::{ARITY, TREE_HEIGHT};
 use tokio_vsock::{VsockAddr, VsockListener, VsockStream};
 
 use crate::{command_line_args::CommandLineArgs, kms::KmsCrypto};
 
 pub struct Server {
-    public_key: Vec<u8>,
     kms: KmsCrypto,
     #[cfg(not(feature = "without_attestation"))]
     nsm_fd: i32,
@@ -51,22 +48,18 @@ impl Server {
         )
         .map_err(|e| VsockError::Protocol(format!("KMS init error: {e}")))?;
         #[cfg(feature = "without_attestation")]
-        let private_key = general_purpose::STANDARD
-            .decode(&options.private_key)
-            .map_err(|e| VsockError::Protocol(format!("Private key base64 decode error: {e}")))?;
-        #[cfg(feature = "without_attestation")]
-        let kms = KmsCrypto::new(private_key)
-            .map_err(|e| VsockError::Protocol(format!("KMS init error: {e}")))?;
-
-        let public_key = general_purpose::STANDARD
-            .decode(&options.public_key)
-            .map_err(|e| VsockError::Protocol(format!("Public key base64 decode error: {e}")))?;
-
-        kms.verify_public_key(&public_key)?;
+        let kms = {
+            let private_key = general_purpose::STANDARD
+                .decode(&options.private_key)
+                .map_err(|e| {
+                    VsockError::Protocol(format!("Private key base64 decode error: {e}"))
+                })?;
+            KmsCrypto::new(private_key)
+                .map_err(|e| VsockError::Protocol(format!("KMS init error: {e}")))?
+        };
 
         Ok(Arc::new(Self {
             listener,
-            public_key,
 
             kms,
             #[cfg(not(feature = "without_attestation"))]
@@ -96,17 +89,15 @@ impl Server {
                 .handle_request(|request| async move {
                     match request {
                         Request::Ping => Ok(Response::Pong),
-                        Request::TeePublicKey => self.public_key_response().await,
+                        Request::TeePublicKey { public_key } => self.public_key_response(public_key).await,
                         Request::PrepareRelayCalldata {
-                            sealed_data_encryption_key,
-                            payload,
+                            encryption_envelope,
                             relayer_address,
                             relayer_fee,
                             merkle_path,
                         } => {
                             self.prepare_relay_calldata_response(
-                                sealed_data_encryption_key,
-                                payload,
+                                encryption_envelope,
                                 relayer_address,
                                 relayer_fee,
                                 merkle_path,
@@ -121,35 +112,35 @@ impl Server {
 
     /// Return the public key (hex) and
     /// an attestation document that embeds the same public key.
-    async fn public_key_response(&self) -> Result<Response, VsockError> {
+    async fn public_key_response(&self, public_key: Vec<u8>) -> Result<Response, VsockError> {
+        self.kms.verify_public_key(&public_key)?;
+
         #[cfg(not(feature = "without_attestation"))]
         let attestation_document =
-            self.request_attestation_from_nsm_driver(self.public_key.clone())?;
+            self.request_attestation_from_nsm_driver(public_key.clone())?;
 
         #[cfg(feature = "without_attestation")]
         let attestation_document = Vec::new();
 
         Ok(Response::TeePublicKey {
-            public_key: self.public_key.clone(),
+            public_key,
             attestation_document,
         })
     }
 
     async fn prepare_relay_calldata_response(
         &self,
-        sealed_data_encryption_key: Vec<u8>,
-        payload: Vec<u8>,
+        encryption_envelope: EncryptionEnvelope,
         _relayer_address: Address,
         _relayer_fee: U256,
-        _merkle_path: Box<[[U256; ARITY]; TREE_HEIGHT]>,
+        _merkle_path: MerklePath,
     ) -> Result<Response, VsockError> {
-        let data_key = self.kms.decrypt(&sealed_data_encryption_key)?;
-
-        let decrypted_payload = self.decrypt_payload(&data_key, &payload).await?;
+        let decrypted_payload = self.kms.decrypt_payload(&encryption_envelope)?;
 
         let _deserialized_payload: Result<Payload, _> = serde_json::from_slice(&decrypted_payload);
 
         // TODO: Implement proof generation logic here
+        info!("Received payload: {:?}", _deserialized_payload);
 
         Ok(Response::PrepareRelayCalldata {
             calldata: RelayCalldata {
@@ -168,14 +159,6 @@ impl Server {
                 memo: Vec::new().into(),
             },
         }) // Placeholder response
-    }
-
-    async fn decrypt_payload(
-        &self,
-        _data_key: &[u8],
-        _payload: &[u8],
-    ) -> Result<Vec<u8>, VsockError> {
-        todo!("Implement payload decryption with the data key.");
     }
 
     #[cfg(not(feature = "without_attestation"))]

@@ -4,6 +4,8 @@ mod error;
 mod handlers;
 mod scheduler_processor;
 
+pub use handlers::tee_prepare_relay_calldata::prepare_relay_calldata;
+
 use std::{net::SocketAddrV4, sync::Arc, time::Duration};
 
 use axum::{

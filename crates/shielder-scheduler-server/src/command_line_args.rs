@@ -1,4 +1,11 @@
 use clap::Parser;
+use base64::{engine::general_purpose, Engine as _};
+
+fn parse_base64(s: &str) -> Result<Vec<u8>, String> {
+    general_purpose::STANDARD
+        .decode(s)
+        .map_err(|e| format!("Failed to decode base64: {}", e))
+}
 
 #[derive(Parser, Debug, Clone)]
 pub struct CommandLineArgs {
@@ -38,6 +45,10 @@ pub struct CommandLineArgs {
     /// This is the part of the vsock endpoint, which is tee_cid:tee_port
     #[clap(long, default_value_t = shielder_scheduler_common::protocol::VMADDR_CID_ANY, env = "TEE_CID")]
     pub tee_cid: u32,
+
+    /// Base64-encoded DER
+    #[clap(long, value_parser = parse_base64, env = "TEE_PUBLIC_KEY")]
+    pub tee_public_key: Vec<u8>,
 
     /// How many tasks can be processed in parallel by the TEE task pool
     /// Do not raise it above 128 as this is the limit of vsock connections, at least

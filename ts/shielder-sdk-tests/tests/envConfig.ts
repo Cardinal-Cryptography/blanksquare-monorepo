@@ -38,9 +38,9 @@ export const proverServerUrl =
   (() => {
     throw new Error("PROVER_SERVER_URL env not defined");
   })();
-export const skipNitroAttestation =
-  process.env.SKIP_NITRO_ATTESTATION === "true" ||
-  (cryptoClientType === "wasm-light" ? true : false);
+export const pcrs = process.env.VITE_PCRS
+  ? new Map<string, string>(Object.entries(JSON.parse(process.env.VITE_PCRS)))
+  : undefined;
 
 export const getChainConfig = () => {
   return {

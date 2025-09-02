@@ -32,11 +32,13 @@ import { base64ToBytes, bytesToBase64 } from "@/utils";
  * Verify an AWS Nitro Enclaves attestation document
  *
  * @param attestationDocBase64 - Base64-encoded attestation document from the enclave
+ * @param expectedPCRs - Optional map of expected PCR index to hex-encoded PCR value for validation
  * @returns Verified attestation data
  * @throws Error if verification fails at any step
  */
 export async function verifyAttestation(
-  attestationDocBase64: string
+  attestationDocBase64: string,
+  expectedPCRs?: Map<string, string>
 ): Promise<AttestationResult> {
   try {
     // Step 1: Parse the attestation document from base64
@@ -67,8 +69,10 @@ export async function verifyAttestation(
       publicKey
     );
 
-    // Step 7: Verify PCR measurements against expected values
-    verifyPCRMeasurements(attestationDocument.pcrs);
+    if (expectedPCRs) {
+      // Step 7 (Optional): Verify PCR measurements against expected values
+      verifyPCRMeasurements(attestationDocument.pcrs, expectedPCRs);
+    }
 
     // Step 8: Return the verified attestation data
     return buildAttestationResult(attestationDocument);

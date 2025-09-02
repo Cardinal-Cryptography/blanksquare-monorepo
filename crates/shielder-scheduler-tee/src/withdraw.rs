@@ -174,7 +174,7 @@ impl WithdrawCircuit {
             mac_salt: withdraw_call.mac_salt,
             mac_commitment: withdraw_call.mac_commitment,
             pocket_money,
-            memo: Bytes::from(vec![]),
+            memo: extra.memo.clone(),
         }
     }
 

@@ -1,9 +1,13 @@
 use std::{sync::Arc, time::Duration};
 
-use alloy_primitives::U256;
+use alloy_primitives::{Address, U256};
 use alloy_signer_local::PrivateKeySigner;
 use chrono::Utc;
 use shielder_contract::{merkle_path::get_current_merkle_path, ConnectionPolicy, ShielderUser};
+use shielder_scheduler_common::{
+    protocol::{Request, Response},
+    vsock::VsockError,
+};
 use shielder_setup::{
     consts::ARITY, shielder_circuits::consts::merkle_constants::NOTE_TREE_HEIGHT,
 };
@@ -16,6 +20,7 @@ use crate::{
         ScheduledRequest,
     },
     error::SchedulerServerError,
+    handlers::tee_request,
     AppState,
 };
 
@@ -158,21 +163,64 @@ Please check the SHIELDER_ADDRESS environment variable or --shielder-address arg
         let max_relayer_fee = request.max_relayer_fee_as_u256().map_err(|e| {
             SchedulerServerError::ValueParseError(format!("Failed to parse max_relayer_fee: {}", e))
         })?;
+        let pocket_money = request.pocket_money_as_u256().map_err(|e| {
+            SchedulerServerError::ValueParseError(format!("Failed to parse pocket_money: {}", e))
+        })?;
+        let token_address = request.token_address_as_address().map_err(|e| {
+            SchedulerServerError::ValueParseError(format!("Failed to parse token_address: {}", e))
+        })?;
 
-        let (_, _merkle_path) = self.current_merkle_path(last_note_index).await?;
+        let (merkle_root, merkle_path) = self.current_merkle_path(last_note_index).await?;
 
-        // TODO:
-        // 1. Get fee quote from the relayer
-        // 2. Prepare the relay calldata using the TEE
-        // 3. Submit to a relayer or relay directly to the blockchain
+        // Send PrepareRelayCalldata request to TEE server
+        let tee_task_pool = self.app_state.tee_task_pool.clone();
+        let app_state = self.app_state.clone();
+        let payload = request.payload.clone();
+        
+        let response = tee_task_pool
+            .spawn(async move {
+                // Create the PrepareRelayCalldata request
+                let request = Request::PrepareRelayCalldata {
+                    payload,
+                    relayer_fee: max_relayer_fee,
+                    relayer_address: Address::ZERO, // TODO: Get actual relayer address
+                    merkle_path: Box::new(merkle_path),
+                    merkle_root,
+                    pocket_money,
+                    protocol_fee: U256::ZERO, // TODO: Calculate protocol fee based on token_address
+                };
 
-        // For now, we'll simulate the processing
+                // Send request to TEE using the existing tee_request function
+                let json_response = tee_request(app_state, request).await?;
+                Ok::<Response, VsockError>(json_response.0)
+            })
+            .await
+            .map_err(SchedulerServerError::TaskPool)?
+            .await
+            .map_err(SchedulerServerError::JoinHandleError)??
+            .map_err(SchedulerServerError::ProvingServerError)?;
+
+        // Handle the response
+        match response {
+            Response::PrepareRelayCalldata { calldata } => {
+                info!(
+                    "Successfully prepared relay calldata for request ID: {} - amount: {}, merkle_root: {}",
+                    request.id, calldata.amount, calldata.merkle_root
+                );
+                // TODO: Submit to relayer or relay directly to the blockchain
+            }
+            _ => {
+                return Err(SchedulerServerError::ProvingServerError(
+                    VsockError::Protocol("Unexpected response from TEE".to_string()),
+                ));
+            }
+        }
+
         info!(
-            "Processing withdrawal request - last_note_index: {}, max_relayer_fee: {}, relay_after: {}",
-            last_note_index, max_relayer_fee, request.relay_after
+            "Processing withdrawal request - last_note_index: {}, max_relayer_fee: {}, pocket_money: {}, token_address: {}, relay_after: {}",
+            last_note_index, max_relayer_fee, pocket_money, token_address, request.relay_after
         );
 
-        // For now, just return success
         Ok(ProcessingResult {
             request_id: request.id,
         })

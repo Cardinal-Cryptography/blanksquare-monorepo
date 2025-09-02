@@ -28,8 +28,6 @@ pub struct Payload {
     /// Total amount to be withdrawn. This amount includes fees (protocol and relayer fees).
     pub withdrawal_value: U256,
     pub withdraw_address: Address,
-    pub pocket_money: U256,
-    pub protocol_fee: U256,
     pub memo: Bytes,
 
     /// Maximum relayer fee.
@@ -60,6 +58,10 @@ pub enum Request {
         merkle_path: Box<[[U256; ARITY]; TREE_HEIGHT]>,
         /// Current merkle root
         merkle_root: U256,
+        /// Pocket money to be sent to the withdraw address to cover gas fees
+        pocket_money: U256,    
+        /// Protocol fee to be sent to the protocol fee address
+        protocol_fee: U256,
     },
 }
 

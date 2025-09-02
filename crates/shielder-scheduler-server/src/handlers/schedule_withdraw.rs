@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use alloy_primitives::U256;
+use alloy_primitives::{Address, U256};
 use axum::{extract::State, response::IntoResponse, Json};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -23,6 +23,10 @@ pub struct ScheduleWithdrawRequest {
     last_note_index: U256,
     /// Maximum fee that the relayer can charge for this transaction.
     max_relayer_fee: U256,
+    /// Pocket money amount for the withdrawal.
+    pocket_money: U256,
+    /// Token address for the withdrawal.
+    token_address: Address,
     /// Timestamp after which the relay is allowed (Unix timestamp in seconds).
     relay_after: i64,
 }
@@ -39,9 +43,11 @@ pub async fn schedule_withdraw(
     Json(schedule_withdraw_request): Json<ScheduleWithdrawRequest>,
 ) -> impl IntoResponse {
     info!(
-        "Received schedule withdraw request - last_note_index: {}, max_relayer_fee: {}, relay_after: {}",
+        "Received schedule withdraw request - last_note_index: {}, max_relayer_fee: {}, pocket_money: {}, token_address: {}, relay_after: {}",
         schedule_withdraw_request.last_note_index,
         schedule_withdraw_request.max_relayer_fee,
+        schedule_withdraw_request.pocket_money,
+        schedule_withdraw_request.token_address,
         schedule_withdraw_request.relay_after
     );
 
@@ -91,6 +97,8 @@ pub async fn schedule_withdraw(
         &schedule_withdraw_request.payload,
         schedule_withdraw_request.last_note_index,
         schedule_withdraw_request.max_relayer_fee,
+        schedule_withdraw_request.pocket_money,
+        schedule_withdraw_request.token_address,
         relay_after,
     )
     .await

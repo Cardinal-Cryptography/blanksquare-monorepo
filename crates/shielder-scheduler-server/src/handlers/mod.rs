@@ -14,7 +14,7 @@ pub mod schedule_withdraw;
 pub mod tee_public_key;
 
 /// Sends a request to the TEE server and returns the response.
-async fn tee_request(state: Arc<AppState>, request: Request) -> Result<Json<Response>, VsockError> {
+pub async fn tee_request(state: Arc<AppState>, request: Request) -> Result<Json<Response>, VsockError> {
     let mut tee_client = TEEClient::new(state.options.tee_cid, state.options.tee_port as u32)
         .instrument(info_span!("Building_VSOCK_connection"))
         .await?;

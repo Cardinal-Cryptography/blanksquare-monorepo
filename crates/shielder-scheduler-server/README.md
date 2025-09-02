@@ -33,6 +33,8 @@ Schedule a withdrawal request to be processed at a future time.
   "payload": "base64-encoded-encrypted-payload",
   "last_note_index": "12345",
   "max_relayer_fee": "1000000000000000000",
+  "pocket_money": "500000000000000000",
+  "token_address": "0x1234567890123456789012345678901234567890",
   "relay_after": 1693564800
 }
 ```
@@ -40,6 +42,8 @@ Schedule a withdrawal request to be processed at a future time.
 - `payload`: Base64-encoded encrypted payload containing withdrawal details
 - `last_note_index`: Index of the last leaf in the Merkle tree (as string)
 - `max_relayer_fee`: Maximum fee the relayer can charge (as string, in wei)
+- `pocket_money`: Pocket money amount for the withdrawal (as string, in wei)
+- `token_address`: Token address for the withdrawal (as hex string)
 - `relay_after`: Unix timestamp (seconds) after which the relay is allowed
 
 #### Response
@@ -80,6 +84,8 @@ CREATE TABLE scheduled_requests (
     payload BYTEA NOT NULL,
     last_note_index TEXT NOT NULL,
     max_relayer_fee TEXT NOT NULL,
+    pocket_money TEXT NOT NULL,
+    token_address TEXT NOT NULL,
     relay_after TIMESTAMPTZ NOT NULL,
     status request_status NOT NULL DEFAULT 'pending',
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -187,6 +193,8 @@ curl -X POST http://localhost:3000/schedule_withdraw \
     "payload": "SGVsbG8gV29ybGQ=",
     "last_note_index": "12345",
     "max_relayer_fee": "1000000000000000000",
+    "pocket_money": "500000000000000000",
+    "token_address": "0x1234567890123456789012345678901234567890",
     "relay_after": 1693564800
   }'
 ```

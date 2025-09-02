@@ -1,6 +1,8 @@
 use std::sync::Arc;
 
 use alloy_primitives::{Address, U256};
+#[cfg(feature = "without_attestation")]
+use base64::{engine::general_purpose, Engine as _};
 #[cfg(not(feature = "without_attestation"))]
 use aws_nitro_enclaves_nsm_api::{
     api::Request as NsmRequest,

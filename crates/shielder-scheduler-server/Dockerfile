@@ -22,6 +22,9 @@ RUN apt-get update && \
       ca-certificates && \
     rm -rf /var/lib/apt/lists/*
 
+COPY --from=aws-nitro-enclaves-cli:latest /usr/bin/kmstool_enclave_cli /usr/bin/kmstool_enclave_cli
+RUN /usr/bin/kmstool_enclave_cli --help || true
+
 COPY --from=builder /app/target/release/shielder-scheduler-server /usr/local/bin/
 RUN chmod +x /usr/local/bin/shielder-scheduler-server
 

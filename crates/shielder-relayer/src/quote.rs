@@ -1,5 +1,6 @@
 use alloy_provider::Provider;
 use axum::{extract::State, response::IntoResponse, Json};
+use price_feed::Price;
 use shielder_account::Token;
 use shielder_contract::{alloy_primitives::U256, providers::create_simple_provider};
 use shielder_relayer::{
@@ -10,7 +11,7 @@ use shielder_relayer::{
 use time::OffsetDateTime;
 use tracing::error;
 
-use crate::{price_feed::Price, quote_cache::CachedQuote, AppState};
+use crate::{quote_cache::CachedQuote, AppState};
 
 /// Get a quote for the fees associated with a relay.
 #[utoipa::path(

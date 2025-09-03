@@ -1,7 +1,7 @@
 use rust_decimal::Decimal;
 use time::{Duration, OffsetDateTime};
 
-use crate::price_feed::fetching::PriceInfoFromProvider;
+use crate::fetching::PriceInfoFromProvider;
 
 /// The expiration of a price.
 #[derive(Clone, Debug)]
@@ -72,7 +72,7 @@ mod tests {
     use rust_decimal::Decimal;
     use time::{Duration, OffsetDateTime};
 
-    use crate::price_feed::{price::Expiration, Price};
+    use crate::{price::Expiration, Price};
 
     #[test]
     fn static_price_is_always_valid() {

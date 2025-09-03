@@ -1,0 +1,23 @@
+[package]
+name = "price-feed"
+version = "0.1.0"
+edition.workspace = true
+authors.workspace = true
+homepage.workspace = true
+license.workspace = true
+categories.workspace = true
+repository.workspace = true
+
+[dependencies]
+alloy-primitives.workspace = true
+anyhow.workspace = true
+parking_lot.workspace = true
+reqwest = { workspace = true, features = ["json"] }
+rust_decimal = { workspace = true, features = ["maths"] }
+serde = { workspace = true, features = ["derive"] }
+shielder-account.workspace = true
+thiserror.workspace = true
+time = { workspace = true, features = ["serde-human-readable"] }
+tokio = { workspace = true, features = ["rt-multi-thread", "time", "macros"] }
+tracing.workspace = true
+utoipa.workspace = true

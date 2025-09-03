@@ -5,10 +5,8 @@ use utoipa::ToSchema;
 
 mod environment_variables;
 pub use environment_variables::*;
+pub use price_feed::*;
 use shielder_account::Token;
-
-mod token;
-pub use token::*;
 mod fee;
 pub mod server;
 pub use fee::*;

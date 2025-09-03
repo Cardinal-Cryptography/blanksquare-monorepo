@@ -39,7 +39,6 @@ mod health_endpoint;
 mod info_endpoints;
 mod metrics;
 mod monitor;
-mod price_feed;
 mod quote;
 mod quote_cache;
 mod recharge;

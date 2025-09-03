@@ -8,9 +8,10 @@ use axum::{
     response::IntoResponse,
 };
 use metrics_exporter_prometheus::{Matcher, PrometheusBuilder, PrometheusHandle};
+use price_feed::Prices;
 use shielder_setup::native_token::NATIVE_TOKEN_DECIMALS;
 
-use crate::{monitor::rpc_monitor::RpcMonitor, price_feed::Prices, SignerInfo};
+use crate::{monitor::rpc_monitor::RpcMonitor, SignerInfo};
 
 pub const TOTAL_REQUESTS_METRIC: &str = "http_requests_total";
 pub const REQUEST_DURATION_METRIC: &str = "http_requests_duration_seconds";

@@ -7,8 +7,12 @@ use aes_gcm::{
 };
 #[cfg(not(feature = "without_attestation"))]
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine};
+use log::info;
 #[cfg(feature = "without_attestation")]
-use rsa::{pkcs8::EncodePublicKey, sha2::Sha256, Oaep, RsaPrivateKey, RsaPublicKey, pkcs8::DecodePrivateKey};
+use rsa::{
+    pkcs8::DecodePrivateKey, pkcs8::EncodePublicKey, sha2::Sha256, Oaep, RsaPrivateKey,
+    RsaPublicKey,
+};
 use shielder_scheduler_common::{protocol::EncryptionEnvelope, vsock::VsockError};
 
 pub struct KmsCrypto {
@@ -26,8 +30,7 @@ impl KmsCrypto {
         kms_key_id: String,
         kms_region: String,
         kms_encryption_algorithm: String,
-        #[cfg(feature = "without_attestation")]
-        private_key: Vec<u8>,
+        #[cfg(feature = "without_attestation")] private_key: Vec<u8>,
     ) -> Result<Self, VsockError> {
         Ok(Self {
             kms_public_key,
@@ -42,6 +45,7 @@ impl KmsCrypto {
     fn decrypt_dek(&self, encrypted_dek: &[u8]) -> Result<Vec<u8>, VsockError> {
         #[cfg(not(feature = "without_attestation"))]
         let decrypted_data = {
+            info!("Decrypting data encryption key (DEK)");
             let output = Command::new("/usr/bin/kmstool_enclave_cli")
                 .arg("decrypt")
                 .arg(format!("--region={}", self.kms_region))
@@ -60,11 +64,14 @@ impl KmsCrypto {
 
             if !output.status.success() {
                 let stderr = String::from_utf8_lossy(&output.stderr);
+                info!("Decrypting data encryption key failed with {stderr}");
                 return Err(VsockError::KMS(format!("kmstool failed: {}", stderr)));
             }
+            info!("Decrypting data encryption key success");
 
             let b64_str = String::from_utf8(output.stdout)
                 .map_err(|_| VsockError::KMS("stdout not valid utf8".into()))?;
+            info!("Decoding output success");
             BASE64
                 .decode(b64_str.trim())
                 .map_err(|_| VsockError::KMS("base64 decode failed".into()))?
@@ -76,11 +83,9 @@ impl KmsCrypto {
             let private_key = RsaPrivateKey::from_pkcs8_der(&self.private_key).map_err(|e| {
                 VsockError::KMS(format!("Failed to parse private key from DER: {e:?}"))
             })?;
-            private_key
-                .decrypt(padding, encrypted_dek)
-                .map_err(|e| {
-                    VsockError::KMS(format!("Failed to decrypt with private key: {e:?}"))
-                })?
+            private_key.decrypt(padding, encrypted_dek).map_err(|e| {
+                VsockError::KMS(format!("Failed to decrypt with private key: {e:?}"))
+            })?
         };
         Ok(decrypted_data)
     }
@@ -89,7 +94,9 @@ impl KmsCrypto {
         &self,
         encryption_envelope: &EncryptionEnvelope,
     ) -> Result<Vec<u8>, VsockError> {
+        info!("Decrypting DEK and payload");
         let dek = self.decrypt_dek(&encryption_envelope.encrypted_dek)?;
+        info!("Decrypting data encryption key success");
 
         if dek.len() != 32 {
             return Err(VsockError::KMS(format!(
@@ -98,6 +105,7 @@ impl KmsCrypto {
             )));
         }
 
+        info!("Decrypting payload");
         let mut full_ciphertext = encryption_envelope.encrypted_payload.clone();
         full_ciphertext.extend(encryption_envelope.auth_tag.clone());
 
@@ -108,6 +116,7 @@ impl KmsCrypto {
         let decrypted_payload = cipher
             .decrypt(nonce, full_ciphertext.as_ref())
             .map_err(|e| VsockError::KMS(format!("Failed to decrypt payload: {e:?}")))?;
+        info!("Decrypting payloadsuccess");
 
         Ok(decrypted_payload)
     }

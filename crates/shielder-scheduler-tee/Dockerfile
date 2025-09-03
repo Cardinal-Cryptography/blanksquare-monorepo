@@ -25,6 +25,8 @@ RUN apt-get update && \
       ca-certificates && \
       rm -rf /tmp/* /var/{tmp,cache}/* /var/lib/{apt,dpkg}/
 
+ENV RUST_LOG=info
+
 COPY --from=builder /app/target/release/shielder-scheduler-tee /usr/local/bin
 RUN chmod +x /usr/local/bin/shielder-scheduler-tee
 

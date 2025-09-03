@@ -2,7 +2,7 @@ use alloy_primitives::{Address, Bytes, FixedBytes, U256};
 use serde::{Deserialize, Serialize};
 pub use shielder_relayer::RelayCalldata;
 use shielder_setup::consts::{ARITY, TREE_HEIGHT};
-pub use tokio_vsock::VMADDR_CID_ANY;
+pub use tokio_vsock::{VMADDR_CID_ANY, VMADDR_CID_HOST};
 
 use crate::{
     base64_serialization,

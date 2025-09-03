@@ -72,14 +72,13 @@ pub async fn create_tables(pool: &PgPool) -> Result<(), Error> {
             max_relayer_fee TEXT NOT NULL,
             relay_after TIMESTAMPTZ NOT NULL,
             status request_status NOT NULL DEFAULT 'pending',
-            created_at TIMESTAMPTZ NOT NULL DEFAULT &1,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
             processed_at TIMESTAMPTZ,
             retry_count INTEGER NOT NULL DEFAULT 0,
             error_message TEXT
         )
         "#,
     )
-    .bind(Utc::now())
     .execute(pool)
     .await?;
 

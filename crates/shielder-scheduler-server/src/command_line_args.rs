@@ -39,10 +39,6 @@ pub struct CommandLineArgs {
     #[clap(long, default_value_t = shielder_scheduler_common::protocol::VMADDR_CID_HOST, env = "TEE_CID")]
     pub tee_cid: u32,
 
-    /// Base64-encoded DER
-    #[clap(long, env = "TEE_PUBLIC_KEY")]
-    pub tee_public_key: String,
-
     /// How many tasks can be processed in parallel by the TEE task pool
     /// Do not raise it above 128 as this is the limit of vsock connections, at least
     /// for the rust lib used by this server

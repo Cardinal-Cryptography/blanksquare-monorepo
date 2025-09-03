@@ -61,10 +61,7 @@ pub enum Request {
     Ping,
 
     /// Retrieves TEE Public Key, ie key which is used by the user to encrypt inputs to a circuit
-    TeePublicKey {
-        #[serde(with = "base64_serialization")]
-        public_key: Vec<u8>,
-    },
+    TeePublicKey,
 
     /// Request to prepare calldata for a relay transaction.
     PrepareRelayCalldata {

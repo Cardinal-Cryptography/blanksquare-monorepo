@@ -1,8 +1,6 @@
 use std::sync::Arc;
 
 use alloy_primitives::{Address, U256};
-#[cfg(feature = "without_attestation")]
-use base64::{engine::general_purpose, Engine as _};
 #[cfg(not(feature = "without_attestation"))]
 use aws_nitro_enclaves_nsm_api::{
     api::Request as NsmRequest,
@@ -11,7 +9,9 @@ use aws_nitro_enclaves_nsm_api::{
 };
 use log::{debug, info};
 use shielder_scheduler_common::{
-    protocol::{EncryptionEnvelope, MerklePath, Payload, RelayCalldata, Request, Response, TEEServer},
+    protocol::{
+        EncryptionEnvelope, MerklePath, Payload, RelayCalldata, Request, Response, TEEServer,
+    },
     vsock::VsockError,
 };
 use tokio_vsock::{VsockAddr, VsockListener, VsockStream};
@@ -43,26 +43,16 @@ impl Server {
 
         #[cfg(not(feature = "without_attestation"))]
         let kms = KmsCrypto::new(
+            options.kms_key_id,
             options.kms_region,
-            options.kms_access_key,
-            options.kms_secret_key,
-            options.kms_session_token,
+            options.kms_encryption_algorithm,
         )
         .map_err(|e| VsockError::Protocol(format!("KMS init error: {e}")))?;
         #[cfg(feature = "without_attestation")]
-        let kms = {
-            let private_key = general_purpose::STANDARD
-                .decode(&options.private_key)
-                .map_err(|e| {
-                    VsockError::Protocol(format!("Private key base64 decode error: {e}"))
-                })?;
-            KmsCrypto::new(private_key)
-                .map_err(|e| VsockError::Protocol(format!("KMS init error: {e}")))?
-        };
+        let kms = KmsCrypto::new().map_err(|e| VsockError::Protocol(format!("KMS init error: {e}")))?;
 
         Ok(Arc::new(Self {
             listener,
-
             kms,
             #[cfg(not(feature = "without_attestation"))]
             nsm_fd,
@@ -91,7 +81,9 @@ impl Server {
                 .handle_request(|request| async move {
                     match request {
                         Request::Ping => Ok(Response::Pong),
-                        Request::TeePublicKey { public_key } => self.public_key_response(public_key).await,
+                        Request::TeePublicKey => {
+                            self.public_key_response().await
+                        }
                         Request::PrepareRelayCalldata {
                             encryption_envelope,
                             relayer_address,
@@ -114,12 +106,11 @@ impl Server {
 
     /// Return the public key (hex) and
     /// an attestation document that embeds the same public key.
-    async fn public_key_response(&self, public_key: Vec<u8>) -> Result<Response, VsockError> {
-        self.kms.verify_public_key(&public_key)?;
+    async fn public_key_response(&self) -> Result<Response, VsockError> {
+        let public_key = self.kms.public_key()?;
 
         #[cfg(not(feature = "without_attestation"))]
-        let attestation_document =
-            self.request_attestation_from_nsm_driver(public_key.clone())?;
+        let attestation_document = self.request_attestation_from_nsm_driver(public_key.clone())?;
 
         #[cfg(feature = "without_attestation")]
         let attestation_document = Vec::new();
@@ -139,15 +130,17 @@ impl Server {
     ) -> Result<Response, VsockError> {
         let decrypted_payload = self.kms.decrypt_payload(&encryption_envelope)?;
 
-        let _deserialized_payload: Result<Payload, _> = serde_json::from_slice(&decrypted_payload);
+        let deserialized_payload: Payload = serde_json::from_slice(&decrypted_payload).map_err(|e| {
+            VsockError::Protocol(format!("Failed to deserialize decrypted payload: {e:?}"))
+        })?;
 
         // TODO: Implement proof generation logic here
-        info!("Received payload: {:?}", _deserialized_payload);
+        info!("Received payload: {:?}", deserialized_payload);
 
         Ok(Response::PrepareRelayCalldata {
             calldata: RelayCalldata {
                 expected_contract_version: [0, 0, 0].into(),
-                amount: U256::from(0),
+                amount: deserialized_payload.withdrawal_value,
                 withdraw_address: Address::random(),
                 merkle_root: U256::from(0),
                 nullifier_hash: U256::from(0),

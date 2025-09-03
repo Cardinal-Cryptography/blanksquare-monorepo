@@ -7,6 +7,7 @@ use aws_nitro_enclaves_nsm_api::{
     api::Response as NsmResponse,
     driver::{nsm_exit, nsm_init, nsm_process_request},
 };
+use base64::{engine::general_purpose::STANDARD as BASE64, Engine};
 use log::{debug, info};
 use shielder_scheduler_common::{
     protocol::{
@@ -41,15 +42,22 @@ impl Server {
         #[cfg(not(feature = "without_attestation"))]
         let nsm_fd = Self::init_nsm_driver()?;
 
-        #[cfg(not(feature = "without_attestation"))]
+        let public_key = BASE64.decode(options.kms_public_key.as_bytes()).map_err(|e| {
+            VsockError::Protocol(format!("Failed to decode KMS public key from base64: {e:?}"))
+        })?;
+
+
         let kms = KmsCrypto::new(
+            public_key,
             options.kms_key_id,
             options.kms_region,
             options.kms_encryption_algorithm,
+            #[cfg(feature = "without_attestation")]
+            BASE64.decode(options.private_key.as_bytes()).map_err(|e| {
+                VsockError::Protocol(format!("Failed to decode private key from base64: {e:?}"))
+            })?,
         )
         .map_err(|e| VsockError::Protocol(format!("KMS init error: {e}")))?;
-        #[cfg(feature = "without_attestation")]
-        let kms = KmsCrypto::new().map_err(|e| VsockError::Protocol(format!("KMS init error: {e}")))?;
 
         Ok(Arc::new(Self {
             listener,
@@ -104,19 +112,17 @@ impl Server {
         }
     }
 
-    /// Return the public key (hex) and
+    /// Return the public key (base64) and
     /// an attestation document that embeds the same public key.
     async fn public_key_response(&self) -> Result<Response, VsockError> {
-        let public_key = self.kms.public_key()?;
-
         #[cfg(not(feature = "without_attestation"))]
-        let attestation_document = self.request_attestation_from_nsm_driver(public_key.clone())?;
+        let attestation_document = self.request_attestation_from_nsm_driver(self.kms.kms_public_key.clone())?;
 
         #[cfg(feature = "without_attestation")]
         let attestation_document = Vec::new();
 
         Ok(Response::TeePublicKey {
-            public_key,
+            public_key: self.kms.kms_public_key.clone(),
             attestation_document,
         })
     }

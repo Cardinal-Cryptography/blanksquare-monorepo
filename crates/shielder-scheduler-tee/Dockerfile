@@ -14,11 +14,6 @@ RUN apt-get update && apt-get install -y \
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 ENV PATH="/root/.cargo/bin:${PATH}"
 
-# Install the specific nightly toolchain
-RUN rustup toolchain install nightly-2025-02-27
-RUN rustup default nightly-2025-02-27
-RUN rustup component add rustfmt clippy rust-src
-
 COPY . .
 
 RUN cd crates/shielder-scheduler-tee && cargo build --release
@@ -35,6 +30,8 @@ COPY ./crates/shielder-scheduler-tee/artifacts/kms/libnsm.so /usr/lib/x86_64-lin
 
 COPY --from=builder /app/target/release/shielder-scheduler-tee /usr/local/bin
 RUN chmod +x /usr/local/bin/shielder-scheduler-tee
+
+ENV RUST_LOG=info
 
 RUN useradd -r -s /bin/false server
 USER server

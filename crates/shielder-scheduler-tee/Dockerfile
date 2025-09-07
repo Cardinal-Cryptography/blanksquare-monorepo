@@ -1,109 +1,169 @@
-ARG BASE_IMAGE=public.ecr.aws/amazonlinux/amazonlinux:2
+FROM public.ecr.aws/docker/library/alpine:3.16 AS builder
 
-# ---- Build kmstool-enclave-cli ----
-FROM $BASE_IMAGE AS builder
+# Force Rust dynamic linking against the Alpine-default musl libc.
+ENV RUSTFLAGS="-C target-feature=-crt-static"
 
-RUN yum install -y \
-    cmake3 \
+# Install system dependencies / packages.
+RUN apk add \
+    p11-kit-server \
+    ca-certificates \
+    cmake \
+    g++ \
     gcc \
     git \
-    tar \
-    make \
-    gcc-c++ \
     go \
-    ninja-build \
-    doxygen \
     perl \
-    perl-ExtUtils-MakeMaker \
-    zlib-devel \
-    openssl-devel
+    curl \
+    make \
+    linux-headers \
+    shadow \
+    sudo
 
-# RUN curl https://sh.rustup.rs -sSf | sh -s -- -y --profile minimal
-RUN curl https://sh.rustup.rs -sSf | sh -s -- -y --profile minimal --default-toolchain 1.71
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+ENV PATH="/root/.cargo/bin:${PATH}"
 
-# We keep the build artifacts in the -build directory
-WORKDIR /tmp/crt-builder
+RUN ln -s /usr/lib /usr/lib64
 
-RUN git clone --depth 1 -b v1.12.0 https://github.com/awslabs/aws-lc.git aws-lc
-RUN cmake3 -DCMAKE_PREFIX_PATH=/usr -DCMAKE_INSTALL_PREFIX=/usr -GNinja -DBUILD_TESTING=0 -S aws-lc -B aws-lc/build .
-RUN go env -w GOPROXY=direct
-RUN cmake3 --build aws-lc/build --parallel $(nproc) --target install
+RUN mkdir -p /build
+WORKDIR /build
 
-RUN git clone --depth 1 -b v1.3.46 https://github.com/aws/s2n-tls.git
-RUN cmake3 -DCMAKE_PREFIX_PATH=/usr -DBUILD_TESTING=0 -DCMAKE_INSTALL_PREFIX=/usr -S s2n-tls -B s2n-tls/build
-RUN cmake3 --build s2n-tls/build --parallel $(nproc) --target install
+# Build AWS libcrypto
+ENV AWS_LC_VER="v1.12.0"
+RUN git clone "https://github.com/awslabs/aws-lc.git" \
+    && cd aws-lc \
+    && git reset --hard $AWS_LC_VER \
+    && cmake -DCMAKE_PREFIX_PATH=/usr -DCMAKE_INSTALL_PREFIX=/usr -DBUILD_SHARED_LIBS=1 -DBUILD_TESTING=0 -B build \
+    && cmake --build build/ --parallel $(nproc) --target crypto \
+    && mv build/crypto/libcrypto.so /usr/lib/ \
+    && cp -rf include/openssl /usr/include/ \
+    && ldconfig /usr/lib
 
-RUN git clone --depth 1 -b v0.8.0 https://github.com/awslabs/aws-c-common.git
-RUN cmake3 -DCMAKE_PREFIX_PATH=/usr -DBUILD_TESTING=0 -DCMAKE_INSTALL_PREFIX=/usr -GNinja -S aws-c-common -B aws-c-common/build
-RUN cmake3 --build aws-c-common/build --parallel $(nproc) --target install
+# AWS-S2N
+ENV AWS_S2N_VER="v1.3.46"
+RUN git clone https://github.com/aws/s2n-tls.git \
+    && cd s2n-tls \
+    && git reset --hard $AWS_S2N_VER \
+    && cmake -DCMAKE_PREFIX_PATH=/usr -DCMAKE_INSTALL_PREFIX=/usr -DBUILD_SHARED_LIBS=1 -DBUILD_TESTING=0 -B build \
+    && cmake --build build/ --parallel $(nproc) --target install
 
-RUN git clone --depth 1 -b v0.1.2 https://github.com/awslabs/aws-c-sdkutils.git
-RUN cmake3 -DCMAKE_PREFIX_PATH=/usr -DBUILD_TESTING=0 -DCMAKE_INSTALL_PREFIX=/usr -GNinja -S aws-c-sdkutils -B aws-c-sdkutils/build
-RUN cmake3 --build aws-c-sdkutils/build --parallel $(nproc) --target install
+# AWS-C-COMMON
+ENV AWS_C_COMMON_VER="v0.8.0"
+RUN git clone https://github.com/awslabs/aws-c-common.git \
+    && cd aws-c-common \
+    && git reset --hard $AWS_C_COMMON_VER \
+    && cmake -DCMAKE_PREFIX_PATH=/usr -DCMAKE_INSTALL_PREFIX=/usr -DBUILD_SHARED_LIBS=1 -DBUILD_TESTING=0 -B build \
+    && cmake --build build/ --parallel $(nproc) --target install
 
-RUN git clone --depth 1 -b v0.5.18 https://github.com/awslabs/aws-c-cal.git
-RUN cmake3 -DCMAKE_PREFIX_PATH=/usr -DBUILD_TESTING=0 -DCMAKE_INSTALL_PREFIX=/usr -GNinja -S aws-c-cal -B aws-c-cal/build
-RUN cmake3 --build aws-c-cal/build --parallel $(nproc) --target install
+# AWS-C-SDKUTILS
+ENV AWS_C_SDKUTILS_VER="v0.1.2"
+RUN git clone https://github.com/awslabs/aws-c-sdkutils \
+    && cd aws-c-sdkutils \
+    && git reset --hard $AWS_C_SDKUTILS_VER \
+    && cmake -DCMAKE_PREFIX_PATH=/usr -DCMAKE_INSTALL_PREFIX=/usr -DBUILD_SHARED_LIBS=1 -DBUILD_TESTING=0 -B build \
+    && cmake --build build/ --parallel $(nproc) --target install
 
-RUN git clone --depth 1 -b v0.11.0 https://github.com/awslabs/aws-c-io.git
-RUN cmake3 -DUSE_VSOCK=1 -DCMAKE_PREFIX_PATH=/usr -DBUILD_TESTING=0 -DCMAKE_INSTALL_PREFIX=/usr -GNinja -S aws-c-io -B aws-c-io/build
-RUN cmake3 --build aws-c-io/build --parallel $(nproc) --target install
+# AWS-C-CAL
+ENV AWS_C_CAL_VER="v0.5.18"
+RUN git clone https://github.com/awslabs/aws-c-cal.git \
+    && cd aws-c-cal \
+    && git reset --hard $AWS_C_CAL_VER \
+    && cmake -DCMAKE_PREFIX_PATH=/usr -DCMAKE_INSTALL_PREFIX=/usr -DBUILD_SHARED_LIBS=1 -DBUILD_TESTING=0 -B build \
+    && cmake --build build --parallel $(nproc) --target install
 
-RUN git clone --depth 1 -b v0.2.14 http://github.com/awslabs/aws-c-compression.git
-RUN cmake3 -DCMAKE_PREFIX_PATH=/usr -DBUILD_TESTING=0 -DCMAKE_INSTALL_PREFIX=/usr -GNinja -S aws-c-compression -B aws-c-compression/build
-RUN cmake3 --build aws-c-compression/build --parallel $(nproc) --target install
+# AWS-C-IO
+ENV AWS_C_IO_VER="v0.11.0"
+RUN git clone https://github.com/awslabs/aws-c-io.git \
+    && cd aws-c-io \
+    && git reset --hard $AWS_C_IO_VER \
+    && cmake -DUSE_VSOCK=1 -DCMAKE_PREFIX_PATH=/usr -DCMAKE_INSTALL_PREFIX=/usr -DBUILD_SHARED_LIBS=1 -DBUILD_TESTING=0 -B build \
+    && cmake --build build/ --parallel $(nproc) --target install
 
-RUN git clone --depth 1 -b v0.7.6 https://github.com/awslabs/aws-c-http.git
-RUN cmake3 -DCMAKE_PREFIX_PATH=/usr -DBUILD_TESTING=0 -DCMAKE_INSTALL_PREFIX=/usr -GNinja -S aws-c-http -B aws-c-http/build
-RUN cmake3 --build aws-c-http/build --parallel $(nproc) --target install
+# AWS-C-COMPRESSION
+ENV AWS_C_COMPRESSION_VER="v0.2.14"
+RUN git clone http://github.com/awslabs/aws-c-compression.git \
+    && cd aws-c-compression \
+    && git reset --hard $AWS_C_COMPRESSION_VER \
+    && cmake -DCMAKE_PREFIX_PATH=/usr -DCMAKE_INSTALL_PREFIX=/usr -DBUILD_SHARED_LIBS=1 -DBUILD_TESTING=0 -B build \
+    && cmake --build build --parallel $(nproc) --target install
 
-RUN git clone --depth 1 -b v0.6.15 https://github.com/awslabs/aws-c-auth.git
-RUN cmake3 -DCMAKE_PREFIX_PATH=/usr -DBUILD_TESTING=0 -DCMAKE_INSTALL_PREFIX=/usr -GNinja -S aws-c-auth -B aws-c-auth/build
-RUN cmake3 --build aws-c-auth/build --parallel $(nproc) --target install
+# AWS-C-HTTP
+ENV AWS_C_HTTP_VER="v0.6.19"
+RUN git clone https://github.com/awslabs/aws-c-http.git \
+    && cd aws-c-http \
+    && git reset --hard $AWS_C_HTTP_VER \
+    && cmake -DCMAKE_PREFIX_PATH=/usr -DCMAKE_INSTALL_PREFIX=/usr -DBUILD_SHARED_LIBS=1 -DBUILD_TESTING=0 -B build \
+    && cmake --build build --parallel $(nproc) --target install
 
-RUN git clone --depth 1 -b json-c-0.16-20220414 https://github.com/json-c/json-c.git
-RUN cmake3 -DCMAKE_PREFIX_PATH=/usr -DBUILD_TESTING=0 -DCMAKE_INSTALL_PREFIX=/usr -DBUILD_SHARED_LIBS=OFF -GNinja -S json-c -B json-c/build
-RUN cmake3 --build json-c/build --parallel $(nproc)  --target install
+# AWS-C-AUTH
+ENV AWS_C_AUTH_VER="v0.6.15"
+RUN git clone https://github.com/awslabs/aws-c-auth.git \
+    && cd aws-c-auth \
+    && git reset --hard $AWS_C_AUTH_VER \
+    && cmake -DCMAKE_PREFIX_PATH=/usr -DCMAKE_INSTALL_PREFIX=/usr -DBUILD_SHARED_LIBS=1 -DBUILD_TESTING=0 -B build \
+    && cmake --build build --parallel $(nproc) --target install
 
-RUN git clone --depth 1 -b v0.4.0 https://github.com/aws/aws-nitro-enclaves-nsm-api.git
-RUN source $HOME/.cargo/env && cd aws-nitro-enclaves-nsm-api && cargo build --release --jobs $(nproc) -p nsm-lib
-RUN mv aws-nitro-enclaves-nsm-api/target/release/libnsm.so /usr/lib64
-RUN mv aws-nitro-enclaves-nsm-api/target/release/nsm.h /usr/include
+# JSON-C library
+ENV JSON_C_VER="json-c-0.16-20220414"
+RUN git clone https://github.com/json-c/json-c.git \
+    && cd json-c \
+    && git reset --hard $JSON_C_VER \
+    && cmake -DCMAKE_PREFIX_PATH=/usr -DCMAKE_INSTALL_PREFIX=/usr -DBUILD_SHARED_LIBS=1 -DBUILD_TESTING=0 -B build \
+    && cmake --build build --parallel $(nproc) --target install
 
-RUN git clone --depth 1 -b v0.4.1 https://github.com/aws/aws-nitro-enclaves-sdk-c.git
-RUN cmake3 -DCMAKE_PREFIX_PATH=/usr -DCMAKE_INSTALL_PREFIX=/usr -GNinja \
-	-S aws-nitro-enclaves-sdk-c -B aws-nitro-enclaves-sdk-c/build
-RUN cmake3 --build aws-nitro-enclaves-sdk-c/build --parallel $(nproc) --target install
-RUN cmake3 --build aws-nitro-enclaves-sdk-c/build --parallel $(nproc) --target docs
+# NSM LIB
+ENV AWS_NE_NSM_API_VER="v0.4.0"
+RUN git clone "https://github.com/aws/aws-nitro-enclaves-nsm-api" \
+    && cd aws-nitro-enclaves-nsm-api \
+    && git reset --hard $AWS_NE_NSM_API_VER \
+    && PATH="$PATH:/root/.cargo/bin" cargo build --release -p nsm-lib \
+    && mv target/release/libnsm.so /usr/lib/ \
+    && mv target/release/nsm.h /usr/include/
+
+# AWS Nitro Enclaves SDK
+ENV AWS_NE_SDK_VER="v0.4.1"
+RUN git clone "https://github.com/aws/aws-nitro-enclaves-sdk-c" \
+    && cd aws-nitro-enclaves-sdk-c \
+    && git reset --hard $AWS_NE_SDK_VER \
+    && cmake -DCMAKE_PREFIX_PATH=/usr -DCMAKE_INSTALL_PREFIX=/usr -DBUILD_SHARED_LIBS=1 -DBUILD_TESTING=0 -B build \
+    && cmake --build build --target install --parallel $(nproc)
 
 WORKDIR /app
+
 COPY . .
 
-# Build your Rust app
-RUN source $HOME/.cargo/env && cd crates/shielder-scheduler-tee && cargo build --release
+RUN cd crates/shielder-scheduler-tee && cargo build --release
 
-# ---- Final runtime image ----
-FROM $BASE_IMAGE
+FROM alpine:3.16
 
-# Copy kmstool binary
-# TODO: building packages statically instead of cleaning up unwanted packages from amazonlinux
-RUN rpm -e python python-libs python-urlgrabber python2-rpm pygpgme pyliblzma python-iniparse pyxattr python-pycurl amazon-linux-extras yum yum-metadata-parser yum-plugin-ovl yum-plugin-priorities
-COPY --from=builder /usr/lib64/libnsm.so /usr/lib64/libnsm.so
-COPY --from=builder /usr/bin/kmstool_enclave_cli /kmstool_enclave_cli
+RUN apk add --no-cache \
+    ca-certificates \
+    tini \
+    libgcc
 
-# test cli works
+# Copy the AWS C libraries from the builder
+COPY --from=builder /usr/lib/libaws-c-common.so* /usr/lib/
+COPY --from=builder /usr/lib/libaws-c-io.so* /usr/lib/
+COPY --from=builder /usr/lib/libaws-c-cal.so* /usr/lib/
+COPY --from=builder /usr/lib/libaws-c-compression.so* /usr/lib/
+COPY --from=builder /usr/lib/libaws-c-http.so* /usr/lib/
+COPY --from=builder /usr/lib/libaws-c-auth.so* /usr/lib/
+COPY --from=builder /usr/lib/libaws-c-sdkutils.so* /usr/lib/
+COPY --from=builder /usr/lib/libaws-nitro-enclaves-sdk-c.so* /usr/lib/
+COPY --from=builder /usr/lib/libs2n.so* /usr/lib/
+COPY --from=builder /usr/lib/libcrypto.so* /usr/lib/
+COPY --from=builder /usr/lib/libjson-c.so* /usr/lib/
+COPY --from=builder /usr/lib/libnsm.so* /usr/lib/
+
+# Update library cache
+RUN ldconfig /usr/lib
+
+# Verify that the kmstool_enclave_cli works
 RUN /usr/bin/kmstool_enclave_cli --help || true
 
-ENV RUST_LOG=info
-
-# TODO: install all dependencies needed for shielder-scheduler-tee
-
-# Copy Rust binary
-COPY --from=builder /app/target/release/shielder-scheduler-tee /usr/local/bin/
+COPY --from=builder /app/target/release/shielder-scheduler-tee /usr/local/bin
 RUN chmod +x /usr/local/bin/shielder-scheduler-tee
 
-# Run as non-root
-RUN useradd server
+RUN adduser -D server
 USER server
 
 ENTRYPOINT ["tini", "--", "shielder-scheduler-tee"]

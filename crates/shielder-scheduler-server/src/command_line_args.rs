@@ -87,4 +87,31 @@ pub struct CommandLineArgs {
     /// If set to true, the server will use SSL to connect to the database
     #[clap(long, default_value_t = false, env = "DB_USE_SSL")]
     pub db_ssl: bool,
+
+    // KMS configuration
+
+    #[clap(long, env = "KMS_PUBLIC_KEY")]
+    pub kms_public_key: String,
+
+    #[clap(long, env = "KMS_KEY_ID")]
+    pub kms_key_id: String,
+
+    #[clap(long, env = "AWS_REGION")]
+    pub aws_region: String,
+
+    #[clap(long, env = "AWS_ACCESS_KEY_ID")]
+    pub aws_access_key_id: String,
+
+    #[clap(long, env = "AWS_SECRET_ACCESS_KEY")]
+    pub aws_secret_access_key: String,
+
+    #[clap(long, env = "AWS_SESSION_TOKEN")]
+    pub aws_session_token: String,
+
+    #[clap(
+        long,
+        default_value = "RSAES_OAEP_SHA_256",
+        env = "KMS_ENCRYPTION_ALGORITHM"
+    )]
+    pub kms_encryption_algorithm: String,
 }

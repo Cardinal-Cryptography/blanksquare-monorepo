@@ -7,11 +7,11 @@ use aws_nitro_enclaves_nsm_api::{
     api::Response as NsmResponse,
     driver::{nsm_exit, nsm_init, nsm_process_request},
 };
-use base64::{engine::general_purpose::STANDARD as BASE64, Engine};
 use log::{debug, info};
 use shielder_scheduler_common::{
     protocol::{
-        EncryptionEnvelope, MerklePath, Payload, RelayCalldata, Request, Response, TEEServer,
+        AwsConfig, EncryptionEnvelope, MerklePath, Payload, RelayCalldata, Request, Response,
+        TEEServer,
     },
     vsock::VsockError,
 };
@@ -28,10 +28,6 @@ pub struct Server {
 }
 
 impl Server {
-    /// Initialize the TEE server:
-    /// - Binds vsock listener on the provided port
-    /// - Initializes the Nitro Enclaves NSM driver (unless without_attestation)
-    /// - Creates the KMS client (unless without_attestation)
     pub async fn new(options: CommandLineArgs) -> Result<Arc<Self>, VsockError> {
         #[cfg(feature = "without_attestation")]
         info!("Running server without attestation (TEST BUILD).");
@@ -42,22 +38,11 @@ impl Server {
         #[cfg(not(feature = "without_attestation"))]
         let nsm_fd = Self::init_nsm_driver()?;
 
-        let public_key = BASE64.decode(options.kms_public_key.as_bytes()).map_err(|e| {
-            VsockError::Protocol(format!("Failed to decode KMS public key from base64: {e:?}"))
-        })?;
-
-
         let kms = KmsCrypto::new(
-            public_key,
-            options.kms_key_id,
-            options.kms_region,
-            options.kms_encryption_algorithm,
+            options.kms_proxy_port,
             #[cfg(feature = "without_attestation")]
-            BASE64.decode(options.private_key.as_bytes()).map_err(|e| {
-                VsockError::Protocol(format!("Failed to decode private key from base64: {e:?}"))
-            })?,
-        )
-        .map_err(|e| VsockError::Protocol(format!("KMS init error: {e}")))?;
+            options.private_key,
+        );
 
         Ok(Arc::new(Self {
             listener,
@@ -89,16 +74,18 @@ impl Server {
                 .handle_request(|request| async move {
                     match request {
                         Request::Ping => Ok(Response::Pong),
-                        Request::TeePublicKey => {
-                            self.public_key_response().await
+                        Request::TeePublicKey { aws_config } => {
+                            self.public_key_response(&aws_config).await
                         }
                         Request::PrepareRelayCalldata {
+                            aws_config,
                             encryption_envelope,
                             relayer_address,
                             relayer_fee,
                             merkle_path,
                         } => {
                             self.prepare_relay_calldata_response(
+                                &aws_config,
                                 encryption_envelope,
                                 relayer_address,
                                 relayer_fee,
@@ -114,31 +101,36 @@ impl Server {
 
     /// Return the public key (base64) and
     /// an attestation document that embeds the same public key.
-    async fn public_key_response(&self) -> Result<Response, VsockError> {
+    async fn public_key_response(&self, aws_config: &AwsConfig) -> Result<Response, VsockError> {
+        self.kms.verify_public_key(aws_config)?;
+
         #[cfg(not(feature = "without_attestation"))]
-        let attestation_document = self.request_attestation_from_nsm_driver(self.kms.kms_public_key.clone())?;
+        let attestation_document =
+            self.request_attestation_from_nsm_driver(aws_config.public_key.clone())?;
 
         #[cfg(feature = "without_attestation")]
         let attestation_document = Vec::new();
 
         Ok(Response::TeePublicKey {
-            public_key: self.kms.kms_public_key.clone(),
+            public_key: aws_config.public_key.clone(),
             attestation_document,
         })
     }
 
     async fn prepare_relay_calldata_response(
         &self,
+        aws_config: &AwsConfig,
         encryption_envelope: EncryptionEnvelope,
         _relayer_address: Address,
         _relayer_fee: U256,
         _merkle_path: MerklePath,
     ) -> Result<Response, VsockError> {
-        let decrypted_payload = self.kms.decrypt_payload(&encryption_envelope)?;
+        let decrypted_payload = self.kms.decrypt_payload(aws_config, &encryption_envelope)?;
 
-        let deserialized_payload: Payload = serde_json::from_slice(&decrypted_payload).map_err(|e| {
-            VsockError::Protocol(format!("Failed to deserialize decrypted payload: {e:?}"))
-        })?;
+        let deserialized_payload: Payload =
+            serde_json::from_slice(&decrypted_payload).map_err(|e| {
+                VsockError::Protocol(format!("Failed to deserialize decrypted payload: {e:?}"))
+            })?;
 
         // TODO: Implement proof generation logic here
         info!("Received payload: {:?}", deserialized_payload);

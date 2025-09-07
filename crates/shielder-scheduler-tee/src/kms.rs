@@ -5,55 +5,68 @@ use aes_gcm::{
     aead::{Aead, KeyInit},
     Aes256Gcm, Nonce,
 };
-#[cfg(not(feature = "without_attestation"))]
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine};
 use log::info;
 #[cfg(feature = "without_attestation")]
-use rsa::{
-    pkcs8::DecodePrivateKey, pkcs8::EncodePublicKey, sha2::Sha256, Oaep, RsaPrivateKey,
-    RsaPublicKey,
+use rsa::{pkcs8::DecodePrivateKey, RsaPrivateKey};
+use rsa::{pkcs8::DecodePublicKey, sha2::Sha256, Oaep, RsaPublicKey};
+use shielder_scheduler_common::{
+    protocol::{AwsConfig, EncryptionEnvelope},
+    vsock::VsockError,
 };
-use shielder_scheduler_common::{protocol::EncryptionEnvelope, vsock::VsockError};
 
 pub struct KmsCrypto {
-    pub kms_public_key: Vec<u8>,
-    kms_key_id: String,
-    kms_region: String,
-    kms_encryption_algorithm: String,
+    kms_proxy_port: u32,
     #[cfg(feature = "without_attestation")]
     private_key: Vec<u8>,
 }
 
 impl KmsCrypto {
     pub fn new(
-        kms_public_key: Vec<u8>,
-        kms_key_id: String,
-        kms_region: String,
-        kms_encryption_algorithm: String,
-        #[cfg(feature = "without_attestation")] private_key: Vec<u8>,
-    ) -> Result<Self, VsockError> {
-        Ok(Self {
-            kms_public_key,
-            kms_key_id,
-            kms_region,
-            kms_encryption_algorithm,
+        kms_proxy_port: u32,
+        #[cfg(feature = "without_attestation")] private_key: String,
+    ) -> Self {
+        Self {
+            kms_proxy_port,
             #[cfg(feature = "without_attestation")]
-            private_key,
-        })
+            private_key: BASE64
+                .decode(private_key)
+                .map_err(|e| {
+                    panic!("Failed to decode PRIVATE_KEY from base64: {e:?}");
+                })
+                .unwrap(),
+        }
     }
 
-    fn decrypt_dek(&self, encrypted_dek: &[u8]) -> Result<Vec<u8>, VsockError> {
+    fn decrypt_dek(
+        &self,
+        aws_config: &AwsConfig,
+        encrypted_dek: &[u8],
+    ) -> Result<Vec<u8>, VsockError> {
         #[cfg(not(feature = "without_attestation"))]
         let decrypted_data = {
             info!("Decrypting data encryption key (DEK)");
-            let output = Command::new("/usr/bin/kmstool_enclave_cli")
+            let output = Command::new("/usr/local/bin/kmstool_enclave_cli")
                 .arg("decrypt")
-                .arg(format!("--region={}", self.kms_region))
-                .arg(format!("--key-id={}", self.kms_key_id))
+                .arg(format!("--region={}", aws_config.aws_region))
+                .arg(format!("--proxy-port={}", self.kms_proxy_port))
+                .arg(format!(
+                    "--aws-access-key-id={}",
+                    aws_config.aws_access_key_id
+                ))
+                .arg(format!(
+                    "--aws-secret-access-key={}",
+                    aws_config.aws_secret_access_key
+                ))
+                .arg(format!(
+                    "--aws-session-token={}",
+                    aws_config.aws_session_token
+                ))
+                .arg(format!("--key-id={}", aws_config.kms_key_id))
                 .arg(format!("--ciphertext={}", BASE64.encode(encrypted_dek)))
                 .arg(format!(
                     "--encryption-algorithm={}",
-                    self.kms_encryption_algorithm
+                    aws_config.kms_encryption_algorithm
                 ))
                 .stdout(Stdio::piped())
                 .stderr(Stdio::piped())
@@ -69,9 +82,22 @@ impl KmsCrypto {
             }
             info!("Decrypting data encryption key success");
 
-            let b64_str = String::from_utf8(output.stdout)
+            let stdout_str = String::from_utf8(output.stdout)
                 .map_err(|_| VsockError::KMS("stdout not valid utf8".into()))?;
-            info!("Decoding output success");
+
+            // Parse the output - it should have format "PLAINTEXT: <base64-encoded-data>"
+            let plaintext_line = stdout_str
+                .lines()
+                .find(|line| line.starts_with("PLAINTEXT: "))
+                .ok_or_else(|| {
+                    VsockError::KMS("No PLAINTEXT line found in kmstool output".into())
+                })?;
+
+            let b64_str = plaintext_line
+                .strip_prefix("PLAINTEXT: ")
+                .ok_or_else(|| VsockError::KMS("Invalid PLAINTEXT format".into()))?;
+
+            info!("Parsing kmstool output success");
             BASE64
                 .decode(b64_str.trim())
                 .map_err(|_| VsockError::KMS("base64 decode failed".into()))?
@@ -92,10 +118,11 @@ impl KmsCrypto {
 
     pub fn decrypt_payload(
         &self,
+        aws_config: &AwsConfig,
         encryption_envelope: &EncryptionEnvelope,
     ) -> Result<Vec<u8>, VsockError> {
         info!("Decrypting DEK and payload");
-        let dek = self.decrypt_dek(&encryption_envelope.encrypted_dek)?;
+        let dek = self.decrypt_dek(aws_config, &encryption_envelope.encrypted_dek)?;
         info!("Decrypting data encryption key success");
 
         if dek.len() != 32 {
@@ -119,5 +146,26 @@ impl KmsCrypto {
         info!("Decrypting payloadsuccess");
 
         Ok(decrypted_payload)
+    }
+
+    pub fn verify_public_key(&self, aws_config: &AwsConfig) -> Result<(), VsockError> {
+        let expected_data = "This is a correct key".to_string();
+        let encrypted_data = RsaPublicKey::from_public_key_der(&aws_config.public_key)
+            .map_err(|e| VsockError::KMS(format!("Failed to parse public key: {e:?}")))?
+            .encrypt(
+                &mut rand::thread_rng(),
+                Oaep::new::<Sha256>(),
+                expected_data.as_bytes(),
+            )
+            .map_err(|e| VsockError::KMS(format!("Failed to encrypt data: {e:?}")))?;
+
+        let decrypted_data = self.decrypt_dek(aws_config, &encrypted_data)?;
+        if decrypted_data != expected_data.as_bytes() {
+            return Err(VsockError::KMS(
+                "Public key verification failed: decrypted data does not match expected".into(),
+            ));
+        }
+        info!("Public key verification succeeded");
+        Ok(())
     }
 }

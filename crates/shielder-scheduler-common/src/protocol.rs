@@ -55,16 +55,31 @@ pub struct EncryptionEnvelope {
     pub auth_tag: Vec<u8>,
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct AwsConfig {
+    #[serde(with = "base64_serialization")]
+    pub public_key: Vec<u8>,
+    pub kms_key_id: String,
+    pub aws_region: String,
+    pub aws_access_key_id: String,
+    pub aws_secret_access_key: String,
+    pub aws_session_token: String,
+    pub kms_encryption_algorithm: String,
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub enum Request {
     /// Message used to determine if TEE server is healthy
     Ping,
 
     /// Retrieves TEE Public Key, ie key which is used by the user to encrypt inputs to a circuit
-    TeePublicKey,
+    TeePublicKey {
+        aws_config: AwsConfig,
+    },
 
     /// Request to prepare calldata for a relay transaction.
     PrepareRelayCalldata {
+        aws_config: AwsConfig,
         encryption_envelope: EncryptionEnvelope,
         /// Relayer fee
         relayer_fee: U256,

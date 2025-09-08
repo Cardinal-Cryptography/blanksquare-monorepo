@@ -79,3 +79,17 @@ async fn metrics_register_withdrawals() {
         context
     );
 }
+
+#[tokio::test]
+async fn metrics_initialize_withdraw_metrics_to_zero() {
+    let context = TestContext::default().await;
+
+    // Get metrics immediately after startup, before any withdrawals
+    sleep(Duration::from_millis(500)).await; // Give metrics time to initialize
+    let metrics = context.get_metrics().await;
+
+    // Check that all withdraw metrics are present with value 0
+    ctx_assert!(metrics.contains("withdraw_success 0"), context);
+    ctx_assert!(metrics.contains("withdraw_failure 0"), context);
+    ctx_assert!(metrics.contains("withdraw_dry_run_failure 0"), context);
+}

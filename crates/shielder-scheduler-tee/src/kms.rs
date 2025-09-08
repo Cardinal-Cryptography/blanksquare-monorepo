@@ -63,7 +63,7 @@ impl KmsCrypto {
                     aws_config.aws_session_token
                 ))
                 .arg(format!("--key-id {}", aws_config.kms_key_id))
-                .arg(format!("--ciphertext CIPHERTEXT: {}", BASE64.encode(encrypted_dek)))
+                .arg(format!("--ciphertext {}", BASE64.encode(encrypted_dek)))
                 .arg(format!(
                     "--encryption-algorithm {}",
                     aws_config.kms_encryption_algorithm

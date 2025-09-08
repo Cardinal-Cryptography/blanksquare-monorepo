@@ -50,12 +50,10 @@ impl RelayerRpcController {
             debug!("Relayer health check succeeded.");
             Ok(())
         } else {
-            Err(SchedulerServerError::RelayerError(
-                format!(
-                    "Relayer health check failed with status: {}",
-                    response.status()
-                )
-            ))
+            Err(SchedulerServerError::RelayerError(format!(
+                "Relayer health check failed with status: {}",
+                response.status()
+            )))
         }
     }
 
@@ -156,7 +154,7 @@ impl RelayerRpcController {
 
         if tx_hash == TxHash::ZERO {
             return Err(SchedulerServerError::RelayerError(
-                "Relayer returned invalid transaction hash: zero hash".to_string()
+                "Relayer returned invalid transaction hash: zero hash".to_string(),
             ));
         }
 

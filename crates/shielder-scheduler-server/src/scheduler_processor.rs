@@ -4,7 +4,7 @@ use alloy_primitives::{Address, U256};
 use alloy_signer_local::PrivateKeySigner;
 use chrono::Utc;
 use shielder_contract::{merkle_path::get_current_merkle_path, ConnectionPolicy, ShielderUser};
-use shielder_relayer::RelayQuery;
+use shielder_relayer::{RelayQuery, QuoteFeeResponse};
 use shielder_scheduler_common::{
     protocol::{Request, Response},
     vsock::VsockError,
@@ -23,6 +23,15 @@ use crate::{
 };
 
 type Result<T> = std::result::Result<T, SchedulerServerError>;
+
+/// Parsed request parameters
+#[derive(Debug)]
+struct ParsedRequestParams {
+    last_note_index: U256,
+    max_relayer_fee: U256,
+    pocket_money: U256,
+    token_address: Address,
+}
 
 /// Background request scheduler that processes scheduled withdrawal requests
 #[derive(Debug)]
@@ -154,6 +163,25 @@ Please check the SHIELDER_ADDRESS environment variable or --shielder-address arg
 
     /// The actual processing logic for a scheduled request
     async fn process_request_logic(&self, request: ScheduledRequest) -> Result<ProcessingResult> {
+        let parsed_params = self.parse_request_parameters(&request)?;
+        let (merkle_root, merkle_path) = self.current_merkle_path(parsed_params.last_note_index).await?;
+        let quoted_fee = self.get_quoted_fee(parsed_params.token_address, parsed_params.pocket_money).await?;
+        
+        self.validate_fee_within_limit(&quoted_fee, parsed_params.max_relayer_fee)?;
+        
+        let tee_response = self.call_tee_prepare_relay_calldata(
+            &request,
+            &quoted_fee,
+            merkle_root,
+            merkle_path,
+            parsed_params.pocket_money,
+        ).await?;
+        
+        self.process_tee_response(tee_response, quoted_fee, request.id).await
+    }
+
+    /// Parse and validate request parameters
+    fn parse_request_parameters(&self, request: &ScheduledRequest) -> Result<ParsedRequestParams> {
         let last_note_index = request.last_note_index_as_u256().map_err(|e| {
             SchedulerServerError::ValueParseError(format!("Failed to parse last_note_index: {}", e))
         })?;
@@ -167,20 +195,39 @@ Please check the SHIELDER_ADDRESS environment variable or --shielder-address arg
             SchedulerServerError::ValueParseError(format!("Failed to parse token_address: {}", e))
         })?;
 
-        let (merkle_root, merkle_path) = self.current_merkle_path(last_note_index).await?;
-        let quoted_fee = self
-            .app_state
-            .relayer_rpc_controller
-            .get_relayer_total_fee(
-                if token_address == Address::ZERO {
-                    shielder_account::Token::Native
-                } else {
-                    shielder_account::Token::ERC20(token_address)
-                },
-                pocket_money,
-            )
-            .await?;
+        Ok(ParsedRequestParams {
+            last_note_index,
+            max_relayer_fee,
+            pocket_money,
+            token_address,
+        })
+    }
 
+    /// Get quoted fee from relayer
+    async fn get_quoted_fee(
+        &self,
+        token_address: Address,
+        pocket_money: U256,
+    ) -> Result<QuoteFeeResponse> {
+        let token = if token_address == Address::ZERO {
+            shielder_account::Token::Native
+        } else {
+            shielder_account::Token::ERC20(token_address)
+        };
+
+        self.app_state
+            .relayer_rpc_controller
+            .get_relayer_total_fee(token, pocket_money)
+            .await
+            .map_err(SchedulerServerError::from)
+    }
+
+    /// Validate that quoted fee is within the maximum allowed limit
+    fn validate_fee_within_limit(
+        &self,
+        quoted_fee: &QuoteFeeResponse,
+        max_relayer_fee: U256,
+    ) -> Result<()> {
         if quoted_fee.fee_details.total_cost_fee_token > max_relayer_fee {
             return Err(SchedulerServerError::ProvingServerError(
                 VsockError::Protocol(format!(
@@ -189,7 +236,18 @@ Please check the SHIELDER_ADDRESS environment variable or --shielder-address arg
                 )),
             ));
         }
+        Ok(())
+    }
 
+    /// Call TEE to prepare relay calldata
+    async fn call_tee_prepare_relay_calldata(
+        &self,
+        request: &ScheduledRequest,
+        quoted_fee: &QuoteFeeResponse,
+        merkle_root: U256,
+        merkle_path: [[U256; ARITY]; NOTE_TREE_HEIGHT],
+        pocket_money: U256,
+    ) -> Result<Response> {
         let tee_task_pool = self.app_state.tee_task_pool.clone();
         let app_state = self.app_state.clone();
         let payload = request.payload.clone();
@@ -199,11 +257,13 @@ Please check the SHIELDER_ADDRESS environment variable or --shielder-address arg
             .get_relayer_fee_address()
             .await?;
         
+        let max_relayer_fee = quoted_fee.fee_details.total_cost_fee_token;
+
         let response = tee_task_pool
             .spawn(async move {
                 let request = Request::PrepareRelayCalldata {
                     payload,
-                    max_relayer_fee: quoted_fee.fee_details.total_cost_fee_token,
+                    max_relayer_fee,
                     relayer_address,
                     merkle_path: Box::new(merkle_path),
                     merkle_root,
@@ -219,11 +279,20 @@ Please check the SHIELDER_ADDRESS environment variable or --shielder-address arg
             .map_err(SchedulerServerError::JoinHandleError)??
             .map_err(SchedulerServerError::ProvingServerError)?;
 
+        Ok(response)
+    }
+
+    async fn process_tee_response(
+        &self,
+        response: Response,
+        quoted_fee: QuoteFeeResponse,
+        request_id: i64,
+    ) -> Result<ProcessingResult> {
         match response {
             Response::PrepareRelayCalldata { calldata } => {
                 info!(
                     "Successfully prepared relay calldata for request ID: {}",
-                    request.id,
+                    request_id,
                 );
                 let relay_query = RelayQuery {
                     calldata,
@@ -233,12 +302,12 @@ Please check the SHIELDER_ADDRESS environment variable or --shielder-address arg
                     .relayer_rpc_controller
                     .send_relay_query(relay_query)
                     .await?;
-                Ok(ProcessingResult { request_id: request.id })
+                Ok(ProcessingResult { request_id })
             }
             _ => {
-                return Err(SchedulerServerError::ProvingServerError(
+                Err(SchedulerServerError::ProvingServerError(
                     VsockError::Protocol("Unexpected response from TEE".to_string()),
-                ));
+                ))
             }
         }
     }

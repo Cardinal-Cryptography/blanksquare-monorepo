@@ -53,7 +53,7 @@ pub struct OperationalConfig {
     pub dry_running: DryRunning,
     pub recharge_threshold: U256,
     pub recharge_amount: U256,
-    pub token_config: Vec<TokenInfo>,
+    pub token_config: Vec<TokenInfo<TokenKind>>,
     pub price_feed_validity: Duration,
     pub price_feed_refresh_interval: Duration,
     pub service_fee_percent: u32,
@@ -167,7 +167,7 @@ pub fn resolve_config_from_cli_config(
     let token_config = token_config
         .or_else(|| std::env::var(TOKEN_CONFIG_ENV).ok())
         .expect("Missing token configuration");
-    let token_config: Vec<TokenInfo> =
+    let token_config: Vec<TokenInfo<TokenKind>> =
         serde_json::from_str(&token_config).expect("Invalid token configuration");
     check_token_config(&token_config)?;
 
@@ -267,7 +267,7 @@ fn resolve_value_map<T, Map: Fn(&str) -> anyhow::Result<T>>(
     })
 }
 
-fn check_token_config(token_config: &[TokenInfo]) -> Result<(), anyhow::Error> {
+fn check_token_config(token_config: &[TokenInfo<TokenKind>]) -> Result<(), anyhow::Error> {
     let mut kinds = HashSet::new();
 
     for token in token_config {

@@ -28,6 +28,27 @@ pub enum TokenKind {
     },
 }
 
+impl Decimals for TokenKind {
+    fn decimals(&self) -> u32 {
+        match self {
+            TokenKind::Native => 18,
+            TokenKind::ERC20 { decimals, .. } => *decimals,
+        }
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Hash, Deserialize, Serialize)]
+pub struct SimpleKind {
+    pub name: String,
+    pub decimals: u32,
+}
+
+impl Decimals for SimpleKind {
+    fn decimals(&self) -> u32 {
+        self.decimals
+    }
+}
+
 impl From<TokenKind> for Token {
     fn from(token_kind: TokenKind) -> Self {
         match token_kind {
@@ -55,19 +76,18 @@ pub enum PriceProvider {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
-pub struct TokenInfo {
-    pub kind: TokenKind,
+pub struct TokenInfo<K> {
+    pub kind: K,
     pub price_provider: PriceProvider,
 }
 
-impl TokenInfo {
-    pub fn decimals(&self) -> u32 {
-        match self.kind {
-            // Native EVM has 18 decimals by default
-            TokenKind::Native => 18,
-            // ERC20 enum has configured decimals
-            TokenKind::ERC20 { decimals, .. } => decimals,
-        }
+pub trait Decimals {
+    fn decimals(&self) -> u32;
+}
+
+impl<K: Decimals> Decimals for TokenInfo<K> {
+    fn decimals(&self) -> u32 {
+        self.kind.decimals()
     }
 }
 
@@ -75,21 +95,27 @@ impl TokenInfo {
 ///
 /// The underlying structure is behind a mutex, and a process to update it
 /// asynchronously can be started with `start_price_feed`.
+///
+/// The type parameter `K` is the type used to identify tokens.
+/// Apart from being `Clone`, `Eq`, `PartialEq` and `Hash`, it must also implement the `Decimals` trait
+/// to provide the number of decimals for each token. `TokenKind` is a legacy implementation that works
+/// but can only represent one native token. SimpleKind is an implementation where a token is identified
+/// by its name.
 #[derive(Clone)]
-pub struct Prices {
+pub struct Prices<K> {
     validity: time::Duration,
     refresh_interval: Duration,
-    tokens: HashMap<TokenKind, TokenInfo>,
-    inner: HashMap<TokenKind, Arc<Mutex<Option<Price>>>>,
+    tokens: HashMap<K, TokenInfo<K>>,
+    inner: HashMap<K, Arc<Mutex<Option<Price>>>>,
 }
 
-impl Prices {
+impl<K: Clone + Eq + PartialEq + std::hash::Hash + Decimals> Prices<K> {
     /// Create a new `Prices` instance for a set of tokens with the given validity and refresh
     /// interval.
     ///
     /// Note that you should realistically set `validity` to at least 5 or 10 minutes - it seems
     /// the API we are using (DIA) updates about 2 or 3 minutes or so.
-    pub fn new(tokens: &[TokenInfo], validity: Duration, refresh_interval: Duration) -> Self {
+    pub fn new(tokens: &[TokenInfo<K>], validity: Duration, refresh_interval: Duration) -> Self {
         let validity =
             time::Duration::new(validity.as_secs() as i64, validity.subsec_nanos() as i32);
 
@@ -97,13 +123,13 @@ impl Prices {
         let mut inner = HashMap::new();
 
         for token in tokens {
-            token_map.insert(token.kind, token.clone());
+            token_map.insert(token.kind.clone(), token.clone());
             let price = match &token.price_provider {
                 PriceProvider::Dia(_) => None,
                 PriceProvider::Pyth(_) => None,
                 PriceProvider::Static(price) => Some(Price::static_price(*price, token.decimals())),
             };
-            inner.insert(token.kind, Arc::new(Mutex::new(price)));
+            inner.insert(token.kind.clone(), Arc::new(Mutex::new(price)));
         }
 
         Self {
@@ -115,11 +141,14 @@ impl Prices {
     }
 
     /// Gather current price for all the tokens.
-    pub fn current_prices(&self) -> HashMap<TokenKind, Option<Price>> {
-        self.tokens.keys().map(|k| (*k, self.price(*k))).collect()
+    pub fn current_prices(&self) -> HashMap<K, Option<Price>> {
+        self.tokens
+            .keys()
+            .map(|k| (k.clone(), self.price(k)))
+            .collect()
     }
 
-    pub fn price_ages(&self) -> HashMap<TokenKind, Option<time::Duration>> {
+    pub fn price_ages(&self) -> HashMap<K, Option<time::Duration>> {
         let now = OffsetDateTime::now_utc();
         self.inner
             .iter()
@@ -127,21 +156,21 @@ impl Prices {
                 let price = price.lock();
                 if price.is_none() {
                     // if the price is None, it means it was never fetched
-                    return (*token, None);
+                    return (token.clone(), None);
                 }
                 let price = price.as_ref().unwrap();
                 match price.expiration {
-                    Expiration::Eternal => (*token, Some(time::Duration::ZERO)),
-                    Expiration::Timed { fetched, .. } => (*token, Some(now - fetched)),
+                    Expiration::Eternal => (token.clone(), Some(time::Duration::ZERO)),
+                    Expiration::Timed { fetched, .. } => (token.clone(), Some(now - fetched)),
                 }
             })
             .collect()
     }
 
     /// Get the price of a token or `None` if the price is not available or outdated.
-    pub fn price(&self, token: TokenKind) -> Option<Price> {
+    pub fn price(&self, token: &K) -> Option<Price> {
         self.inner
-            .get(&token)?
+            .get(token)?
             .lock()
             .clone()?
             .validate(&OffsetDateTime::now_utc())
@@ -165,7 +194,9 @@ impl Prices {
 }
 
 /// Start a price feed that updates the prices in the given `Prices` instance.
-pub async fn start_price_feed(prices: Prices) -> Result<(), anyhow::Error> {
+pub async fn start_price_feed<K: Clone + Eq + PartialEq + std::hash::Hash + Decimals>(
+    prices: Prices<K>,
+) -> Result<(), anyhow::Error> {
     loop {
         prices.update().await;
         tokio::time::sleep(prices.refresh_interval).await;
@@ -176,14 +207,14 @@ pub async fn start_price_feed(prices: Prices) -> Result<(), anyhow::Error> {
 mod tests {
     use super::*;
 
-    fn token_with_static_price() -> TokenInfo {
+    fn token_with_static_price() -> TokenInfo<TokenKind> {
         TokenInfo {
             kind: TokenKind::Native,
             price_provider: PriceProvider::Static(Decimal::ONE),
         }
     }
 
-    fn token_with_url_price() -> TokenInfo {
+    fn token_with_url_price() -> TokenInfo<TokenKind> {
         TokenInfo {
             kind: TokenKind::Native,
             price_provider: PriceProvider::Dia(
@@ -199,7 +230,7 @@ mod tests {
             Duration::from_secs(1_000_000),
             Default::default(),
         );
-        assert!(prices.price(TokenKind::Native).is_some());
+        assert!(prices.price(&TokenKind::Native).is_some());
     }
 
     #[tokio::test]
@@ -212,7 +243,7 @@ mod tests {
 
         prices.update().await;
 
-        assert!(prices.price(TokenKind::Native).is_some());
+        assert!(prices.price(&TokenKind::Native).is_some());
     }
 
     #[tokio::test]
@@ -225,7 +256,7 @@ mod tests {
 
         prices.update().await;
 
-        assert!(prices.price(TokenKind::Native).is_some());
+        assert!(prices.price(&TokenKind::Native).is_some());
     }
 
     #[tokio::test]
@@ -237,7 +268,7 @@ mod tests {
         );
         prices.update().await;
 
-        assert!(prices.price(TokenKind::Native).is_none());
+        assert!(prices.price(&TokenKind::Native).is_none());
     }
 
     #[tokio::test]
@@ -250,6 +281,6 @@ mod tests {
         tokio::spawn(start_price_feed(prices.clone()));
 
         tokio::time::sleep(Duration::from_secs(3)).await;
-        assert!(prices.price(TokenKind::Native).is_some());
+        assert!(prices.price(&TokenKind::Native).is_some());
     }
 }

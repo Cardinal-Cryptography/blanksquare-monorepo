@@ -65,6 +65,15 @@ impl Price {
             }
         }
     }
+
+    /// Get the time when the price was fetched.
+    /// Note: For eternal prices, this returns the current time.
+    pub fn fetched_at(&self) -> OffsetDateTime {
+        match self.expiration {
+            Expiration::Eternal => OffsetDateTime::now_utc(),
+            Expiration::Timed { fetched, .. } => fetched,
+        }
+    }
 }
 
 #[cfg(test)]

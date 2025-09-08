@@ -76,12 +76,19 @@ pub fn setup_metrics_handle() -> Result<PrometheusHandle> {
         0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0, 20.0,
     ];
 
-    Ok(PrometheusBuilder::new()
+    let handle = PrometheusBuilder::new()
         .set_buckets_for_metric(
             Matcher::Full(REQUEST_DURATION_METRIC.to_string()),
             EXPONENTIAL_SECONDS,
         )?
-        .install_recorder()?)
+        .install_recorder()?;
+
+    // Initialize withdraw metrics to 0 so they appear on fresh start
+    metrics::counter!(WITHDRAW_SUCCESS).increment(0);
+    metrics::counter!(WITHDRAW_FAILURE).increment(0);
+    metrics::counter!(WITHDRAW_DRY_RUN_FAILURE).increment(0);
+
+    Ok(handle)
 }
 
 /// Middleware to record HTTP request metrics.

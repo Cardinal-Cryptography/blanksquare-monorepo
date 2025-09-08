@@ -48,24 +48,24 @@ impl KmsCrypto {
             info!("Decrypting data encryption key (DEK)");
             let output = Command::new("/usr/local/bin/kmstool_enclave_cli")
                 .arg("decrypt")
-                .arg(format!("--region={}", aws_config.aws_region))
-                .arg(format!("--proxy-port={}", self.kms_proxy_port))
+                .arg(format!("--region {}", aws_config.aws_region))
+                .arg(format!("--proxy-port {}", self.kms_proxy_port))
                 .arg(format!(
-                    "--aws-access-key-id={}",
+                    "--aws-access-key-id {}",
                     aws_config.aws_access_key_id
                 ))
                 .arg(format!(
-                    "--aws-secret-access-key={}",
+                    "--aws-secret-access-key {}",
                     aws_config.aws_secret_access_key
                 ))
                 .arg(format!(
-                    "--aws-session-token={}",
+                    "--aws-session-token {}",
                     aws_config.aws_session_token
                 ))
-                .arg(format!("--key-id={}", aws_config.kms_key_id))
-                .arg(format!("--ciphertext={}", BASE64.encode(encrypted_dek)))
+                .arg(format!("--key-id {}", aws_config.kms_key_id))
+                .arg(format!("--ciphertext CIPHERTEXT: {}", BASE64.encode(encrypted_dek)))
                 .arg(format!(
-                    "--encryption-algorithm={}",
+                    "--encryption-algorithm {}",
                     aws_config.kms_encryption_algorithm
                 ))
                 .stdout(Stdio::piped())

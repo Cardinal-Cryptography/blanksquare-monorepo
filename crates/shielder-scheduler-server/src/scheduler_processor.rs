@@ -1,9 +1,14 @@
 use std::{sync::Arc, time::Duration};
 
-use alloy_primitives::U256;
+use alloy_primitives::{Address, U256};
 use alloy_signer_local::PrivateKeySigner;
 use chrono::Utc;
 use shielder_contract::{merkle_path::get_current_merkle_path, ConnectionPolicy, ShielderUser};
+use shielder_relayer::{QuoteFeeResponse, RelayQuery};
+use shielder_scheduler_common::{
+    protocol::{Request, Response},
+    vsock::VsockError,
+};
 use shielder_setup::{
     consts::ARITY, shielder_circuits::consts::merkle_constants::NOTE_TREE_HEIGHT,
 };
@@ -16,10 +21,19 @@ use crate::{
         ScheduledRequest,
     },
     error::SchedulerServerError,
+    handlers::tee_request,
     AppState,
 };
 
 type Result<T> = std::result::Result<T, SchedulerServerError>;
+
+#[derive(Debug)]
+struct ParsedRequestParams {
+    last_note_index: U256,
+    max_relayer_fee: U256,
+    pocket_money: U256,
+    token_address: Address,
+}
 
 /// Background request scheduler that processes scheduled withdrawal requests
 #[derive(Debug)]
@@ -37,7 +51,6 @@ impl SchedulerProcessor {
         Self { app_state }
     }
 
-    /// Start the background processing loop
     pub async fn start(self) {
         info!("Starting background task processor");
         let mut interval = interval(Duration::from_secs(
@@ -149,32 +162,153 @@ Please check the SHIELDER_ADDRESS environment variable or --shielder-address arg
         Ok(())
     }
 
-    /// The actual processing logic for a scheduled request
     async fn process_request_logic(&self, request: ScheduledRequest) -> Result<ProcessingResult> {
-        // Parse the U256 values
+        let parsed_params = self.parse_request_parameters(&request)?;
+        let (merkle_root, merkle_path) = self
+            .current_merkle_path(parsed_params.last_note_index)
+            .await?;
+        let quoted_fee = self
+            .get_quoted_fee(parsed_params.token_address, parsed_params.pocket_money)
+            .await?;
+
+        self.validate_fee_within_limit(&quoted_fee, parsed_params.max_relayer_fee)?;
+
+        let tee_response = self
+            .call_tee_prepare_relay_calldata(
+                &request,
+                &quoted_fee,
+                merkle_root,
+                merkle_path,
+                parsed_params.pocket_money,
+            )
+            .await?;
+
+        self.process_tee_response(tee_response, quoted_fee, request.id)
+            .await
+    }
+
+    fn parse_request_parameters(&self, request: &ScheduledRequest) -> Result<ParsedRequestParams> {
         let last_note_index = request.last_note_index_as_u256().map_err(|e| {
             SchedulerServerError::ValueParseError(format!("Failed to parse last_note_index: {}", e))
         })?;
         let max_relayer_fee = request.max_relayer_fee_as_u256().map_err(|e| {
             SchedulerServerError::ValueParseError(format!("Failed to parse max_relayer_fee: {}", e))
         })?;
+        let pocket_money = request.pocket_money_as_u256().map_err(|e| {
+            SchedulerServerError::ValueParseError(format!("Failed to parse pocket_money: {}", e))
+        })?;
+        let token_address = request.token_address_as_address().map_err(|e| {
+            SchedulerServerError::ValueParseError(format!("Failed to parse token_address: {}", e))
+        })?;
 
-        let (_, _merkle_path) = self.current_merkle_path(last_note_index).await?;
-
-        // TODO:
-        // 1. Get fee quote from the relayer
-        // 2. Prepare the relay calldata using the TEE
-        // 3. Submit to a relayer or relay directly to the blockchain
-
-        // For now, we'll simulate the processing
-        info!(
-            "Processing withdrawal request - last_note_index: {}, max_relayer_fee: {}, relay_after: {}",
-            last_note_index, max_relayer_fee, request.relay_after
-        );
-
-        // For now, just return success
-        Ok(ProcessingResult {
-            request_id: request.id,
+        Ok(ParsedRequestParams {
+            last_note_index,
+            max_relayer_fee,
+            pocket_money,
+            token_address,
         })
+    }
+
+    async fn get_quoted_fee(
+        &self,
+        token_address: Address,
+        pocket_money: U256,
+    ) -> Result<QuoteFeeResponse> {
+        let token = if token_address == Address::ZERO {
+            shielder_account::Token::Native
+        } else {
+            shielder_account::Token::ERC20(token_address)
+        };
+
+        self.app_state
+            .relayer_rpc_controller
+            .get_relayer_total_fee(token, pocket_money)
+            .await
+    }
+
+    fn validate_fee_within_limit(
+        &self,
+        quoted_fee: &QuoteFeeResponse,
+        max_relayer_fee: U256,
+    ) -> Result<()> {
+        if quoted_fee.fee_details.total_cost_fee_token > max_relayer_fee {
+            return Err(SchedulerServerError::ProvingServerError(
+                VsockError::Protocol(format!(
+                    "Relayer fee {} exceeds maximum allowed {}",
+                    quoted_fee.fee_details.total_cost_fee_token, max_relayer_fee
+                )),
+            ));
+        }
+        Ok(())
+    }
+
+    async fn call_tee_prepare_relay_calldata(
+        &self,
+        request: &ScheduledRequest,
+        quoted_fee: &QuoteFeeResponse,
+        merkle_root: U256,
+        merkle_path: [[U256; ARITY]; NOTE_TREE_HEIGHT],
+        pocket_money: U256,
+    ) -> Result<Response> {
+        let tee_task_pool = self.app_state.tee_task_pool.clone();
+        let app_state = self.app_state.clone();
+        let payload = request.payload.clone();
+        let relayer_address = self
+            .app_state
+            .relayer_rpc_controller
+            .get_relayer_fee_address()
+            .await?;
+
+        let max_relayer_fee = quoted_fee.fee_details.total_cost_fee_token;
+
+        let response = tee_task_pool
+            .spawn(async move {
+                let request = Request::PrepareRelayCalldata {
+                    payload,
+                    max_relayer_fee,
+                    relayer_address,
+                    merkle_path: Box::new(merkle_path),
+                    merkle_root,
+                    pocket_money,
+                };
+
+                let json_response = tee_request(app_state, request).await?;
+                Ok::<Response, VsockError>(json_response.0)
+            })
+            .await
+            .map_err(SchedulerServerError::TaskPool)?
+            .await
+            .map_err(SchedulerServerError::JoinHandleError)??
+            .map_err(SchedulerServerError::ProvingServerError)?;
+
+        Ok(response)
+    }
+
+    async fn process_tee_response(
+        &self,
+        response: Response,
+        quoted_fee: QuoteFeeResponse,
+        request_id: i64,
+    ) -> Result<ProcessingResult> {
+        match response {
+            Response::PrepareRelayCalldata { calldata } => {
+                info!(
+                    "Successfully prepared relay calldata for request ID: {}",
+                    request_id,
+                );
+                let relay_query = RelayQuery {
+                    calldata,
+                    quote: quoted_fee.into(),
+                };
+                self.app_state
+                    .relayer_rpc_controller
+                    .send_relay_query(relay_query)
+                    .await?;
+                Ok(ProcessingResult { request_id })
+            }
+            _ => Err(SchedulerServerError::ProvingServerError(
+                VsockError::Protocol("Unexpected response from TEE".to_string()),
+            )),
+        }
     }
 }

@@ -33,6 +33,8 @@ Schedule a withdrawal request to be processed at a future time.
   "payload": "base64-encoded-encrypted-payload",
   "last_note_index": "12345",
   "max_relayer_fee": "1000000000000000000",
+  "pocket_money": "500000000000000000",
+  "token_address": "0x1234567890123456789012345678901234567890",
   "relay_after": 1693564800
 }
 ```
@@ -40,6 +42,8 @@ Schedule a withdrawal request to be processed at a future time.
 - `payload`: Base64-encoded encrypted payload containing withdrawal details
 - `last_note_index`: Index of the last leaf in the Merkle tree (as string)
 - `max_relayer_fee`: Maximum fee the relayer can charge (as string, in wei)
+- `pocket_money`: Pocket money amount for the withdrawal (as string, in wei)
+- `token_address`: Token address for the withdrawal (as hex string)
 - `relay_after`: Unix timestamp (seconds) after which the relay is allowed
 
 #### Response
@@ -54,9 +58,9 @@ Schedule a withdrawal request to be processed at a future time.
 ## Request Statuses
 
 - **Pending**: Request is waiting to be processed
-- **Processing**: Request failed but did not reach max retry attemps count
+- **Processing**: Request is currently being processed
 - **Completed**: Request has been successfully processed
-- **Failed**: Request processing failed and reached max retry attemps count
+- **Failed**: Request processing failed and reached max retry attempts count
 
 ## Background Processing
 
@@ -67,6 +71,8 @@ The service runs a background scheduler processor that:
 3. Updates request status in the database
 4. Handles retries with configurable retry count and delay
 5. Communicates with the TEE through a managed task pool
+6. Interacts with the relayer service to get fee quotes and submit transactions
+7. Validates fees against user-specified maximums before processing
 
 The scheduler processor can handle multiple requests in batches (configurable via `SCHEDULER_BATCH_SIZE`) and provides error handling with automatic retries.
 
@@ -80,6 +86,8 @@ CREATE TABLE scheduled_requests (
     payload BYTEA NOT NULL,
     last_note_index TEXT NOT NULL,
     max_relayer_fee TEXT NOT NULL,
+    pocket_money TEXT NOT NULL,
+    token_address TEXT NOT NULL,
     relay_after TIMESTAMPTZ NOT NULL,
     status request_status NOT NULL DEFAULT 'pending',
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -120,6 +128,11 @@ The service can be configured using environment variables or command-line argume
 - `SCHEDULER_MAX_RETRY_COUNT`: Maximum retry attempts per request (default: 3)
 - `SCHEDULER_RETRY_DELAY_SECS`: Delay between retry attempts (default: 60)
 
+### Blockchain Configuration
+- `NODE_RPC_URL`: RPC URL of the Ethereum node to connect to (required)
+- `SHIELDER_ADDRESS`: Address of the Shielder contract (required)
+- `RELAYER_RPC_URL`: URL of the relayer service (required)
+
 ### Metrics Configuration
 - `METRICS_UPKEEP_TIMEOUT_SECS`: How often to perform metric upkeep (default: 60)
 - `METRICS_BUCKET_DURATION_SECS`: Duration of metric histogram buckets (default: 60)
@@ -144,8 +157,17 @@ The service is built with clear separation of concerns:
    - Background processing of scheduled requests
    - Batch processing with configurable limits
    - Retry logic with backoff
+   - Request parameter parsing and validation
+   - Fee quotation from relayer services
+   - TEE communication for calldata preparation
+   - Response processing and relay submission
 
-4. **TEE Communication**:
+4. **Relayer Communication** (`relayer_rpc_controller.rs`):
+   - Communication with external relayer service
+   - Fee quotation requests
+   - Relay transaction submission
+
+5. **TEE Communication**:
    - Managed through a bounded task pool
    - Vsock-based communication with TEE
    - Configurable timeouts and capacity limits
@@ -155,7 +177,12 @@ The service is built with clear separation of concerns:
 1. Client submits withdrawal request via HTTP API
 2. Request is validated and stored in PostgreSQL database
 3. Background scheduler processor periodically checks for ready requests
-4. Ready requests are processed through the TEE task pool
+4. Ready requests are processed through the following pipeline:
+   - Parse and validate request parameters
+   - Get fee quote from relayer service
+   - Validate fee against user-specified maximum
+   - Send request to TEE for calldata preparation
+   - Process TEE response and submit to relayer
 5. Results are updated in the database with appropriate status
 
 ## Example Usage
@@ -163,16 +190,19 @@ The service is built with clear separation of concerns:
 ### Running the Service
 
 ```bash
-# With default configuration
-cargo run
+# With default configuration (requires blockchain configuration)
+cargo run -- --node-rpc-url "http://localhost:8545" --shielder-address "0x..." --relayer-rpc-url "http://localhost:8080"
 
 # With custom configuration
-cargo run -- --public-port 8080 --db-host mydb.example.com --scheduler-interval-secs 10
+cargo run -- --public-port 8080 --db-host mydb.example.com --scheduler-interval-secs 10 --node-rpc-url "http://localhost:8545" --shielder-address "0x..." --relayer-rpc-url "http://localhost:8080"
 
 # Using environment variables
 export DB_HOST=mydb.example.com
 export PUBLIC_PORT=8080
 export SCHEDULER_INTERVAL_SECS=10
+export NODE_RPC_URL="http://localhost:8545"
+export SHIELDER_ADDRESS="0x..."
+export RELAYER_RPC_URL="http://localhost:8080"
 cargo run
 ```
 
@@ -187,6 +217,8 @@ curl -X POST http://localhost:3000/schedule_withdraw \
     "payload": "SGVsbG8gV29ybGQ=",
     "last_note_index": "12345",
     "max_relayer_fee": "1000000000000000000",
+    "pocket_money": "500000000000000000",
+    "token_address": "0x1234567890123456789012345678901234567890",
     "relay_after": 1693564800
   }'
 ```

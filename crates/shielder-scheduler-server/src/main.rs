@@ -3,7 +3,7 @@ mod db;
 mod error;
 mod handlers;
 mod scheduler_processor;
-mod relayer_rpc_url;
+mod relayer_rpc_controller;
 
 use std::{net::SocketAddrV4, sync::Arc, time::Duration};
 
@@ -22,7 +22,7 @@ use tracing::info;
 use tracing_subscriber::{fmt, layer::SubscriberExt, util::SubscriberInitExt, EnvFilter, Layer};
 
 use crate::{
-    command_line_args::CommandLineArgs, handlers::{self as server_handlers}, relayer_rpc_url::RelayerRpcUrl, scheduler_processor::SchedulerProcessor
+    command_line_args::CommandLineArgs, handlers::{self as server_handlers}, relayer_rpc_controller::RelayerRpcController, scheduler_processor::SchedulerProcessor
 };
 
 #[derive(Debug)]
@@ -30,7 +30,7 @@ struct AppState {
     options: CommandLineArgs,
     db_pool: db::PgPool,
     tee_task_pool: Arc<tokio_task_pool::Pool>,
-    relayer_rpc_url: RelayerRpcUrl,
+    relayer_rpc_controller: RelayerRpcController,
 }
 
 #[tokio::main]
@@ -71,12 +71,12 @@ async fn main() -> Result<(), Error> {
         .into();
 
     // Create the application state
-    let relayer_rpc_url = RelayerRpcUrl::new(options.relayer_rpc_url.clone());
+    let relayer_rpc_controller = RelayerRpcController::new(options.relayer_rpc_url.clone());
     let app_state = Arc::new(AppState {
         options,
         tee_task_pool,
         db_pool,
-        relayer_rpc_url,
+        relayer_rpc_controller,
     });
 
     // Start the scheduler processor

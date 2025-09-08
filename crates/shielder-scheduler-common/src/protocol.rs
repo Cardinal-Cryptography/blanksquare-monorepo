@@ -29,11 +29,7 @@ pub struct Payload {
     pub withdrawal_value: U256,
     pub withdraw_address: Address,
     pub memo: Bytes,
-
-    /// Maximum relayer fee.
-    pub max_relayer_fee: U256,
-    /// Timestamp after which the transaction can be relayed to chain.
-    pub relay_after: U256,
+    pub protocool_fee: U256,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -51,7 +47,7 @@ pub enum Request {
         #[serde(with = "base64_serialization")]
         payload: Vec<u8>,
         /// Relayer fee
-        relayer_fee: U256,
+        max_relayer_fee: U256,
         /// Address of the relayer which will receive the relayer fee
         relayer_address: Address,
         /// Current merkle path
@@ -60,8 +56,6 @@ pub enum Request {
         merkle_root: U256,
         /// Pocket money to be sent to the withdraw address to cover gas fees
         pocket_money: U256,    
-        /// Protocol fee to be sent to the protocol fee address
-        protocol_fee: U256,
     },
 }
 

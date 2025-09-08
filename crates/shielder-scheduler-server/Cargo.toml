@@ -21,7 +21,9 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 shielder-scheduler-common = { workspace = true }
 shielder-setup = { workspace = true }
+shielder-account = { workspace = true }
 shielder-contract = { workspace = true }
+shielder-relayer = { workspace = true }
 thiserror = { workspace = true }
 tokio = { workspace = true, features = ["net", "rt", "rt-multi-thread"] }
 tokio-task-pool = { workspace = true, features = ["log"] }

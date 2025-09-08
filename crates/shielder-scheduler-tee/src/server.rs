@@ -74,11 +74,10 @@ impl Server {
                     Request::PrepareRelayCalldata {
                         payload,
                         relayer_address,
-                        relayer_fee,
+                        max_relayer_fee: relayer_fee,
                         merkle_path,
                         merkle_root,
                         pocket_money,
-                        protocol_fee,
                     } => self.prepare_relay_calldata_response(
                         payload,
                         relayer_address,
@@ -86,7 +85,6 @@ impl Server {
                         merkle_path,
                         merkle_root,
                         pocket_money,
-                        protocol_fee,
                     ),
                 })
                 .await?;
@@ -117,7 +115,6 @@ impl Server {
         merkle_path: Box<[[U256; ARITY]; TREE_HEIGHT]>,
         merkle_root: U256,
         pocket_money: U256,
-        protocol_fee: U256,
     ) -> Result<Response, VsockError> {
         let decrypted_payload = self.decrypt_payload(&payload)?;
 
@@ -139,7 +136,7 @@ impl Server {
             relayer_fee,
             pocket_money,
             relayer_address,
-            protocol_fee,
+            deserialized_payload.protocool_fee,
             deserialized_payload.memo,
             deserialized_payload.nullifier_old,
             deserialized_payload.nullifier_new,

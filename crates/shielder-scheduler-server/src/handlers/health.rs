@@ -13,7 +13,6 @@ pub async fn health(
     let tee_task_pool = state.tee_task_pool.clone();
     let relayer_rpc_controller = state.relayer_rpc_controller.clone();
 
-    // Check TEE connection
     let tee_result = tee_task_pool
         .spawn(async move { tee_request(state, Request::Ping).await })
         .await
@@ -22,7 +21,6 @@ pub async fn health(
         .map_err(SchedulerServerError::JoinHandleError)??
         .map_err(SchedulerServerError::ProvingServerError);
 
-    // Check relayer connection
     relayer_rpc_controller.health_check().await?;
 
     tee_result

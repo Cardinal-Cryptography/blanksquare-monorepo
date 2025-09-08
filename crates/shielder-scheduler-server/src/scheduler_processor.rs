@@ -24,7 +24,6 @@ use crate::{
 
 type Result<T> = std::result::Result<T, SchedulerServerError>;
 
-/// Parsed request parameters
 #[derive(Debug)]
 struct ParsedRequestParams {
     last_note_index: U256,
@@ -49,7 +48,6 @@ impl SchedulerProcessor {
         Self { app_state }
     }
 
-    /// Start the background processing loop
     pub async fn start(self) {
         info!("Starting background task processor");
         let mut interval = interval(Duration::from_secs(
@@ -161,7 +159,6 @@ Please check the SHIELDER_ADDRESS environment variable or --shielder-address arg
         Ok(())
     }
 
-    /// The actual processing logic for a scheduled request
     async fn process_request_logic(&self, request: ScheduledRequest) -> Result<ProcessingResult> {
         let parsed_params = self.parse_request_parameters(&request)?;
         let (merkle_root, merkle_path) = self.current_merkle_path(parsed_params.last_note_index).await?;
@@ -180,7 +177,6 @@ Please check the SHIELDER_ADDRESS environment variable or --shielder-address arg
         self.process_tee_response(tee_response, quoted_fee, request.id).await
     }
 
-    /// Parse and validate request parameters
     fn parse_request_parameters(&self, request: &ScheduledRequest) -> Result<ParsedRequestParams> {
         let last_note_index = request.last_note_index_as_u256().map_err(|e| {
             SchedulerServerError::ValueParseError(format!("Failed to parse last_note_index: {}", e))
@@ -203,7 +199,6 @@ Please check the SHIELDER_ADDRESS environment variable or --shielder-address arg
         })
     }
 
-    /// Get quoted fee from relayer
     async fn get_quoted_fee(
         &self,
         token_address: Address,
@@ -222,7 +217,6 @@ Please check the SHIELDER_ADDRESS environment variable or --shielder-address arg
             .map_err(SchedulerServerError::from)
     }
 
-    /// Validate that quoted fee is within the maximum allowed limit
     fn validate_fee_within_limit(
         &self,
         quoted_fee: &QuoteFeeResponse,
@@ -239,7 +233,6 @@ Please check the SHIELDER_ADDRESS environment variable or --shielder-address arg
         Ok(())
     }
 
-    /// Call TEE to prepare relay calldata
     async fn call_tee_prepare_relay_calldata(
         &self,
         request: &ScheduledRequest,

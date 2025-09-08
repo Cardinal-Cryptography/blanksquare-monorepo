@@ -40,7 +40,7 @@ export async function initFullWasm() {
 
 export async function initLightWasm(
   proverServerUrl: string,
-  withoutAttestation: boolean
+  pcrs?: Map<string, string>
 ) {
-  return initLightWasmWorker(proverServerUrl, withoutAttestation);
+  return initLightWasmWorker(proverServerUrl, pcrs);
 }

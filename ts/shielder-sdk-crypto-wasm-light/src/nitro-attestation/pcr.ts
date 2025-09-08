@@ -2,7 +2,6 @@
  * PCR (Platform Configuration Register) validation for AWS Nitro attestation verification
  */
 
-import { EXPECTED_PCR_MEASUREMENTS } from "./constants";
 import { uint8ToHex } from "@/utils";
 
 /**
@@ -13,17 +12,15 @@ import { uint8ToHex } from "@/utils";
  * to ensure the enclave is running trusted code.
  *
  * @param actualPCRs - Map of PCR index to PCR value from the attestation document
+ * @param expectedPCRs - Map of expected PCR index to expected hex-encoded PCR value
  * @throws Error if any PCR measurement doesn't match expected values
  */
 export function verifyPCRMeasurements(
-  actualPCRs: Map<number, Uint8Array>
+  actualPCRs: Map<number, Uint8Array>,
+  expectedPCRs: Map<string, string>
 ): void {
-  for (const [expectedIndex, expectedValue] of Object.entries(
-    EXPECTED_PCR_MEASUREMENTS
-  )) {
-    const pcrIndex = parseInt(expectedIndex);
-    const actualValue = actualPCRs.get(pcrIndex);
-
+  for (const [pcrIndex, expectedValue] of expectedPCRs.entries()) {
+    const actualValue = actualPCRs.get(parseInt(pcrIndex));
     if (!actualValue) {
       throw new Error(`Missing PCR${pcrIndex} in attestation document`);
     }

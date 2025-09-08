@@ -55,7 +55,6 @@ impl RelayerRpcController {
                     "Relayer health check failed with status: {}",
                     response.status()
                 )
-                .into(),
             ))
         }
     }
@@ -88,12 +87,12 @@ impl RelayerRpcController {
                 ))
             })?
             .message;
-        Ok(Address::from_str(&address).map_err(|e| {
+        Address::from_str(&address).map_err(|e| {
             SchedulerServerError::RelayerError(format!(
                 "Failed to parse relayer fee address: {}",
                 e
             ))
-        })?)
+        })
     }
 
     pub async fn get_relayer_total_fee(
@@ -156,9 +155,9 @@ impl RelayerRpcController {
         let tx_hash = relay_response.tx_hash;
 
         if tx_hash == TxHash::ZERO {
-            return Err(SchedulerServerError::RelayerError(format!(
-                "Relayer returned invalid transaction hash: zero hash"
-            )));
+            return Err(SchedulerServerError::RelayerError(
+                "Relayer returned invalid transaction hash: zero hash".to_string()
+            ));
         }
 
         Ok(tx_hash)

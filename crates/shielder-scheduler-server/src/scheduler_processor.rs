@@ -224,7 +224,6 @@ Please check the SHIELDER_ADDRESS environment variable or --shielder-address arg
             .relayer_rpc_controller
             .get_relayer_total_fee(token, pocket_money)
             .await
-            .map_err(SchedulerServerError::from)
     }
 
     fn validate_fee_within_limit(

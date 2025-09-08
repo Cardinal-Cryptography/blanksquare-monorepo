@@ -100,6 +100,7 @@ impl WithdrawCircuit {
         U256::from_limbs(array::from_fn(|_| rand::random()))
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn get_relayer_calldata(
         &self,
         amount: U256,

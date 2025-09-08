@@ -29,7 +29,7 @@ pub struct Payload {
     pub withdrawal_value: U256,
     pub withdraw_address: Address,
     pub memo: Bytes,
-    pub protocool_fee: U256,
+    pub protocol_fee: U256,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

@@ -128,7 +128,7 @@ pub async fn get_pending_requests(
 ) -> Result<Vec<ScheduledRequest>, Error> {
     let rows = sqlx::query(
         r#"
-        SELECT id, payload, last_note_index, max_relayer_fee, pocket_money, protocol_fee, relay_after, 
+        SELECT id, payload, last_note_index, max_relayer_fee, pocket_money, token_address, relay_after, 
                status, created_at, processed_at, retry_count, error_message
         FROM scheduled_requests
         WHERE status IN ('pending', 'processing') 

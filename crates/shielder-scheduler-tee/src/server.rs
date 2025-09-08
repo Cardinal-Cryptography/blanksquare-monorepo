@@ -132,7 +132,7 @@ impl Server {
             relayer_fee,
             pocket_money,
             relayer_address,
-            deserialized_payload.protocool_fee,
+            deserialized_payload.protocol_fee,
             deserialized_payload.memo,
             deserialized_payload.nullifier_old,
             deserialized_payload.nullifier_new,

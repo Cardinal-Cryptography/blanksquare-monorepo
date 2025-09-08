@@ -1,44 +1,46 @@
 use std::array;
-use rand::rngs::OsRng;
 
 use alloy_primitives::{Address, Bytes, U256};
-use shielder_account::call_data::{WithdrawCall, WithdrawExtra};
-use shielder_account::{Token};
-use shielder_circuits::circuits::{Params, ProvingKey};
-use shielder_circuits::{generate_proof, Field, Fr, ProverKnowledge, PublicInputProvider};
-use shielder_circuits::marshall::{self, unmarshall_params};
-use shielder_circuits::withdraw::{WithdrawInstance, WithdrawProverKnowledge};
-
+use rand::rngs::OsRng;
+use shielder_account::{
+    call_data::{WithdrawCall, WithdrawExtra},
+    Token,
+};
+use shielder_circuits::{
+    circuits::{Params, ProvingKey},
+    generate_proof,
+    marshall::{self, unmarshall_params},
+    withdraw::{WithdrawInstance, WithdrawProverKnowledge},
+    Field, Fr, ProverKnowledge, PublicInputProvider,
+};
 use shielder_contract::WithdrawCommitment;
 use shielder_relayer::RelayCalldata;
-use shielder_setup::consts::{ARITY, TREE_HEIGHT};
-use shielder_setup::version::contract_version;
+use shielder_setup::{
+    consts::{ARITY, TREE_HEIGHT},
+    version::contract_version,
+};
 use type_conversions::{address_to_field, field_to_address, field_to_u256, u256_to_field};
-
 
 #[derive(Clone, Debug)]
 pub struct WithdrawCircuit {
     params: Params,
     pk: ProvingKey,
     token: Token,
-    shielder_account_id: U256
+    shielder_account_id: U256,
 }
 
 impl WithdrawCircuit {
     pub fn new(shielder_account_id: U256, token: Token) -> Self {
         WithdrawCircuit {
-            params: Self::get_params(
-                include_bytes!("../artifacts/withdraw/params.bin"),
-            ),
+            params: Self::get_params(include_bytes!("../artifacts/withdraw/params.bin")),
             pk: Self::get_pk(include_bytes!("../artifacts/withdraw/pk.bin")),
             shielder_account_id,
-            token
+            token,
         }
     }
 
     fn get_params(params_buf: &[u8]) -> Params {
-        unmarshall_params(params_buf)
-            .expect("Failed to unmarshall params")
+        unmarshall_params(params_buf).expect("Failed to unmarshall params")
     }
 
     fn get_pk(pk_buf: &[u8]) -> ProvingKey {
@@ -92,19 +94,20 @@ impl WithdrawCircuit {
             }
         }
         result
-}
-
-
-    fn get_salt() -> U256 {
-	    U256::from_limbs(array::from_fn(|_| rand::random()))
     }
 
-    pub fn get_relayer_calldata(&self, amount: U256, 
-        to: Address, 
-        merkle_path: [[U256; ARITY]; TREE_HEIGHT], 
-        chain_id: U256, 
-        total_cost_fee_token: U256, 
-        pocket_money: U256, 
+    fn get_salt() -> U256 {
+        U256::from_limbs(array::from_fn(|_| rand::random()))
+    }
+
+    pub fn get_relayer_calldata(
+        &self,
+        amount: U256,
+        to: Address,
+        merkle_path: [[U256; ARITY]; TREE_HEIGHT],
+        chain_id: U256,
+        total_cost_fee_token: U256,
+        pocket_money: U256,
         relayer_fee_address: Address,
         protocol_fee: U256,
         memo: Bytes,
@@ -112,19 +115,19 @@ impl WithdrawCircuit {
         nullifier_new: U256,
         account_old_balance: U256,
         merkle_root: U256,
-    ) -> RelayCalldata  {
+    ) -> RelayCalldata {
         let extra = WithdrawExtra {
-                merkle_path,
-				to,
-				relayer_address: relayer_fee_address,
-				relayer_fee: total_cost_fee_token,
-				contract_version: contract_version(),
-				chain_id,
-                mac_salt: Self::get_salt(),
-				pocket_money,
-				protocol_fee,
-				memo,
-			};
+            merkle_path,
+            to,
+            relayer_address: relayer_fee_address,
+            relayer_fee: total_cost_fee_token,
+            contract_version: contract_version(),
+            chain_id,
+            mac_salt: Self::get_salt(),
+            pocket_money,
+            protocol_fee,
+            memo,
+        };
 
         let prover_knowledge = self.prepare_prover_knowledge(
             self.token.address(),
@@ -146,20 +149,31 @@ impl WithdrawCircuit {
         let withdraw_call = WithdrawCall {
             expected_contract_version: contract_version().to_bytes(),
             token: field_to_address(prover_knowledge.token_address).into(),
-            amount: field_to_u256(prover_knowledge.compute_public_input(WithdrawInstance::WithdrawalValue)),
+            amount: field_to_u256(
+                prover_knowledge.compute_public_input(WithdrawInstance::WithdrawalValue),
+            ),
             withdrawal_address: extra.to,
-            merkle_root: field_to_u256(prover_knowledge.compute_public_input(WithdrawInstance::MerkleRoot)),
-            old_nullifier_hash: field_to_u256(prover_knowledge.compute_public_input(WithdrawInstance::HashedOldNullifier)),
-            new_note: field_to_u256(prover_knowledge.compute_public_input(WithdrawInstance::HashedNewNote)),
+            merkle_root: field_to_u256(
+                prover_knowledge.compute_public_input(WithdrawInstance::MerkleRoot),
+            ),
+            old_nullifier_hash: field_to_u256(
+                prover_knowledge.compute_public_input(WithdrawInstance::HashedOldNullifier),
+            ),
+            new_note: field_to_u256(
+                prover_knowledge.compute_public_input(WithdrawInstance::HashedNewNote),
+            ),
             proof: Bytes::from(proof),
             relayer_address: extra.relayer_address,
             relayer_fee: extra.relayer_fee,
-            mac_salt: field_to_u256(prover_knowledge.compute_public_input(WithdrawInstance::MacSalt)),
-            mac_commitment: field_to_u256(prover_knowledge.compute_public_input(WithdrawInstance::MacCommitment)),
+            mac_salt: field_to_u256(
+                prover_knowledge.compute_public_input(WithdrawInstance::MacSalt),
+            ),
+            mac_commitment: field_to_u256(
+                prover_knowledge.compute_public_input(WithdrawInstance::MacCommitment),
+            ),
             pocket_money: extra.pocket_money,
             memo: extra.memo.clone(),
         };
-
 
         RelayCalldata {
             expected_contract_version: contract_version().to_bytes(),
@@ -177,6 +191,4 @@ impl WithdrawCircuit {
             memo: extra.memo.clone(),
         }
     }
-
-
 }

@@ -13,9 +13,7 @@ use shielder_scheduler_common::{
     vsock::VsockError,
 };
 use shielder_setup::consts::{ARITY, TREE_HEIGHT};
-
 use tokio_vsock::{VsockAddr, VsockListener, VsockStream, VMADDR_CID_ANY};
-
 
 use crate::withdraw::WithdrawCircuit;
 
@@ -118,16 +116,14 @@ impl Server {
     ) -> Result<Response, VsockError> {
         let decrypted_payload = self.decrypt_payload(&payload)?;
 
-        let deserialized_payload : Payload = serde_json::from_slice(&decrypted_payload).map_err(|e| {
-            VsockError::Protocol(format!("Failed to deserialize payload: {}", e))
-        })?;
+        let deserialized_payload: Payload = serde_json::from_slice(&decrypted_payload)
+            .map_err(|e| VsockError::Protocol(format!("Failed to deserialize payload: {}", e)))?;
 
         let token = match deserialized_payload.token_address {
             Address::ZERO => shielder_account::Token::Native,
             addr => shielder_account::Token::ERC20(addr),
         };
-        let withdraw_circuit = WithdrawCircuit::new(deserialized_payload.account_id, 
-            token);
+        let withdraw_circuit = WithdrawCircuit::new(deserialized_payload.account_id, token);
         let relayer_calldata = withdraw_circuit.get_relayer_calldata(
             deserialized_payload.withdrawal_value,
             deserialized_payload.withdraw_address,
@@ -144,7 +140,9 @@ impl Server {
             merkle_root,
         );
 
-        Ok(Response::PrepareRelayCalldata { calldata: relayer_calldata })
+        Ok(Response::PrepareRelayCalldata {
+            calldata: relayer_calldata,
+        })
     }
 
     fn decrypt_payload(&self, _payload: &[u8]) -> Result<Vec<u8>, VsockError> {

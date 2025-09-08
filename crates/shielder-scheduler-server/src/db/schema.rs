@@ -11,8 +11,8 @@ pub struct ScheduledRequest {
     pub payload: Vec<u8>,
     pub last_note_index: String, // U256 as string for PostgreSQL
     pub max_relayer_fee: String, // U256 as string for PostgreSQL
-    pub pocket_money: String, // U256 as string for PostgreSQL
-    pub token_address: String, // Address as string for PostgreSQL
+    pub pocket_money: String,    // U256 as string for PostgreSQL
+    pub token_address: String,   // Address as string for PostgreSQL
     pub relay_after: DateTime<Utc>,
     pub status: RequestStatus,
     pub created_at: DateTime<Utc>,

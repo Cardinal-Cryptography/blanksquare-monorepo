@@ -55,7 +55,7 @@ pub enum Request {
         /// Current merkle root
         merkle_root: U256,
         /// Pocket money to be sent to the withdraw address to cover gas fees
-        pocket_money: U256,    
+        pocket_money: U256,
     },
 }
 

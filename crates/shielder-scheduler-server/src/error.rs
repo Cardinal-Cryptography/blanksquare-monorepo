@@ -35,7 +35,7 @@ pub enum SchedulerServerError {
 
     #[error("Contract error: {0}")]
     ContractError(#[from] ShielderContractError),
-    
+
     #[error("Relayer error: {0}")]
     RelayerError(String),
 }

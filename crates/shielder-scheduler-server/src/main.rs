@@ -2,8 +2,8 @@ mod command_line_args;
 mod db;
 mod error;
 mod handlers;
-mod scheduler_processor;
 mod relayer_rpc_controller;
+mod scheduler_processor;
 
 use std::{net::SocketAddrV4, sync::Arc, time::Duration};
 
@@ -22,7 +22,10 @@ use tracing::info;
 use tracing_subscriber::{fmt, layer::SubscriberExt, util::SubscriberInitExt, EnvFilter, Layer};
 
 use crate::{
-    command_line_args::CommandLineArgs, handlers::{self as server_handlers}, relayer_rpc_controller::RelayerRpcController, scheduler_processor::SchedulerProcessor
+    command_line_args::CommandLineArgs,
+    handlers::{self as server_handlers},
+    relayer_rpc_controller::RelayerRpcController,
+    scheduler_processor::SchedulerProcessor,
 };
 
 #[derive(Debug)]

@@ -38,14 +38,14 @@ expose(exposed);
  * Pass `wasm_url` only if you need the special setup (such as vite-patched distribution).
  *
  * @param proverServiceUrl - URL of the prover service to connect to.
- * @param withoutAttestation - Optional flag to disable attestation.
+ * @param expectedPCRs - Optional map of expected PCR index to hex-encoded PCR value for validation.
  * @param wasmUrl - Optional URL to the WASM binary.
  * @returns A promise that resolves to a Comlink-wrapped worker implementing CryptoClient.
  * @throws Will throw an error if the worker initialization fails.
  */
 export const initWasmWorker = async (
   proverServiceUrl: string,
-  withoutAttestation?: boolean,
+  expectedPCRs?: Map<string, string>,
   wasmUrl?: string
 ): Promise<CryptoClient> => {
   // Create a new worker instance
@@ -60,7 +60,7 @@ export const initWasmWorker = async (
   const wrappedWorker = wrap<WasmClient>(worker) as unknown as WasmClient;
 
   try {
-    await wrappedWorker.init(proverServiceUrl, withoutAttestation, wasmUrl);
+    await wrappedWorker.init(proverServiceUrl, expectedPCRs, wasmUrl);
     return wrappedWorker;
   } catch (error) {
     console.error("Failed to initialize WASM worker:", error);

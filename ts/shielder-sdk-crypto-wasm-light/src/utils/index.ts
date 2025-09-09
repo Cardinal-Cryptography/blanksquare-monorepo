@@ -42,20 +42,3 @@ export function base64ToBytes(base64: string): Uint8Array {
   }
   return bytes;
 }
-
-export function uint8ToHex(uint8: Uint8Array): string {
-  return Array.from(uint8)
-    .map((byte) => byte.toString(16).padStart(2, "0"))
-    .join("");
-}
-
-export function hexToUint8(hex: string): Uint8Array {
-  if (hex.length % 2 !== 0) {
-    throw new Error("Hex string must have an even length");
-  }
-  const bytes = new Uint8Array(hex.length / 2);
-  for (let i = 0; i < hex.length; i += 2) {
-    bytes[i / 2] = parseInt(hex.slice(i, i + 2), 16);
-  }
-  return bytes;
-}

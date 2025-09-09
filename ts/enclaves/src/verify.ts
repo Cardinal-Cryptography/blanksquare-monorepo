@@ -26,7 +26,7 @@ import {
   parseAttestationDocument,
   validateAttestationDocument
 } from "./validation";
-import { base64ToBytes, bytesToBase64 } from "@/utils";
+import { base64ToBytes, bytesToBase64 } from "./utils";
 
 /**
  * Verify an AWS Nitro Enclaves attestation document

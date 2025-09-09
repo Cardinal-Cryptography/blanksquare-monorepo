@@ -99,19 +99,29 @@ pub struct CommandLineArgs {
     #[clap(long, env = "AWS_REGION")]
     pub aws_region: String,
 
-    #[clap(long, env = "AWS_ACCESS_KEY_ID")]
-    pub aws_access_key_id: String,
+    /// How often to refresh AWS STS credentials (in seconds, range: 900-1800)
+    #[clap(long, default_value_t = 900, env = "AWS_STS_REFRESH_CREDENTIALS_PERIOD_SECONDS")]
+    pub aws_sts_refresh_period_secs: u64,
+}
 
-    #[clap(long, env = "AWS_SECRET_ACCESS_KEY")]
-    pub aws_secret_access_key: String,
-
-    #[clap(long, env = "AWS_SESSION_TOKEN")]
-    pub aws_session_token: String,
-
-    #[clap(
-        long,
-        default_value = "RSAES_OAEP_SHA_256",
-        env = "KMS_ENCRYPTION_ALGORITHM"
-    )]
-    pub kms_encryption_algorithm: String,
+impl CommandLineArgs {
+    /// Validates the command line arguments
+    pub fn validate(&self) -> Result<(), String> {
+        // Validate AWS STS refresh period is within acceptable range
+        if self.aws_sts_refresh_period_secs < 900 {
+            return Err(format!(
+                "AWS_STS_REFRESH_CREDENTIALS_PERIOD_SECONDS must be at least 900 seconds, got: {}",
+                self.aws_sts_refresh_period_secs
+            ));
+        }
+        
+        if self.aws_sts_refresh_period_secs > 1800 {
+            return Err(format!(
+                "AWS_STS_REFRESH_CREDENTIALS_PERIOD_SECONDS must be at most 1800 seconds, got: {}",
+                self.aws_sts_refresh_period_secs
+            ));
+        }
+        
+        Ok(())
+    }
 }

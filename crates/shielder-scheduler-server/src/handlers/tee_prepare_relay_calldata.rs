@@ -24,16 +24,20 @@ pub async fn prepare_relay_calldata(
                 "Failed to decode KMS_PUBLIC_KEY from base64: {e:?}"
             ))
         })?;
+
+    // Get current AWS credentials
+    let aws_credentials = state.aws_credentials.lock().await.clone();
+    
     tee_task_pool
         .spawn(async move { tee_request(state.clone(), Request::PrepareRelayCalldata {
             aws_config: AwsConfig {
                 public_key,
                 kms_key_id: state.options.kms_key_id.clone(),
                 aws_region: state.options.aws_region.clone(),
-                aws_access_key_id: state.options.aws_access_key_id.clone(),
-                aws_secret_access_key: state.options.aws_secret_access_key.clone(),
-                aws_session_token: state.options.aws_session_token.clone(),
-                kms_encryption_algorithm: state.options.kms_encryption_algorithm.clone(),
+                aws_access_key_id: aws_credentials.access_key_id,
+                aws_secret_access_key: aws_credentials.secret_access_key,
+                aws_session_token: aws_credentials.session_token.unwrap_or_default(),
+                kms_encryption_algorithm: "RSAES_OAEP_SHA_256".to_string(),
             },
             encryption_envelope,
             relayer_fee,

@@ -1,3 +1,4 @@
+mod aws_session_tokens;
 mod command_line_args;
 mod db;
 mod error;
@@ -17,12 +18,13 @@ use clap::Parser;
 use error::SchedulerServerError as Error;
 use metrics_exporter_prometheus::PrometheusBuilder;
 use shielder_scheduler_common::metrics::FutureHistogramLayer;
-use tokio::net::TcpListener;
+use tokio::{net::TcpListener, sync::Mutex};
 use tower_http::cors::CorsLayer;
 use tracing::info;
 use tracing_subscriber::{fmt, layer::SubscriberExt, util::SubscriberInitExt, EnvFilter, Layer};
 
 use crate::{
+    aws_session_tokens::AwsCredentials,
     command_line_args::CommandLineArgs,
     handlers::{self as server_handlers},
     scheduler_processor::SchedulerProcessor,
@@ -33,12 +35,18 @@ struct AppState {
     options: CommandLineArgs,
     db_pool: db::PgPool,
     tee_task_pool: Arc<tokio_task_pool::Pool>,
+    aws_credentials: Arc<Mutex<AwsCredentials>>,
 }
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
     // Parse command line arguments
     let options = CommandLineArgs::parse();
+    
+    // Validate command line arguments
+    if let Err(validation_error) = options.validate() {
+        return Err(Error::ParseError(validation_error));
+    }
 
     // Initialize logging
     tracing_subscriber::registry()
@@ -72,11 +80,32 @@ async fn main() -> Result<(), Error> {
         .with_run_timeout(Duration::from_secs(options.tee_compute_timeout_secs))
         .into();
 
+    // Get AWS session token using STS
+    let aws_credentials = aws_session_tokens::get_session_token(
+        &options.aws_region,
+        (options.aws_sts_refresh_period_secs * 2) as i32
+    ).await?;
+
     // Create the application state
     let app_state = Arc::new(AppState {
         options,
         tee_task_pool,
         db_pool,
+        aws_credentials: Arc::new(Mutex::new(aws_credentials)),
+    });
+
+    // Perform initial TEE public key verification to ensure the server is correctly configured
+    info!("Performing initial TEE public key verification...");
+    let _verification_result = server_handlers::tee_public_key::tee_public_key(
+        axum::extract::State(app_state.clone())
+    ).await.map_err(|e| Error::ParseError(format!("TEE public key verification failed: {}", e)))?;
+
+    info!("TEE public key verification successful");
+
+    // Start the AWS credentials refresh task
+    let credentials_refresh_state = app_state.clone();
+    tokio::spawn(async move {
+        aws_credentials_refresh_task(credentials_refresh_state).await;
     });
 
     // Start the scheduler processor
@@ -112,4 +141,35 @@ async fn main() -> Result<(), Error> {
     serve(listener, router).await?;
 
     Ok(())
+}
+
+/// Background task that periodically refreshes AWS STS credentials
+async fn aws_credentials_refresh_task(app_state: Arc<AppState>) {
+    let mut interval = tokio::time::interval(Duration::from_secs(
+        app_state.options.aws_sts_refresh_period_secs,
+    ));
+
+    // Skip the first tick since we already have initial credentials
+    interval.tick().await;
+
+    loop {
+        interval.tick().await;
+
+        info!("Refreshing AWS STS credentials");
+        match aws_session_tokens::get_session_token(
+            &app_state.options.aws_region,
+            (app_state.options.aws_sts_refresh_period_secs * 2) as i32
+        ).await {
+            Ok(new_credentials) => {
+                let mut credentials = app_state.aws_credentials.lock().await;
+                *credentials = new_credentials;
+                info!("AWS STS credentials refreshed successfully");
+            }
+            Err(e) => {
+                tracing::error!("Failed to refresh AWS STS credentials: {:?}", e);
+                // Continue running - don't crash the server on credential refresh failure
+                // The old credentials might still be valid for a while
+            }
+        }
+    }
 }

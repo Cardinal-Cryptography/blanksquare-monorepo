@@ -28,6 +28,9 @@ pub enum SchedulerServerError {
 
     #[error("Database error: {0}")]
     DatabaseError(#[from] sqlx::Error),
+
+    #[error("AWS error: {0}")]
+    AwsError(String),
 }
 
 impl IntoResponse for SchedulerServerError {

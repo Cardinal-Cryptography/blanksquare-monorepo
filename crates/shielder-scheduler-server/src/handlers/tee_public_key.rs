@@ -20,6 +20,10 @@ pub async fn tee_public_key(
                 "Failed to decode KMS_PUBLIC_KEY from base64: {e:?}"
             ))
         })?;
+    
+    // Get current AWS credentials
+    let aws_credentials = state_cloned.aws_credentials.lock().await.clone();
+    
     tee_task_pool
         .spawn(async move {
             tee_request(
@@ -29,13 +33,10 @@ pub async fn tee_public_key(
                         public_key,
                         kms_key_id: state_cloned.options.kms_key_id.clone(),
                         aws_region: state_cloned.options.aws_region.clone(),
-                        aws_access_key_id: state_cloned.options.aws_access_key_id.clone(),
-                        aws_secret_access_key: state_cloned.options.aws_secret_access_key.clone(),
-                        aws_session_token: state_cloned.options.aws_session_token.clone(),
-                        kms_encryption_algorithm: state_cloned
-                            .options
-                            .kms_encryption_algorithm
-                            .clone(),
+                        aws_access_key_id: aws_credentials.access_key_id,
+                        aws_secret_access_key: aws_credentials.secret_access_key,
+                        aws_session_token: aws_credentials.session_token.unwrap_or_default(),
+                        kms_encryption_algorithm: "RSAES_OAEP_SHA_256".to_string(),
                     },
                 },
             )

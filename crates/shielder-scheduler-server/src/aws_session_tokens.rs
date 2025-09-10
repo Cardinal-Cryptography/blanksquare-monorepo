@@ -1,4 +1,4 @@
-use aws_sdk_sts::Client;
+use aws_sdk_sts::{config::BehaviorVersion, Client};
 use tracing::{info, instrument};
 
 use crate::error::SchedulerServerError;
@@ -19,6 +19,7 @@ pub async fn get_session_token(aws_region: &str, duration_seconds: i32) -> Resul
     // Create STS client with the provided region
     let config = aws_sdk_sts::Config::builder()
         .region(aws_sdk_sts::config::Region::new(aws_region.to_string()))
+        .behavior_version(BehaviorVersion::latest())
         .build();
     let client = Client::from_conf(config);
 

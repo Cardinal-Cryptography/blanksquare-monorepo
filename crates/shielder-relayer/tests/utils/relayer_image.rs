@@ -1,6 +1,6 @@
 use std::{borrow::Cow, collections::HashMap, fmt::Display};
 
-use price_feed::TokenKind;
+use price_feed::LegacyTokenInfo;
 use shielder_relayer::{
     TokenInfo, BALANCE_MONITOR_INTERVAL_ENV, FEE_DESTINATION_KEY_ENV, NODE_RPC_URL_ENV,
     RELAYER_METRICS_PORT_ENV, RELAYER_PORT_ENV, RELAYER_SIGNING_KEYS_ENV,
@@ -31,7 +31,7 @@ impl RelayerImage {
         node_rpc_url: String,
         shielder_address: String,
         signer_key: String,
-        token_config: Vec<TokenInfo<TokenKind>>,
+        token_config: Vec<LegacyTokenInfo>,
         balance_monitor_interval: String,
     ) -> Self {
         Self {

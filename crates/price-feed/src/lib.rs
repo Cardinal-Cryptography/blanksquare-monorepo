@@ -17,6 +17,9 @@ use crate::price::Expiration;
 mod fetching;
 mod price;
 
+pub type LegacyTokenInfo = TokenInfo<TokenKind>;
+pub type SimpleTokenInfo = TokenInfo<SimpleKind>;
+
 #[derive(Copy, Clone, Debug, Default, Hash, Eq, PartialEq, Deserialize, Serialize, ToSchema)]
 pub enum TokenKind {
     #[default]

@@ -10,7 +10,7 @@ use shielder_contract::{
     providers::{create_provider_with_nonce_caching_signer, create_provider_with_signer},
     ConnectionPolicy, ShielderUser,
 };
-use shielder_relayer::TokenInfo;
+use shielder_relayer::LegacyTokenInfo;
 use tower_http::cors::CorsLayer;
 use tracing::info;
 use tracing_subscriber::EnvFilter;
@@ -52,7 +52,7 @@ pub struct AppState {
     pub signer_info: SignerInfo,
     pub rpc_monitor: RpcMonitor,
     pub prices: Prices<TokenKind>,
-    pub token_config: Vec<TokenInfo<TokenKind>>,
+    pub token_config: Vec<LegacyTokenInfo>,
     pub quote_cache: QuoteCache,
     pub max_pocket_money: U256,
     pub service_fee_percent: u32,

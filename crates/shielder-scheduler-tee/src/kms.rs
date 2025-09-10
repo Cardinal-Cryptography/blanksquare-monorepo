@@ -48,26 +48,22 @@ impl KmsCrypto {
             info!("Decrypting data encryption key (DEK)");
             let mut cmd = Command::new("/usr/local/bin/kmstool_enclave_cli");
             cmd.arg("decrypt")
-                .arg(format!("--region {}", aws_config.aws_region))
-                .arg(format!("--proxy-port {}", self.kms_proxy_port))
-                .arg(format!(
-                    "--aws-access-key-id {}",
-                    aws_config.aws_access_key_id
-                ))
-                .arg(format!(
-                    "--aws-secret-access-key {}",
-                    aws_config.aws_secret_access_key
-                ))
-                .arg(format!(
-                    "--aws-session-token {}",
-                    aws_config.aws_session_token
-                ))
-                .arg(format!("--key-id {}", aws_config.kms_key_id))
-                .arg(format!("--ciphertext {}", BASE64.encode(encrypted_dek)))
-                .arg(format!(
-                    "--encryption-algorithm {}",
-                    aws_config.kms_encryption_algorithm
-                ))
+                .arg("--region")
+                .arg(&aws_config.aws_region)
+                .arg("--proxy-port")
+                .arg(self.kms_proxy_port.to_string())
+                .arg("--aws-access-key-id")
+                .arg(&aws_config.aws_access_key_id)
+                .arg("--aws-secret-access-key")
+                .arg(&aws_config.aws_secret_access_key)
+                .arg("--aws-session-token")
+                .arg(&aws_config.aws_session_token)
+                .arg("--key-id")
+                .arg(&aws_config.kms_key_id)
+                .arg("--ciphertext")
+                .arg(BASE64.encode(encrypted_dek))
+                .arg("--encryption-algorithm")
+                .arg(&aws_config.kms_encryption_algorithm)
                 .stdout(Stdio::piped())
                 .stderr(Stdio::piped());
             

@@ -7,7 +7,7 @@ use aes_gcm::{
 };
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine};
 use log::{debug, info};
-use rsa::{pkcs8::DecodePublicKey, sha2::Sha256, Oaep, RsaPublicKey};
+use rsa::{pkcs8::DecodePublicKey, sha2::Sha256, Oaep, Pkcs1v15Encrypt, RsaPublicKey};
 #[cfg(feature = "without_attestation")]
 use rsa::{pkcs8::DecodePrivateKey, RsaPrivateKey};
 use shielder_scheduler_common::{
@@ -157,7 +157,7 @@ impl KmsCrypto {
             .map_err(|e| VsockError::KMS(format!("Failed to parse public key PEM: {e:?}")))?
             .encrypt(
                 &mut rand::thread_rng(),
-                Oaep::new::<Sha256>(),
+                Pkcs1v15Encrypt,
                 expected_data.as_bytes(),
             )
             .map_err(|e| VsockError::KMS(format!("Failed to encrypt data: {e:?}")))?;

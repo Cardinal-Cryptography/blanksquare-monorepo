@@ -6,7 +6,7 @@ use aes_gcm::{
     Aes256Gcm, Nonce,
 };
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine};
-use log::info;
+use log::{debug, info};
 #[cfg(feature = "without_attestation")]
 use rsa::{pkcs8::DecodePrivateKey, RsaPrivateKey};
 use rsa::{pkcs8::DecodePublicKey, sha2::Sha256, Oaep, RsaPublicKey};
@@ -46,8 +46,8 @@ impl KmsCrypto {
         #[cfg(not(feature = "without_attestation"))]
         let decrypted_data = {
             info!("Decrypting data encryption key (DEK)");
-            let output = Command::new("/usr/local/bin/kmstool_enclave_cli")
-                .arg("decrypt")
+            let mut cmd = Command::new("/usr/local/bin/kmstool_enclave_cli");
+            cmd.arg("decrypt")
                 .arg(format!("--region {}", aws_config.aws_region))
                 .arg(format!("--proxy-port {}", self.kms_proxy_port))
                 .arg(format!(
@@ -69,8 +69,10 @@ impl KmsCrypto {
                     aws_config.kms_encryption_algorithm
                 ))
                 .stdout(Stdio::piped())
-                .stderr(Stdio::piped())
-                .output()
+                .stderr(Stdio::piped());
+            
+            debug!("Executing command: {:?}", cmd);
+            let output = cmd.output()
                 .map_err(|e| {
                     VsockError::KMS(format!("failed to run kmstool_enclave_cli: {e:?}"))
                 })?;

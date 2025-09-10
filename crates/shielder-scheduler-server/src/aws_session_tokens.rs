@@ -1,6 +1,6 @@
 use reqwest;
 use serde::Deserialize;
-use tracing::{info, instrument};
+use tracing::{debug, info, instrument};
 
 use crate::error::SchedulerServerError;
 
@@ -93,6 +93,33 @@ pub async fn get_session_token(_aws_region: &str, refresh_period_seconds: i32, i
             metadata_response.code
         )));
     }
+
+    // Step 5: Validate credentials are not empty
+    if metadata_response.access_key_id.is_empty() {
+        return Err(SchedulerServerError::AwsError(
+            "Access key ID is empty".to_string()
+        ));
+    }
+    
+    if metadata_response.secret_access_key.is_empty() {
+        return Err(SchedulerServerError::AwsError(
+            "Secret access key is empty".to_string()
+        ));
+    }
+    
+    if metadata_response.token.is_empty() {
+        return Err(SchedulerServerError::AwsError(
+            "Session token is empty".to_string()
+        ));
+    }
+
+    // Step 6: Debug log credentials (first 4 characters only for security)
+    debug!(
+        "Retrieved AWS credentials - Access Key: {}..., Secret Key: {}..., Token: {}...",
+        &metadata_response.access_key_id.chars().take(4).collect::<String>(),
+        &metadata_response.secret_access_key.chars().take(4).collect::<String>(),
+        &metadata_response.token.chars().take(4).collect::<String>()
+    );
 
     info!("Successfully retrieved AWS credentials from EC2 metadata service");
 

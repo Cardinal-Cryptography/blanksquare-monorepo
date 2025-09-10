@@ -36,4 +36,4 @@ ENV RUST_LOG=info
 RUN useradd -r -s /bin/false server
 USER server
 
-ENTRYPOINT ["tini", "--", "shielder-scheduler-tee"]
+ENTRYPOINT ["RUST_LOG=debug", "tini", "--", "shielder-scheduler-tee"]

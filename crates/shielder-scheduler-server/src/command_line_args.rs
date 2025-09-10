@@ -99,6 +99,10 @@ pub struct CommandLineArgs {
     #[clap(long, env = "AWS_REGION")]
     pub aws_region: String,
 
+    /// AWS IAM role name for KMS access
+    #[clap(long, default_value = "kms-access", env = "AWS_IAM_KMS_ROLE")]
+    pub aws_iam_kms_role: String,
+
     /// How often to refresh AWS STS credentials (in seconds, range: 900-1800)
     #[clap(long, default_value_t = 900, env = "AWS_STS_REFRESH_CREDENTIALS_PERIOD_SECONDS")]
     pub aws_sts_refresh_period_secs: u64,

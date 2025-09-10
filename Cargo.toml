@@ -30,7 +30,6 @@ askama = { version = "0.12.0", default-features = false }
 assert2 = { version = "0.3.15" }
 async-channel = { version = "2.3.1" }
 aws-nitro-enclaves-nsm-api = { version = "0.4.0" }
-aws-sdk-sts = { version = "1.85.0" }
 axum = { version = "0.8.1" }
 base64 = { version = "0.22.1" }
 byteorder = { version = "1.4.3" }

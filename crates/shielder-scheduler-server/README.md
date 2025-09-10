@@ -10,17 +10,16 @@ This service provides the ability to schedule withdrawal requests that will be p
 
 ### AWS Integration & Session Management
 
-The server uses AWS STS (Security Token Service) to dynamically retrieve temporary AWS credentials at startup. This provides enhanced security by:
+The server uses EC2 instance metadata service to dynamically retrieve temporary AWS credentials at startup. This provides enhanced security by:
 
 - Eliminating the need to hardcode long-term AWS credentials in environment variables
 - Using temporary session tokens that have a limited lifespan
 - Automatically refreshing credentials every 15 minutes (configurable via `AWS_STS_REFRESH_CREDENTIALS_PERIOD_SECONDS`)
-- Requesting credentials with a duration of twice the refresh period to ensure overlap and prevent expiration
 - Thread-safe credential updates during runtime without service interruption
 
 The server performs the following AWS-related operations on startup:
 
-1. **STS Authentication**: Calls AWS STS `GetSessionToken` to obtain temporary credentials
+1. **EC2 Metadata Authentication**: Calls EC2 instance metadata service to obtain temporary credentials from the assigned IAM role
 2. **TEE Verification**: Performs an initial `TeePublicKey` request to verify proper TEE and KMS integration
 3. **Credential Storage**: Stores the retrieved credentials in the application state for subsequent use
 
@@ -150,16 +149,19 @@ The service can be configured using environment variables or command-line argume
 
 ### AWS & KMS Configuration
 - `AWS_REGION`: AWS region for STS and KMS operations (required)
+- `AWS_IAM_KMS_ROLE`: IAM role name for KMS access (default: kms-access)
 - `KMS_KEY_ID`: AWS KMS key identifier for encryption operations (required)  
 - `KMS_PUBLIC_KEY`: Base64-encoded KMS public key for verification (required)
 - `AWS_STS_REFRESH_CREDENTIALS_PERIOD_SECONDS`: How often to refresh AWS STS credentials in seconds (default: 900, range: 900-1800)
 
-**Note**: AWS credentials are automatically retrieved using STS at startup and refreshed periodically. Manual AWS credential configuration is no longer required.
+**Note**: AWS credentials are automatically retrieved using EC2 instance metadata at startup and refreshed periodically. Manual AWS credential configuration is no longer required.
+
+**Token Management**: The metadata token TTL is automatically set to twice the refresh period to ensure adequate overlap during credential rotation.
 
 **Validation**: The refresh period is constrained to 900-1800 seconds (15-30 minutes) to ensure:
 - Minimum security through frequent credential rotation (≤30 minutes)
-- Reasonable AWS API usage without excessive STS calls (≥15 minutes)
-- Credential duration (2x refresh period) stays within AWS STS limits
+- Reasonable EC2 metadata service usage without excessive calls (≥15 minutes)
+- Optimal balance between security and operational efficiency
 
 ### Metrics Configuration
 - `METRICS_UPKEEP_TIMEOUT_SECS`: How often to perform metric upkeep (default: 60)
@@ -210,14 +212,15 @@ export KMS_KEY_ID=your-kms-key-id
 export KMS_PUBLIC_KEY=base64-encoded-public-key
 cargo run
 
-# With custom configuration including credential refresh period
-cargo run -- --public-port 8080 --db-host mydb.example.com --scheduler-interval-secs 10 --aws-sts-refresh-period-secs 1800
+# With custom configuration including credential refresh period and IAM role
+cargo run -- --public-port 8080 --db-host mydb.example.com --scheduler-interval-secs 10 --aws-sts-refresh-period-secs 1800 --aws-iam-kms-role my-custom-role
 
 # Using environment variables
 export DB_HOST=mydb.example.com
 export PUBLIC_PORT=8080
 export SCHEDULER_INTERVAL_SECS=10
 export AWS_REGION=us-east-1
+export AWS_IAM_KMS_ROLE=my-custom-role
 export KMS_KEY_ID=your-kms-key-id
 export KMS_PUBLIC_KEY=base64-encoded-public-key
 export AWS_STS_REFRESH_CREDENTIALS_PERIOD_SECONDS=1800  # Refresh every 30 minutes
@@ -225,8 +228,9 @@ cargo run
 ```
 
 **Prerequisites**:
-- AWS credentials must be available in the environment (via AWS CLI, IAM role, etc.)
-- The AWS credentials must have permissions for STS:GetSessionToken and KMS operations
+- EC2 instance with an IAM role that has KMS permissions
+- The EC2 instance must have access to EC2 instance metadata service (IMDSv2)
+- The IAM role name must match the configured `AWS_IAM_KMS_ROLE` (default: kms-access)
 - The specified KMS key must be accessible and properly configured
 - AWS_STS_REFRESH_CREDENTIALS_PERIOD_SECONDS must be between 900 and 1800 seconds
 
@@ -283,12 +287,13 @@ curl http://localhost:3001/metrics
 ## Summary of Changes
 
 **Version 1.85.0 Updates:**
-- Integrated AWS STS (Security Token Service) for dynamic credential management
+- Integrated EC2 instance metadata service for dynamic credential management
 - Added periodic credential refresh (every 15 minutes by default, configurable)
 - Implemented thread-safe credential updates using Arc<Mutex<>> pattern
 - Removed hardcoded AWS credential environment variables (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_SESSION_TOKEN, KMS_ENCRYPTION_ALGORITHM)
+- Removed dependency on AWS STS SDK, now uses EC2 instance metadata directly
 - Added automatic TEE public key verification on server startup
-- Enhanced security through automatic temporary credential rotation
+- Enhanced security through automatic temporary credential rotation from IAM roles
 - Simplified configuration by requiring only AWS_REGION, KMS_KEY_ID, and KMS_PUBLIC_KEY
 
-The server now automatically handles AWS authentication and credential management with periodic refresh, providing improved security and simplified deployment.
+The server now automatically handles AWS authentication and credential management with periodic refresh using EC2 instance metadata, providing improved security and simplified deployment.

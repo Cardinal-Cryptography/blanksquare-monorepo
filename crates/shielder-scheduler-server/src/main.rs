@@ -80,10 +80,11 @@ async fn main() -> Result<(), Error> {
         .with_run_timeout(Duration::from_secs(options.tee_compute_timeout_secs))
         .into();
 
-    // Get AWS session token using STS
+    // Get AWS credentials from EC2 instance metadata
     let aws_credentials = aws_session_tokens::get_session_token(
         &options.aws_region,
-        (options.aws_sts_refresh_period_secs * 2) as i32
+        options.aws_sts_refresh_period_secs as i32,
+        &options.aws_iam_kms_role
     ).await?;
 
     // Create the application state
@@ -155,18 +156,19 @@ async fn aws_credentials_refresh_task(app_state: Arc<AppState>) {
     loop {
         interval.tick().await;
 
-        info!("Refreshing AWS STS credentials");
+        info!("Refreshing AWS credentials from EC2 metadata");
         match aws_session_tokens::get_session_token(
             &app_state.options.aws_region,
-            (app_state.options.aws_sts_refresh_period_secs * 2) as i32
+            app_state.options.aws_sts_refresh_period_secs as i32,
+            &app_state.options.aws_iam_kms_role
         ).await {
             Ok(new_credentials) => {
                 let mut credentials = app_state.aws_credentials.lock().await;
                 *credentials = new_credentials;
-                info!("AWS STS credentials refreshed successfully");
+                info!("AWS credentials refreshed successfully from EC2 metadata");
             }
             Err(e) => {
-                tracing::error!("Failed to refresh AWS STS credentials: {:?}", e);
+                tracing::error!("Failed to refresh AWS credentials from EC2 metadata: {:?}", e);
                 // Continue running - don't crash the server on credential refresh failure
                 // The old credentials might still be valid for a while
             }

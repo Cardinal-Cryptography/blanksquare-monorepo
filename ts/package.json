@@ -16,7 +16,7 @@
     "build:tests": "pnpm --filter shielder-sdk-tests build",
     "build-package:crypto": "pnpm build:crypto",
     "build-package:crypto-wasm": "pnpm build:crypto && pnpm build:crypto-wasm",
-    "build-package:crypto-wasm-light": "pnpm build:crypto && pnpm build:crypto-wasm-light",
+    "build-package:crypto-wasm-light": "pnpm build:crypto && pnpm build:enclaves && pnpm build:crypto-wasm-light",
     "build-package:enclaves": "pnpm build:enclaves",
     "build-package:sdk": "pnpm build:crypto && pnpm build:sdk",
     "build-package:tests": "pnpm build:crypto && pnpm build:crypto-wasm && pnpm build:sdk && pnpm build:tests",

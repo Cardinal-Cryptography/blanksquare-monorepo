@@ -99,8 +99,8 @@ impl<K: Decimals> Decimals for TokenInfo<K> {
 /// The type parameter `K` is the type used to identify tokens.
 /// Apart from being `Clone`, `Eq`, `PartialEq` and `Hash`, it must also implement the `Decimals` trait
 /// to provide the number of decimals for each token. `TokenKind` is a legacy implementation that works
-/// but can only represent one native token. SimpleKind is an implementation where a token is identified
-/// by its name.
+/// but can only represent one native token. `SimpleKind` is an implementation where a token is identified
+/// by both its name and its number of decimals.
 #[derive(Clone)]
 pub struct Prices<K> {
     validity: time::Duration,

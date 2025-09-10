@@ -31,9 +31,9 @@ COPY ./crates/shielder-scheduler-tee/artifacts/kms/libnsm.so /usr/lib/x86_64-lin
 COPY --from=builder /app/target/release/shielder-scheduler-tee /usr/local/bin
 RUN chmod +x /usr/local/bin/shielder-scheduler-tee
 
-ENV RUST_LOG=info
+ENV RUST_LOG=debug
 
 RUN useradd -r -s /bin/false server
 USER server
 
-ENTRYPOINT ["RUST_LOG=debug", "tini", "--", "shielder-scheduler-tee"]
+ENTRYPOINT ["tini", "--", "shielder-scheduler-tee"]

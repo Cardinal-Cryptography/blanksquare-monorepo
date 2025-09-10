@@ -4,13 +4,13 @@ use alloy_provider::Provider;
 use alloy_signer_local::PrivateKeySigner;
 use anyhow::{anyhow, Result};
 use axum::{middleware, routing::get, Router};
-use price_feed::{start_price_feed, Prices};
+use price_feed::{start_price_feed, Prices, TokenKind};
 use shielder_contract::{
     alloy_primitives::{Address, U256},
     providers::{create_provider_with_nonce_caching_signer, create_provider_with_signer},
     ConnectionPolicy, ShielderUser,
 };
-use shielder_relayer::TokenInfo;
+use shielder_relayer::LegacyTokenInfo;
 use tower_http::cors::CorsLayer;
 use tracing::info;
 use tracing_subscriber::EnvFilter;
@@ -39,7 +39,6 @@ mod health_endpoint;
 mod info_endpoints;
 mod metrics;
 mod monitor;
-mod price_feed;
 mod quote;
 mod quote_cache;
 mod recharge;
@@ -52,8 +51,8 @@ pub struct AppState {
     pub taskmaster: Taskmaster,
     pub signer_info: SignerInfo,
     pub rpc_monitor: RpcMonitor,
-    pub prices: Prices,
-    pub token_config: Vec<TokenInfo>,
+    pub prices: Prices<TokenKind>,
+    pub token_config: Vec<LegacyTokenInfo>,
     pub quote_cache: QuoteCache,
     pub max_pocket_money: U256,
     pub service_fee_percent: u32,
@@ -74,7 +73,7 @@ struct ApiDoc;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let server_config = resolve_config();
+    let server_config = resolve_config()?;
     init_logging(server_config.logging_format)?;
 
     info!("Starting Shielder relayer.");
@@ -138,7 +137,7 @@ async fn start_metrics_server(
     config: &ServerConfig,
     signer_info: SignerInfo,
     rpc_monitor: RpcMonitor,
-    prices: Prices,
+    prices: Prices<TokenKind>,
 ) -> Result<()> {
     let address = config.network.metrics_address();
     let listener = tokio::net::TcpListener::bind(address.clone()).await?;
@@ -159,7 +158,7 @@ async fn start_main_server(
     config: &ServerConfig,
     signer_info: SignerInfo,
     rpc_monitor: RpcMonitor,
-    prices: Prices,
+    prices: Prices<TokenKind>,
 ) -> Result<()> {
     let fee_destination = signer_info.fee_destination_key.clone();
 

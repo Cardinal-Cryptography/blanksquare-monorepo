@@ -4448,6 +4448,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "price-feed"
+version = "0.1.0"
+dependencies = [
+ "alloy-primitives",
+ "anyhow",
+ "parking_lot",
+ "reqwest",
+ "rust_decimal",
+ "serde",
+ "shielder-account",
+ "thiserror 2.0.12",
+ "time",
+ "tokio",
+ "tracing",
+ "utoipa",
+]
+
+[[package]]
 name = "primitive-types"
 version = "0.12.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5823,6 +5841,7 @@ dependencies = [
  "openssl",
  "parameterized",
  "parking_lot",
+ "price-feed",
  "rand 0.8.5",
  "reqwest",
  "rust_decimal",

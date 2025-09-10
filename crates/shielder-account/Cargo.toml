@@ -28,5 +28,5 @@ contract = [
     "alloy-provider",
     "alloy-rpc-types-eth",
     "alloy-sol-types",
-    "shielder-contract"
+    "shielder-contract",
 ]

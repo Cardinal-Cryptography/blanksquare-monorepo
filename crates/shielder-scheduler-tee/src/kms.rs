@@ -7,9 +7,9 @@ use aes_gcm::{
 };
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine};
 use log::{debug, info};
+use rsa::{pkcs8::DecodePublicKey, sha2::Sha256, Oaep, RsaPublicKey};
 #[cfg(feature = "without_attestation")]
 use rsa::{pkcs8::DecodePrivateKey, RsaPrivateKey};
-use rsa::{pkcs8::DecodePublicKey, sha2::Sha256, Oaep, RsaPublicKey};
 use shielder_scheduler_common::{
     protocol::{AwsConfig, EncryptionEnvelope},
     vsock::VsockError,
@@ -148,8 +148,13 @@ impl KmsCrypto {
 
     pub fn verify_public_key(&self, aws_config: &AwsConfig) -> Result<(), VsockError> {
         let expected_data = "This is a correct key".to_string();
-        let encrypted_data = RsaPublicKey::from_public_key_der(&aws_config.public_key)
-            .map_err(|e| VsockError::KMS(format!("Failed to parse public key: {e:?}")))?
+        
+        // Parse public key from PEM string instead of DER bytes
+        let public_key_pem = String::from_utf8(aws_config.public_key.clone())
+            .map_err(|e| VsockError::KMS(format!("Failed to parse public key as UTF-8: {e:?}")))?;
+        
+        let encrypted_data = RsaPublicKey::from_public_key_pem(&public_key_pem)
+            .map_err(|e| VsockError::KMS(format!("Failed to parse public key PEM: {e:?}")))?
             .encrypt(
                 &mut rand::thread_rng(),
                 Oaep::new::<Sha256>(),

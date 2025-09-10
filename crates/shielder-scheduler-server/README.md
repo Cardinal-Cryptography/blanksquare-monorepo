@@ -151,7 +151,7 @@ The service can be configured using environment variables or command-line argume
 - `AWS_REGION`: AWS region for STS and KMS operations (required)
 - `AWS_IAM_KMS_ROLE`: IAM role name for KMS access (default: kms-access)
 - `KMS_KEY_ID`: AWS KMS key identifier for encryption operations (required)  
-- `KMS_PUBLIC_KEY`: Base64-encoded KMS public key for verification (required)
+- `KMS_PUBLIC_KEY_PEM_FILE`: Path to the PEM file containing the KMS public key for verification (required)
 - `AWS_STS_REFRESH_CREDENTIALS_PERIOD_SECONDS`: How often to refresh AWS STS credentials in seconds (default: 900, range: 900-1800)
 
 **Note**: AWS credentials are automatically retrieved using EC2 instance metadata at startup and refreshed periodically. Manual AWS credential configuration is no longer required.
@@ -206,10 +206,10 @@ The service is built with clear separation of concerns:
 ### Running the Service
 
 ```bash
-# With default configuration (requires AWS_REGION, KMS_KEY_ID, KMS_PUBLIC_KEY)
+# With default configuration (requires AWS_REGION, KMS_KEY_ID, KMS_PUBLIC_KEY_PEM_FILE)
 export AWS_REGION=us-east-1
 export KMS_KEY_ID=your-kms-key-id
-export KMS_PUBLIC_KEY=base64-encoded-public-key
+export KMS_PUBLIC_KEY_PEM_FILE=/path/to/public_key.pem
 cargo run
 
 # With custom configuration including credential refresh period and IAM role
@@ -222,7 +222,7 @@ export SCHEDULER_INTERVAL_SECS=10
 export AWS_REGION=us-east-1
 export AWS_IAM_KMS_ROLE=my-custom-role
 export KMS_KEY_ID=your-kms-key-id
-export KMS_PUBLIC_KEY=base64-encoded-public-key
+export KMS_PUBLIC_KEY_PEM_FILE=/path/to/public_key.pem
 export AWS_STS_REFRESH_CREDENTIALS_PERIOD_SECONDS=1800  # Refresh every 30 minutes
 cargo run
 ```
@@ -294,6 +294,6 @@ curl http://localhost:3001/metrics
 - Removed dependency on AWS STS SDK, now uses EC2 instance metadata directly
 - Added automatic TEE public key verification on server startup
 - Enhanced security through automatic temporary credential rotation from IAM roles
-- Simplified configuration by requiring only AWS_REGION, KMS_KEY_ID, and KMS_PUBLIC_KEY
+- Simplified configuration by requiring only AWS_REGION, KMS_KEY_ID, and KMS_PUBLIC_KEY_PEM_FILE
 
 The server now automatically handles AWS authentication and credential management with periodic refresh using EC2 instance metadata, providing improved security and simplified deployment.

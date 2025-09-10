@@ -1,7 +1,6 @@
 use std::sync::Arc;
 
 use axum::{extract::State, Json};
-use base64::{engine::general_purpose::STANDARD as BASE64, Engine};
 use shielder_scheduler_common::protocol::{Request, Response};
 use tracing::instrument;
 
@@ -13,11 +12,10 @@ pub async fn tee_public_key(
 ) -> Result<Json<Response>, SchedulerServerError> {
     let tee_task_pool = state.tee_task_pool.clone();
     let state_cloned = state.clone();
-    let public_key = BASE64
-        .decode(state_cloned.options.kms_public_key.clone())
+    let public_key_pem = std::fs::read_to_string(&state_cloned.options.kms_public_key_pem_file)
         .map_err(|e| {
             SchedulerServerError::ParseError(format!(
-                "Failed to decode KMS_PUBLIC_KEY from base64: {e:?}"
+                "Failed to read KMS_PUBLIC_KEY_PEM_FILE: {e:?}"
             ))
         })?;
     
@@ -30,7 +28,7 @@ pub async fn tee_public_key(
                 state_cloned.clone(),
                 Request::TeePublicKey {
                     aws_config: shielder_scheduler_common::protocol::AwsConfig {
-                        public_key,
+                        public_key: public_key_pem.into_bytes(),
                         kms_key_id: state_cloned.options.kms_key_id.clone(),
                         aws_region: state_cloned.options.aws_region.clone(),
                         aws_access_key_id: aws_credentials.access_key_id,

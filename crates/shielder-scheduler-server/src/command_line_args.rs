@@ -90,8 +90,8 @@ pub struct CommandLineArgs {
 
     // KMS configuration
 
-    #[clap(long, env = "KMS_PUBLIC_KEY")]
-    pub kms_public_key: String,
+    #[clap(long, env = "KMS_PUBLIC_KEY_PEM_FILE")]
+    pub kms_public_key_pem_file: String,
 
     #[clap(long, env = "KMS_KEY_ID")]
     pub kms_key_id: String,

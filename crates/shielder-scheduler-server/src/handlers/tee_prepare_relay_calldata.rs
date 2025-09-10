@@ -1,8 +1,7 @@
 use std::sync::Arc;
 
 use alloy_primitives::{Address, U256};
-use axum::{extract::State, Json};
-use base64::{engine::general_purpose::STANDARD as BASE64, Engine};
+use axum::{extract::State, response::Json};
 use shielder_scheduler_common::protocol::{AwsConfig, EncryptionEnvelope, MerklePath, Request, Response};
 use tracing::instrument;
 
@@ -17,11 +16,10 @@ pub async fn prepare_relay_calldata(
     merkle_path: MerklePath,
 ) -> Result<Json<Response>, SchedulerServerError> {
     let tee_task_pool = state.tee_task_pool.clone();
-    let public_key = BASE64
-        .decode(state.options.kms_public_key.clone())
+    let public_key_pem = std::fs::read_to_string(&state.options.kms_public_key_pem_file)
         .map_err(|e| {
             SchedulerServerError::ParseError(format!(
-                "Failed to decode KMS_PUBLIC_KEY from base64: {e:?}"
+                "Failed to read KMS_PUBLIC_KEY_PEM_FILE: {e:?}"
             ))
         })?;
 
@@ -31,7 +29,7 @@ pub async fn prepare_relay_calldata(
     tee_task_pool
         .spawn(async move { tee_request(state.clone(), Request::PrepareRelayCalldata {
             aws_config: AwsConfig {
-                public_key,
+                public_key: public_key_pem.into_bytes(),
                 kms_key_id: state.options.kms_key_id.clone(),
                 aws_region: state.options.aws_region.clone(),
                 aws_access_key_id: aws_credentials.access_key_id,

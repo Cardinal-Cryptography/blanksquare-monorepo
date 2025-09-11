@@ -19,7 +19,7 @@ pub async fn tee_request(
     state: Arc<AppState>,
     request: Request,
 ) -> Result<Json<Response>, VsockError> {
-    let mut tee_client = TEEClient::new(state.options.tee_cid, state.options.tee_port as u32)
+    let mut tee_client = TEEClient::new(state.options.tee_cid, state.options.tee_port)
         .instrument(info_span!("Building_VSOCK_connection"))
         .await?;
 

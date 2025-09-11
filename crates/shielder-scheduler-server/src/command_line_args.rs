@@ -31,8 +31,8 @@ pub struct CommandLineArgs {
     // TEE configuration
     /// Internal port on which host and tee applications talks to each other
     /// This is the part of the vsock endpoint, which is tee_cid:tee_port
-    #[clap(short, long, default_value_t = shielder_scheduler_common::protocol::VSOCK_PORT as u16, env = "TEE_PORT")]
-    pub tee_port: u16,
+    #[clap(short, long, default_value_t = shielder_scheduler_common::protocol::VSOCK_PORT, env = "TEE_PORT")]
+    pub tee_port: u32,
 
     /// A context identifier on which this server and TEE server communicate with each other
     /// This is the part of the vsock endpoint, which is tee_cid:tee_port

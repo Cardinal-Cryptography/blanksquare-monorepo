@@ -36,8 +36,6 @@ pub struct Payload {
 
     /// Maximum relayer fee.
     pub max_relayer_fee: U256,
-    /// Timestamp after which the transaction can be relayed to chain.
-    pub relay_after: U256,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -55,7 +53,7 @@ pub struct EncryptionEnvelope {
     pub auth_tag: Vec<u8>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct AwsConfig {
     #[serde(with = "base64_serialization")]
     pub public_key: Vec<u8>,
@@ -65,6 +63,25 @@ pub struct AwsConfig {
     pub aws_secret_access_key: String,
     pub aws_session_token: String,
     pub kms_encryption_algorithm: String,
+}
+
+fn redact_mid(s: &str) -> String {
+    if s.len() <= 6 { return "******".into(); }
+    format!("{}******{}", &s[..3], &s[s.len()-3..])
+}
+
+impl core::fmt::Debug for AwsConfig {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("AwsConfig")
+            .field("public_key", &format_args!("<{} bytes>", self.public_key.len()))
+            .field("kms_key_id", &self.kms_key_id)
+            .field("aws_region", &self.aws_region)
+            .field("aws_access_key_id", &redact_mid(&self.aws_access_key_id))
+            .field("aws_secret_access_key", &"<redacted>")
+            .field("aws_session_token", &"<redacted>")
+            .field("kms_encryption_algorithm", &self.kms_encryption_algorithm)
+            .finish()
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]

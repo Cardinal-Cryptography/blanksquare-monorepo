@@ -11,7 +11,6 @@ RUN apt-get update && \
 WORKDIR /app
 COPY . .
 
-# Build the scheduler server
 RUN cd crates/shielder-scheduler-server && cargo build --release
 
 FROM debian:bookworm-slim

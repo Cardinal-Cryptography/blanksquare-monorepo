@@ -30,7 +30,7 @@ pub struct Server {
 impl Server {
     pub async fn new(options: CommandLineArgs) -> Result<Arc<Self>, VsockError> {
         #[cfg(feature = "local-run")]
-        info!("Running server without attestation (TEST BUILD).");
+        info!("Running server without attestation and KMS (TEST BUILD).");
 
         let address = VsockAddr::new(options.tee_cid, options.tee_port);
         let listener = VsockListener::bind(address)?;

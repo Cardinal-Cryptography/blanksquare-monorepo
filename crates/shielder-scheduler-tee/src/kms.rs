@@ -6,7 +6,10 @@ use aes_gcm::{
     Aes256Gcm, Nonce,
 };
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine};
+#[cfg(not(feature = "local-run"))]
 use log::{debug, info};
+#[cfg(feature = "local-run")]
+use log::info;
 use rsa::{pkcs8::DecodePublicKey, sha2::Sha256, Oaep, RsaPublicKey};
 #[cfg(feature = "local-run")]
 use rsa::{pkcs8::DecodePrivateKey, RsaPrivateKey};
@@ -16,6 +19,7 @@ use shielder_scheduler_common::{
 };
 
 pub struct KmsCrypto {
+    #[cfg(not(feature = "local-run"))]
     kms_proxy_port: u32,
     #[cfg(feature = "local-run")]
     private_key: Vec<u8>,
@@ -23,10 +27,12 @@ pub struct KmsCrypto {
 
 impl KmsCrypto {
     pub fn new(
-        kms_proxy_port: u32,
+        #[cfg(not(feature = "local-run"))] kms_proxy_port: u32,
+        #[cfg(feature = "local-run")] _kms_proxy_port: u32,
         #[cfg(feature = "local-run")] private_key: String,
     ) -> Self {
         Self {
+            #[cfg(not(feature = "local-run"))]
             kms_proxy_port,
             #[cfg(feature = "local-run")]
             private_key: BASE64
@@ -40,7 +46,8 @@ impl KmsCrypto {
 
     fn decrypt_dek(
         &self,
-        aws_config: &AwsConfig,
+        #[cfg(not(feature = "local-run"))] aws_config: &AwsConfig,
+        #[cfg(feature = "local-run")] _aws_config: &AwsConfig,
         encrypted_dek: &[u8],
     ) -> Result<Vec<u8>, VsockError> {
         #[cfg(not(feature = "local-run"))]

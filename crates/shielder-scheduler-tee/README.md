@@ -129,7 +129,7 @@ The TEE server is configured via command-line arguments and environment variable
 | `--tee-port, -p` | `TEE_PORT` | `42000` | vsock port for TEE communication |
 | `--tee-cid` | `TEE_CID` | `VMADDR_CID_ANY` | Context ID for vsock endpoint |
 | `--kms-proxy-port` | `KMS_PROXY_PORT` | `8000` | Port for KMS proxy communication |
-| `--private-key` | `PRIVATE_KEY_BASE64` | - | Private key (only with `local-run` feature) |
+| `--private-key-base64` | `PRIVATE_KEY_BASE64` | - | Base64-encoded RSA private key for local decryption (replaces AWS KMS, only with `local-run` feature) |
 
 ### Example Usage
 
@@ -138,7 +138,7 @@ The TEE server is configured via command-line arguments and environment variable
 ./shielder-scheduler-tee --tee-port 42000 --kms-proxy-port 8000
 
 # Local testing mode
-./shielder-scheduler-tee --features local-run --private-key "LS0t..."
+./shielder-scheduler-tee --features local-run --private-key-base64 "LS0t..."
 ```
 
 ## Features
@@ -150,7 +150,7 @@ The TEE server is configured via command-line arguments and environment variable
 
 ### `local-run`
 - Disables NSM driver queries
-- Uses provided private key instead of KMS
+- Uses provided private key instead of AWS KMS for decryption operations
 - Intended for local development and testing only
 
 ## Development

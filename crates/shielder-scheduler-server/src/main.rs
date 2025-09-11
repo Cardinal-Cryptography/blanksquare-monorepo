@@ -103,11 +103,14 @@ async fn main() -> Result<(), Error> {
 
     info!("TEE public key verification successful");
 
-    // Start the AWS credentials refresh task
-    let credentials_refresh_state = app_state.clone();
-    tokio::spawn(async move {
-        aws_credentials_refresh_task(credentials_refresh_state).await;
-    });
+    // Start the AWS credentials refresh task only when not in local mode
+    #[cfg(not(feature = "local-run"))]
+    {
+        let credentials_refresh_state = app_state.clone();
+        tokio::spawn(async move {
+            aws_credentials_refresh_task(credentials_refresh_state).await;
+        });
+    }
 
     // Start the scheduler processor
     let scheduler_processor = SchedulerProcessor::new(app_state.clone());
@@ -145,6 +148,7 @@ async fn main() -> Result<(), Error> {
 }
 
 /// Background task that periodically refreshes AWS STS credentials
+#[cfg(not(feature = "local-run"))]
 async fn aws_credentials_refresh_task(app_state: Arc<AppState>) {
     let mut interval = tokio::time::interval(Duration::from_secs(
         app_state.options.aws_sts_refresh_period_secs,

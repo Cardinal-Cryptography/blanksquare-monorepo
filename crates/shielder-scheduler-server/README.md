@@ -33,6 +33,17 @@ The server maintains proper security by verifying the KMS key relationship with 
 - **Runtime Verification**: KMS key verification must be performed every time attestation is requested to maintain the correct relationship between the public key in the TEE and the key in KMS
 - **Failure Handling**: Any verification failure causes the server to bail, preventing operation with invalid configurations
 
+### Local Development
+
+For local development and testing, you can use the `local-run` Cargo feature to skip EC2 metadata service authentication:
+
+- **Feature Flag**: `cargo run --features local-run`
+- **Dummy Credentials**: Uses hardcoded dummy AWS credentials instead of fetching from EC2 metadata
+- **No Credential Refresh**: Skips the background AWS credential refresh task
+- **Validation Bypass**: Skips AWS STS refresh period validation since no real credentials are used
+
+This allows developers to run the server locally without requiring EC2 instance metadata or proper AWS IAM roles.
+
 ## API Endpoints
 
 ### 1. Health Check
@@ -211,6 +222,9 @@ export AWS_REGION=us-east-1
 export KMS_KEY_ID=your-kms-key-id
 export KMS_PUBLIC_KEY_PEM_FILE=/path/to/public_key.pem
 cargo run
+
+# For local development - uses dummy AWS credentials (no EC2 metadata required)
+cargo run --features local-run
 
 # With custom configuration including credential refresh period and IAM role
 cargo run -- --public-port 8080 --db-host mydb.example.com --scheduler-interval-secs 10 --aws-sts-refresh-period-secs 1800 --aws-iam-kms-role my-custom-role

@@ -1,6 +1,11 @@
-use reqwest;
+#[cfg(not(feature = "local-run"))]
 use serde::Deserialize;
-use tracing::{debug, info, instrument};
+use tracing::{info, instrument};
+
+#[cfg(not(feature = "local-run"))]
+use reqwest;
+#[cfg(not(feature = "local-run"))]
+use tracing::debug;
 
 use crate::error::SchedulerServerError;
 
@@ -13,6 +18,7 @@ pub struct AwsCredentials {
 }
 
 /// Response structure from EC2 instance metadata service
+#[cfg(not(feature = "local-run"))]
 #[derive(Debug, Deserialize)]
 struct Ec2MetadataResponse {
     #[serde(rename = "Code")]
@@ -26,6 +32,7 @@ struct Ec2MetadataResponse {
 }
 
 /// Retrieves AWS credentials from EC2 instance metadata service
+#[cfg(not(feature = "local-run"))]
 #[instrument(level = "info")]
 pub async fn get_session_token(_aws_region: &str, refresh_period_seconds: i32, iam_role_name: &str) -> Result<AwsCredentials, SchedulerServerError> {
     info!("Retrieving AWS credentials from EC2 instance metadata");
@@ -127,5 +134,18 @@ pub async fn get_session_token(_aws_region: &str, refresh_period_seconds: i32, i
         access_key_id: metadata_response.access_key_id,
         secret_access_key: metadata_response.secret_access_key,
         session_token: Some(metadata_response.token),
+    })
+}
+
+/// Returns dummy AWS credentials for local development
+#[cfg(feature = "local-run")]
+#[instrument(level = "info")]
+pub async fn get_session_token(_aws_region: &str, _refresh_period_seconds: i32, _iam_role_name: &str) -> Result<AwsCredentials, SchedulerServerError> {
+    info!("Using dummy AWS credentials for local development");
+
+    Ok(AwsCredentials {
+        access_key_id: "dummy_access_key_id".to_string(),
+        secret_access_key: "dummy_secret_access_key".to_string(),
+        session_token: Some("dummy_session_token".to_string()),
     })
 }

@@ -8,6 +8,9 @@ license = { workspace = true }
 categories = { workspace = true }
 repository = { workspace = true }
 
+[features]
+local-run = []
+
 [dependencies]
 alloy-primitives = { workspace = true, features = ["serde"] }
 axum = { workspace = true, features = ["tokio", "macros"] }

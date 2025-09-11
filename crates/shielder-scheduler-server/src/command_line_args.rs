@@ -111,19 +111,23 @@ pub struct CommandLineArgs {
 impl CommandLineArgs {
     /// Validates the command line arguments
     pub fn validate(&self) -> Result<(), String> {
-        // Validate AWS STS refresh period is within acceptable range
-        if self.aws_sts_refresh_period_secs < 900 {
-            return Err(format!(
-                "AWS_STS_REFRESH_CREDENTIALS_PERIOD_SECONDS must be at least 900 seconds, got: {}",
-                self.aws_sts_refresh_period_secs
-            ));
-        }
-        
-        if self.aws_sts_refresh_period_secs > 1800 {
-            return Err(format!(
-                "AWS_STS_REFRESH_CREDENTIALS_PERIOD_SECONDS must be at most 1800 seconds, got: {}",
-                self.aws_sts_refresh_period_secs
-            ));
+        // Skip AWS STS refresh period validation when running in local mode
+        #[cfg(not(feature = "local-run"))]
+        {
+            // Validate AWS STS refresh period is within acceptable range
+            if self.aws_sts_refresh_period_secs < 900 {
+                return Err(format!(
+                    "AWS_STS_REFRESH_CREDENTIALS_PERIOD_SECONDS must be at least 900 seconds, got: {}",
+                    self.aws_sts_refresh_period_secs
+                ));
+            }
+            
+            if self.aws_sts_refresh_period_secs > 1800 {
+                return Err(format!(
+                    "AWS_STS_REFRESH_CREDENTIALS_PERIOD_SECONDS must be at most 1800 seconds, got: {}",
+                    self.aws_sts_refresh_period_secs
+                ));
+            }
         }
         
         Ok(())

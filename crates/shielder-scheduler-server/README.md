@@ -159,11 +159,13 @@ The service can be configured using environment variables or command-line argume
 - `SCHEDULER_RETRY_DELAY_SECS`: Delay between retry attempts (default: 60)
 
 ### AWS & KMS Configuration
-- `AWS_REGION`: AWS region for STS and KMS operations (required)
-- `AWS_IAM_KMS_ROLE`: IAM role name for KMS access (default: kms-access)
-- `KMS_KEY_ID`: AWS KMS key identifier for encryption operations (required)  
+- `AWS_REGION`: AWS region for STS and KMS operations (required in production, optional with `local-run` feature)
+- `AWS_IAM_KMS_ROLE`: IAM role name for KMS access (default: kms-access, optional with `local-run` feature)
+- `KMS_KEY_ID`: AWS KMS key identifier for encryption operations (required in production, optional with `local-run` feature)  
 - `KMS_PUBLIC_KEY`: Base64-encoded public key for KMS verification (required)
-- `AWS_STS_REFRESH_CREDENTIALS_PERIOD_SECONDS`: How often to refresh AWS STS credentials in seconds (default: 900, range: 900-1800)
+- `AWS_STS_REFRESH_CREDENTIALS_PERIOD_SECONDS`: How often to refresh AWS STS credentials in seconds (default: 900, range: 900-1800, optional with `local-run` feature)
+
+**Local Development**: When using the `local-run` feature, AWS-related environment variables become optional. If not provided, dummy AWS credentials are used for local testing.
 
 **Converting PEM to Base64**: If you have a PEM file, you can convert it to base64:
 ```bash

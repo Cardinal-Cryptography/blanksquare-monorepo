@@ -31,8 +31,14 @@ pub async fn prepare_relay_calldata(
         .spawn(async move { tee_request(state.clone(), Request::PrepareRelayCalldata {
             aws_config: AwsConfig {
                 public_key: public_key_bytes,
+                #[cfg(not(feature = "local-run"))]
                 kms_key_id: state.options.kms_key_id.clone(),
+                #[cfg(feature = "local-run")]
+                kms_key_id: state.options.kms_key_id.clone().unwrap_or_default(),
+                #[cfg(not(feature = "local-run"))]
                 aws_region: state.options.aws_region.clone(),
+                #[cfg(feature = "local-run")]
+                aws_region: state.options.aws_region.clone().unwrap_or_default(),
                 aws_access_key_id: aws_credentials.access_key_id,
                 aws_secret_access_key: aws_credentials.secret_access_key,
                 aws_session_token: aws_credentials.session_token.unwrap_or_default(),

@@ -93,19 +93,39 @@ pub struct CommandLineArgs {
     #[clap(long, env = "KMS_PUBLIC_KEY")]
     pub kms_public_key: String,
 
+    #[cfg(not(feature = "local-run"))]
     #[clap(long, env = "KMS_KEY_ID")]
     pub kms_key_id: String,
 
+    #[cfg(feature = "local-run")]
+    #[clap(long, env = "KMS_KEY_ID")]
+    pub kms_key_id: Option<String>,
+
+    #[cfg(not(feature = "local-run"))]
     #[clap(long, env = "AWS_REGION")]
     pub aws_region: String,
 
+    #[cfg(feature = "local-run")]
+    #[clap(long, env = "AWS_REGION")]
+    pub aws_region: Option<String>,
+
     /// AWS IAM role name for KMS access
+    #[cfg(not(feature = "local-run"))]
     #[clap(long, default_value = "kms-access", env = "AWS_IAM_KMS_ROLE")]
     pub aws_iam_kms_role: String,
 
+    #[cfg(feature = "local-run")]
+    #[clap(long, env = "AWS_IAM_KMS_ROLE")]
+    pub aws_iam_kms_role: Option<String>,
+
     /// How often to refresh AWS STS credentials (in seconds, range: 900-1800)
+    #[cfg(not(feature = "local-run"))]
     #[clap(long, default_value_t = 900, env = "AWS_STS_REFRESH_CREDENTIALS_PERIOD_SECONDS")]
     pub aws_sts_refresh_period_secs: u64,
+
+    #[cfg(feature = "local-run")]
+    #[clap(long, env = "AWS_STS_REFRESH_CREDENTIALS_PERIOD_SECONDS")]
+    pub aws_sts_refresh_period_secs: Option<u64>,
 }
 
 impl CommandLineArgs {
@@ -127,6 +147,26 @@ impl CommandLineArgs {
                     "AWS_STS_REFRESH_CREDENTIALS_PERIOD_SECONDS must be at most 1800 seconds, got: {}",
                     self.aws_sts_refresh_period_secs
                 ));
+            }
+        }
+
+        #[cfg(feature = "local-run")]
+        {
+            // In local-run mode, validate AWS STS refresh period only if provided
+            if let Some(period) = self.aws_sts_refresh_period_secs {
+                if period < 900 {
+                    return Err(format!(
+                        "AWS_STS_REFRESH_CREDENTIALS_PERIOD_SECONDS must be at least 900 seconds, got: {}",
+                        period
+                    ));
+                }
+                
+                if period > 1800 {
+                    return Err(format!(
+                        "AWS_STS_REFRESH_CREDENTIALS_PERIOD_SECONDS must be at most 1800 seconds, got: {}",
+                        period
+                    ));
+                }
             }
         }
         

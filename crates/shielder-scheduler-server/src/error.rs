@@ -39,7 +39,6 @@ pub enum SchedulerServerError {
     #[error("Relayer error: {0}")]
     RelayerError(String),
 
-
     #[error("AWS error: {0}")]
     AwsError(String),
 }

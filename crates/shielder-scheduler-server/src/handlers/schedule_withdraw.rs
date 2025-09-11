@@ -48,7 +48,6 @@ pub async fn schedule_withdraw(
         schedule_withdraw_request.relay_after
     );
 
-    // Convert Unix timestamp to DateTime<Utc>
     let relay_after = match DateTime::from_timestamp(schedule_withdraw_request.relay_after, 0) {
         Some(dt) => dt,
         None => {
@@ -66,8 +65,6 @@ pub async fn schedule_withdraw(
         }
     };
 
-    // Basic validation
-
     if relay_after <= Utc::now() {
         return (
             axum::http::StatusCode::BAD_REQUEST,
@@ -78,7 +75,6 @@ pub async fn schedule_withdraw(
             .into_response();
     }
 
-    // Insert the request into the database
     match insert_scheduled_request(
         &state.db_pool,
         schedule_withdraw_request.encryption_envelope,

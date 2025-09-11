@@ -277,13 +277,7 @@ Please check the SHIELDER_ADDRESS environment variable or --shielder-address arg
                 let request = Request::PrepareRelayCalldata {
                     aws_config: shielder_scheduler_common::protocol::AwsConfig {
                         public_key: public_key_bytes,
-                        #[cfg(not(feature = "local-run"))]
-                        kms_key_id: app_state.options.kms_key_id.clone(),
-                        #[cfg(feature = "local-run")]
                         kms_key_id: app_state.options.kms_key_id.clone().unwrap_or_default(),
-                        #[cfg(not(feature = "local-run"))]
-                        aws_region: app_state.options.aws_region.clone(),
-                        #[cfg(feature = "local-run")]
                         aws_region: app_state.options.aws_region.clone().unwrap_or_default(),
                         aws_access_key_id: aws_credentials.access_key_id,
                         aws_secret_access_key: aws_credentials.secret_access_key,

@@ -21,23 +21,17 @@ pub async fn tee_public_key(
             ))
         })?;
 
-    // Get current AWS credentials
-    let aws_credentials = state_cloned.aws_credentials.lock().await.clone();
 
     tee_task_pool
         .spawn(async move {
+            // Get current AWS credentials
+            let aws_credentials = state_cloned.aws_credentials.lock().await.clone();
             tee_request(
                 state_cloned.clone(),
                 Request::TeePublicKey {
                     aws_config: shielder_scheduler_common::protocol::AwsConfig {
                         public_key: public_key_bytes,
-                        #[cfg(not(feature = "local-run"))]
-                        kms_key_id: state_cloned.options.kms_key_id.clone(),
-                        #[cfg(feature = "local-run")]
                         kms_key_id: state_cloned.options.kms_key_id.clone().unwrap_or_default(),
-                        #[cfg(not(feature = "local-run"))]
-                        aws_region: state_cloned.options.aws_region.clone(),
-                        #[cfg(feature = "local-run")]
                         aws_region: state_cloned.options.aws_region.clone().unwrap_or_default(),
                         aws_access_key_id: aws_credentials.access_key_id,
                         aws_secret_access_key: aws_credentials.secret_access_key,

@@ -35,12 +35,19 @@ The server maintains proper security by verifying the KMS key relationship with 
 
 ### Local Development
 
-For local development and testing, you can use the `local-run` Cargo feature to skip EC2 metadata service authentication:
+For local development and testing, you can use the `--disable-kms` command line flag to skip AWS KMS integration:
 
-- **Feature Flag**: `cargo run --features local-run`
+- **Command Line Flag**: `--disable-kms`
 - **Dummy Credentials**: Uses hardcoded dummy AWS credentials instead of fetching from EC2 metadata
-- **No Credential Refresh**: Skips the background AWS credential refresh task
-- **Validation Bypass**: Skips AWS STS refresh period validation since no real credentials are used
+- **No Credential Refresh**: Skips the background AWS credential refresh task when KMS is disabled
+- **Validation Changes**: AWS configuration parameters become optional when `--disable-kms` is used
+- **Security Check**: Ensures `PRIVATE_KEY` environment variable is not set in production mode
+
+When using `--disable-kms`:
+- The TEE must be run with `--disable-kms` flag and `PRIVATE_KEY_BASE64` environment variable
+- AWS parameters (AWS_REGION, KMS_KEY_ID, AWS_IAM_KMS_ROLE) become optional
+- The server uses dummy AWS credentials for TEE communication
+- Background AWS credential refresh is disabled
 
 This allows developers to run the server locally without requiring EC2 instance metadata or proper AWS IAM roles.
 
@@ -96,9 +103,9 @@ Schedule a withdrawal request to be processed at a future time.
 ## Request Statuses
 
 - **Pending**: Request is waiting to be processed
-- **Processing**: Request failed but did not reach max retry attemps count
+- **Processing**: Request failed but did not reach max retry attempts count
 - **Completed**: Request has been successfully processed
-- **Failed**: Request processing failed and reached max retry attemps count
+- **Failed**: Request processing failed and reached max retry attempts count
 
 ## Background Processing
 
@@ -167,13 +174,16 @@ The service can be configured using environment variables or command-line argume
 - `SCHEDULER_RETRY_DELAY_SECS`: Delay between retry attempts (default: 60)
 
 ### AWS & KMS Configuration
-- `AWS_REGION`: AWS region for STS and KMS operations (required in production, optional with `local-run` feature)
-- `AWS_IAM_KMS_ROLE`: IAM role name for KMS access (default: kms-access, optional with `local-run` feature)
-- `KMS_KEY_ID`: AWS KMS key identifier for encryption operations (required in production, optional with `local-run` feature)  
+- `--disable-kms`: Command line flag to disable KMS and use local private key for decryption (for development only)
+- `AWS_REGION`: AWS region for STS and KMS operations (required when KMS is enabled, optional with `--disable-kms`)
+- `AWS_IAM_KMS_ROLE`: IAM role name for KMS access (default: kms-access, optional with `--disable-kms`)
+- `KMS_KEY_ID`: AWS KMS key identifier for encryption operations (required when KMS is enabled, optional with `--disable-kms`)  
 - `KMS_PUBLIC_KEY`: Base64-encoded public key for KMS verification (required)
-- `AWS_STS_REFRESH_CREDENTIALS_PERIOD_SECONDS`: How often to refresh AWS STS credentials in seconds (default: 900, range: 900-1800, optional with `local-run` feature)
+- `AWS_STS_REFRESH_CREDENTIALS_PERIOD_SECONDS`: How often to refresh AWS STS credentials in seconds (default: 900, range: 900-1800)
 
-**Local Development**: When using the `local-run` feature, AWS-related environment variables become optional. If not provided, dummy AWS credentials are used for local testing.
+**Local Development**: When using the `--disable-kms` flag, AWS-related environment variables become optional. If not provided, dummy AWS credentials are used for local testing. The TEE must be run with `--disable-kms` and `PRIVATE_KEY_BASE64` environment variable.
+
+**Security Note**: When `--disable-kms` is used, the system validates that the `PRIVATE_KEY` environment variable is not set to prevent accidental exposure of private keys in production.
 
 **Converting PEM to Base64**: If you have a PEM file, you can convert it to base64:
 ```bash
@@ -250,43 +260,6 @@ The service is built with clear separation of concerns:
 
 ## Example Usage
 
-### Running the Service
-
-```bash
-# With default configuration (requires AWS_REGION, KMS_KEY_ID, KMS_PUBLIC_KEY)
-export AWS_REGION=us-east-1
-export KMS_KEY_ID=your-kms-key-id
-export KMS_PUBLIC_KEY=base64-encoded-public-key
-cargo run
-
-# With default configuration (requires blockchain configuration)
-cargo run -- --node-rpc-url "http://localhost:8545" --shielder-address "0x..." --relayer-rpc-url "http://localhost:8080"
-
-# For local development - uses dummy AWS credentials (no EC2 metadata required)
-cargo run --features local-run
-
-# With custom configuration including credential refresh period and IAM role
-cargo run -- --public-port 8080 --db-host mydb.example.com --scheduler-interval-secs 10 --aws-sts-refresh-period-secs 1800 --aws-iam-kms-role my-custom-role
-
-# With custom configuration
-cargo run -- --public-port 8080 --db-host mydb.example.com --scheduler-interval-secs 10 --node-rpc-url "http://localhost:8545" --shielder-address "0x..." --relayer-rpc-url "http://localhost:8080"
-
-
-# Using environment variables
-export DB_HOST=mydb.example.com
-export PUBLIC_PORT=8080
-export SCHEDULER_INTERVAL_SECS=10
-export AWS_REGION=us-east-1
-export AWS_IAM_KMS_ROLE=my-custom-role
-export KMS_KEY_ID=your-kms-key-id
-export KMS_PUBLIC_KEY=base64-encoded-public-key
-export AWS_STS_REFRESH_CREDENTIALS_PERIOD_SECONDS=1800  # Refresh every 30 minutes
-export NODE_RPC_URL="http://localhost:8545"
-export SHIELDER_ADDRESS="0x..."
-export RELAYER_RPC_URL="http://localhost:8080"
-cargo run
-```
-
 **Prerequisites**:
 - EC2 instance with an IAM role that has KMS permissions
 - The EC2 instance must have access to EC2 instance metadata service (IMDSv2)
@@ -307,6 +280,18 @@ cargo run  # Error: AWS_STS_REFRESH_CREDENTIALS_PERIOD_SECONDS must be at most 1
 # This will work - within valid range
 export AWS_STS_REFRESH_CREDENTIALS_PERIOD_SECONDS=1200
 cargo run  # Success
+```
+
+**Command Line Usage Examples**:
+
+Production mode (with KMS):
+```bash
+cargo run -- --kms-public-key <base64-key> --aws-region us-east-1 --kms-key-id <key-id> --aws-iam-kms-role kms-access --node-rpc-url <rpc-url> --shielder-address <contract-addr> --relayer-rpc-url <relayer-url>
+```
+
+Local development mode (without KMS):
+```bash
+cargo run -- --disable-kms --kms-public-key <base64-key> --node-rpc-url <rpc-url> --shielder-address <contract-addr> --relayer-rpc-url <relayer-url>
 ```
 
 ### API Testing
@@ -360,7 +345,7 @@ base64 -w 0 test_private_key.der > test_private_key_base64.txt
 # Use the base64-encoded public key for KMS_PUBLIC_KEY
 export KMS_PUBLIC_KEY=$(cat test_public_key_base64.txt)
 
-# Use the base64-encoded private key for TEE's PRIVATE_KEY_BASE64 (when running TEE with local-run feature)
+# Use the base64-encoded private key for TEE's PRIVATE_KEY_BASE64 (when running TEE with --disable-kms flag)
 export PRIVATE_KEY_BASE64=$(cat test_private_key_base64.txt)
 ```
 
@@ -373,17 +358,3 @@ The service exposes Prometheus metrics on the `/metrics` endpoint (default port 
 ```bash
 curl http://localhost:3001/metrics
 ```
-
-## Summary of Changes
-
-**Version 1.85.0 Updates:**
-- Integrated EC2 instance metadata service for dynamic credential management
-- Added periodic credential refresh (every 15 minutes by default, configurable)
-- Implemented thread-safe credential updates using Arc<Mutex<>> pattern
-- Removed hardcoded AWS credential environment variables (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_SESSION_TOKEN, KMS_ENCRYPTION_ALGORITHM)
-- Removed dependency on AWS STS SDK, now uses EC2 instance metadata directly
-- Added automatic TEE public key verification on server startup
-- Enhanced security through automatic temporary credential rotation from IAM roles
-- Simplified configuration by requiring only AWS_REGION, KMS_KEY_ID, and KMS_PUBLIC_KEY
-
-The server now automatically handles AWS authentication and credential management with periodic refresh using EC2 instance metadata, providing improved security and simplified deployment.

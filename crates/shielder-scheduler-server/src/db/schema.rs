@@ -110,7 +110,7 @@ pub async fn insert_scheduled_request(
     let row = sqlx::query(
         r#"
         INSERT INTO scheduled_requests (encrypted_payload, encrypted_dek, iv, auth_tag, last_note_index, max_relayer_fee, pocket_money, token_address, relay_after)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, &8, &9)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
         RETURNING id
         "#,
     )

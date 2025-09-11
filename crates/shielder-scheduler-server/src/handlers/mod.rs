@@ -11,7 +11,6 @@ use crate::AppState;
 
 pub mod health;
 pub mod schedule_withdraw;
-pub mod tee_prepare_relay_calldata;
 pub mod tee_public_key;
 
 /// Sends a request to the TEE server and returns the response.

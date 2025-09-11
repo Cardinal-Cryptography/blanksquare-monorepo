@@ -89,46 +89,30 @@ pub struct CommandLineArgs {
     pub db_ssl: bool,
 
     // KMS configuration
+    /// Disable KMS and use local private key for decryption (for development only)
+    #[clap(long, help = "Disable KMS and use local private key for decryption")]
+    pub disable_kms: bool,
+
     #[clap(long, env = "KMS_PUBLIC_KEY")]
     pub kms_public_key: String,
 
-    #[cfg(not(feature = "local-run"))]
-    #[clap(long, env = "KMS_KEY_ID")]
-    pub kms_key_id: String,
-
-    #[cfg(feature = "local-run")]
     #[clap(long, env = "KMS_KEY_ID")]
     pub kms_key_id: Option<String>,
 
-    #[cfg(not(feature = "local-run"))]
-    #[clap(long, env = "AWS_REGION")]
-    pub aws_region: String,
-
-    #[cfg(feature = "local-run")]
     #[clap(long, env = "AWS_REGION")]
     pub aws_region: Option<String>,
 
     /// AWS IAM role name for KMS access
-    #[cfg(not(feature = "local-run"))]
     #[clap(long, default_value = "kms-access", env = "AWS_IAM_KMS_ROLE")]
-    pub aws_iam_kms_role: String,
-
-    #[cfg(feature = "local-run")]
-    #[clap(long, env = "AWS_IAM_KMS_ROLE")]
     pub aws_iam_kms_role: Option<String>,
 
     /// How often to refresh AWS STS credentials (in seconds, range: 900-1800)
-    #[cfg(not(feature = "local-run"))]
     #[clap(
         long,
         default_value_t = 900,
         env = "AWS_STS_REFRESH_CREDENTIALS_PERIOD_SECONDS"
     )]
     pub aws_sts_refresh_period_secs: u64,
-
-    #[cfg(feature = "local-run")]
-    #[clap(long, env = "AWS_STS_REFRESH_CREDENTIALS_PERIOD_SECONDS")]
-    pub aws_sts_refresh_period_secs: Option<u64>,
 
     /// Chain configuration
     /// RPC URL of the Ethereum node to connect to
@@ -145,10 +129,8 @@ pub struct CommandLineArgs {
 impl CommandLineArgs {
     /// Validates the command line arguments
     pub fn validate(&self) -> Result<(), String> {
-        // Skip AWS STS refresh period validation when running in local mode
-        #[cfg(not(feature = "local-run"))]
-        {
-            // Validate AWS STS refresh period is within acceptable range
+        if !self.disable_kms {
+            // In production mode, validate AWS settings are present
             if self.aws_sts_refresh_period_secs < 900 {
                 return Err(format!(
                     "AWS_STS_REFRESH_CREDENTIALS_PERIOD_SECONDS must be at least 900 seconds, got: {}",
@@ -162,28 +144,36 @@ impl CommandLineArgs {
                     self.aws_sts_refresh_period_secs
                 ));
             }
-        }
 
-        #[cfg(feature = "local-run")]
-        {
-            // In local-run mode, validate AWS STS refresh period only if provided
-            if let Some(period) = self.aws_sts_refresh_period_secs {
-                if period < 900 {
-                    return Err(format!(
-                        "AWS_STS_REFRESH_CREDENTIALS_PERIOD_SECONDS must be at least 900 seconds, got: {}",
-                        period
-                    ));
+            if let Some(ref kms_key_id) = self.kms_key_id {
+                if kms_key_id.trim().is_empty() {
+                    return Err("KMS_KEY_ID must not be empty".into());
                 }
+            } else {
+                return Err("KMS_KEY_ID is required when --disable-kms is not set".into());
+            }
 
-                if period > 1800 {
-                    return Err(format!(
-                        "AWS_STS_REFRESH_CREDENTIALS_PERIOD_SECONDS must be at most 1800 seconds, got: {}",
-                        period
-                    ));
+            if let Some(ref aws_region) = self.aws_region {
+                if aws_region.trim().is_empty() {
+                    return Err("AWS_REGION must not be empty".into());
                 }
+            } else {
+                return Err("AWS_REGION is required when --disable-kms is not set".into());
+            }
+
+            if let Some(ref aws_iam_kms_role) = self.aws_iam_kms_role {
+                if aws_iam_kms_role.trim().is_empty() {
+                    return Err("AWS_IAM_KMS_ROLE must not be empty".into());
+                }
+            } else {
+                return Err("AWS_IAM_KMS_ROLE is required when --disable-kms is not set".into());
+            }
+        } else {
+            // In local mode, ensure PRIVATE_KEY is not set (security check)
+            if std::env::var("PRIVATE_KEY").is_ok() {
+                return Err("PRIVATE_KEY environment variable must not be set in production. Use PRIVATE_KEY_BASE64 for local development only.".into());
             }
         }
-
         Ok(())
     }
 }

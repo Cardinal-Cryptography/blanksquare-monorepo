@@ -1,4 +1,4 @@
-FROM rust:1.81-slim-bookworm as builder
+FROM rust:1.88-slim-bookworm as builder
 
 RUN apt-get update && \
     apt-get install -y \
@@ -9,9 +9,10 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
+COPY Cargo.toml Cargo.lock ./
 COPY . .
 
-RUN cd crates/shielder-scheduler-server && cargo build --release
+RUN cargo build --release -p shielder-scheduler-server
 
 FROM debian:bookworm-slim
 

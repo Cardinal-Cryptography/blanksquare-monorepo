@@ -169,6 +169,31 @@ export PRIVATE_KEY_BASE64="LS0tLS1CRUdJTi..." # Base64-encoded private key
 cargo run --features local-run
 ```
 
+### Generating Test RSA Keys
+
+For local testing, you can generate RSA key pairs using OpenSSL:
+
+```bash
+# Generate RSA private key in PKCS#8 format (2048-bit)
+openssl genpkey -algorithm RSA -out test_private_key.pem -pkcs8 -pkeyopt rsa_keygen_bits:2048
+
+# Generate corresponding public key
+openssl pkey -in test_private_key.pem -pubout -out test_public_key.pem
+
+# Convert private key to PKCS#8 DER format and encode as base64 (for PRIVATE_KEY_BASE64)
+openssl pkcs8 -topk8 -inform PEM -outform DER -in test_private_key.pem -out test_private_key.der -nocrypt
+base64 -w 0 test_private_key.der > test_private_key_base64.txt
+
+# Convert public key to DER format and encode as base64
+openssl pkey -in test_private_key.pem -pubout -outform DER -out test_public_key.der
+base64 -w 0 test_public_key.der > test_public_key_base64.txt
+
+# Use the base64-encoded private key for local testing
+export PRIVATE_KEY_BASE64=$(cat test_private_key_base64.txt)
+```
+
+**Security Note**: Test keys should only be used for local development. Never use test keys in production environments.
+
 ### Linting and Formatting
 
 ```bash

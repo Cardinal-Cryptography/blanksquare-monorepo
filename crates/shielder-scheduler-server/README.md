@@ -298,6 +298,34 @@ Get TEE public key:
 curl http://localhost:3000/public_key
 ```
 
+### Generating Test RSA Keys
+
+For local testing, you can generate RSA key pairs using OpenSSL:
+
+```bash
+# Generate RSA private key in PKCS#8 format (2048-bit)
+openssl genpkey -algorithm RSA -out test_private_key.pem -pkcs8 -pkeyopt rsa_keygen_bits:2048
+
+# Generate corresponding public key
+openssl pkey -in test_private_key.pem -pubout -out test_public_key.pem
+
+# Convert public key to DER format and encode as base64 (for KMS_PUBLIC_KEY)
+openssl pkey -in test_private_key.pem -pubout -outform DER -out test_public_key.der
+base64 -w 0 test_public_key.der > test_public_key_base64.txt
+
+# Convert private key to PKCS#8 DER format and encode as base64 (for TEE's PRIVATE_KEY_BASE64)
+openssl pkcs8 -topk8 -inform PEM -outform DER -in test_private_key.pem -out test_private_key.der -nocrypt
+base64 -w 0 test_private_key.der > test_private_key_base64.txt
+
+# Use the base64-encoded public key for KMS_PUBLIC_KEY
+export KMS_PUBLIC_KEY=$(cat test_public_key_base64.txt)
+
+# Use the base64-encoded private key for TEE's PRIVATE_KEY_BASE64 (when running TEE with local-run feature)
+export PRIVATE_KEY_BASE64=$(cat test_private_key_base64.txt)
+```
+
+**Security Note**: Test keys should only be used for local development. Never use test keys in production environments.
+
 ### Monitoring
 
 The service exposes Prometheus metrics on the `/metrics` endpoint (default port 3001):

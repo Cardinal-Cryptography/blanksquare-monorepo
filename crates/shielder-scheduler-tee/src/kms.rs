@@ -7,7 +7,7 @@ use aes_gcm::{
 };
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine};
 use log::{debug, info};
-use rsa::{pkcs8::DecodePublicKey, sha2::Sha256, Oaep, Pkcs1v15Encrypt, RsaPublicKey};
+use rsa::{pkcs8::DecodePublicKey, sha2::Sha256, Oaep, RsaPublicKey};
 #[cfg(feature = "without_attestation")]
 use rsa::{pkcs8::DecodePrivateKey, RsaPrivateKey};
 use shielder_scheduler_common::{
@@ -153,11 +153,12 @@ impl KmsCrypto {
         let public_key_pem = String::from_utf8(aws_config.public_key.clone())
             .map_err(|e| VsockError::KMS(format!("Failed to parse public key as UTF-8: {e:?}")))?;
         
+        let oaep_padding = Oaep::new::<Sha256>();
         let encrypted_data = RsaPublicKey::from_public_key_pem(&public_key_pem)
             .map_err(|e| VsockError::KMS(format!("Failed to parse public key PEM: {e:?}")))?
             .encrypt(
                 &mut rand::thread_rng(),
-                Pkcs1v15Encrypt,
+                oaep_padding,
                 expected_data.as_bytes(),
             )
             .map_err(|e| VsockError::KMS(format!("Failed to encrypt data: {e:?}")))?;

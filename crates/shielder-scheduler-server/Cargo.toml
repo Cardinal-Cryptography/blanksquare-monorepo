@@ -13,23 +13,28 @@ local-run = []
 
 [dependencies]
 alloy-primitives = { workspace = true, features = ["serde"] }
+alloy-signer-local = { workspace = true }
 axum = { workspace = true, features = ["tokio", "macros"] }
 base64 = { workspace = true }
 chrono = { workspace = true, features = ["serde"] }
 clap = { workspace = true, features = ["derive", "env"] }
 metrics = { workspace = true }
 metrics-exporter-prometheus = { workspace = true }
-reqwest = { workspace = true, features = ["json"] }
+reqwest = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 shielder-scheduler-common = { workspace = true }
 shielder-setup = { workspace = true }
+shielder-account = { workspace = true }
+shielder-contract = { workspace = true }
+shielder-relayer = { workspace = true }
 thiserror = { workspace = true }
 tokio = { workspace = true, features = ["net", "rt", "rt-multi-thread"] }
 tokio-task-pool = { workspace = true, features = ["log"] }
 tower-http = { workspace = true, features = ["cors"] }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
+vsock = { workspace = true }
 sqlx = { workspace = true, features = [
     "runtime-tokio",
     "postgres",

@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use alloy_primitives::U256;
+use alloy_primitives::{Address, U256};
 use axum::{extract::State, response::IntoResponse, Json};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -14,8 +14,7 @@ use crate::{db::insert_scheduled_request, AppState};
 pub struct ScheduleWithdrawRequest {
     pub encryption_envelope: EncryptionEnvelope,
     // Unecrypted data useful for basic checks.
-    // It should be consistent with the data in `encryption_envelope`.
-    // TBD what exactly is needed
+    // It should be consistent with the data in `payload`.
     /// Index of the last leaf in the Merkle tree containing the account's note.
     /// Necessary to get the merkle path from this leaf to the current root.
     pub last_note_index: U256,
@@ -23,6 +22,10 @@ pub struct ScheduleWithdrawRequest {
     pub max_relayer_fee: U256,
     /// Timestamp after which the relay is allowed (Unix timestamp in seconds).
     pub relay_after: i64,
+    /// Pocket money amount for the withdrawal.
+    pub pocket_money: U256,
+    /// Token address for the withdrawal.
+    pub token_address: Address,
 }
 
 #[derive(Debug, Serialize)]
@@ -37,9 +40,11 @@ pub async fn schedule_withdraw(
     Json(schedule_withdraw_request): Json<ScheduleWithdrawRequest>,
 ) -> impl IntoResponse {
     info!(
-        "Received schedule withdraw request - last_note_index: {}, max_relayer_fee: {}, relay_after: {}",
+        "Received schedule withdraw request - last_note_index: {}, max_relayer_fee: {}, pocket_money: {}, token_address: {}, relay_after: {}",
         schedule_withdraw_request.last_note_index,
         schedule_withdraw_request.max_relayer_fee,
+        schedule_withdraw_request.pocket_money,
+        schedule_withdraw_request.token_address,
         schedule_withdraw_request.relay_after
     );
 
@@ -79,6 +84,8 @@ pub async fn schedule_withdraw(
         schedule_withdraw_request.encryption_envelope,
         schedule_withdraw_request.last_note_index,
         schedule_withdraw_request.max_relayer_fee,
+        schedule_withdraw_request.pocket_money,
+        schedule_withdraw_request.token_address,
         relay_after,
     )
     .await

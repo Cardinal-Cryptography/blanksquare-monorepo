@@ -2,6 +2,8 @@ use clap::Parser;
 mod command_line_args;
 mod kms;
 mod server;
+mod withdraw;
+
 use log::info;
 use shielder_scheduler_common::vsock::VsockError;
 

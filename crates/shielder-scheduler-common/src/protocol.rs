@@ -80,11 +80,15 @@ pub enum Request {
         aws_config: AwsConfig,
         encryption_envelope: EncryptionEnvelope,
         /// Relayer fee
-        relayer_fee: U256,
+        max_relayer_fee: U256,
         /// Address of the relayer which will receive the relayer fee
         relayer_address: Address,
         /// Current merkle path
         merkle_path: MerklePath,
+        /// Current merkle root
+        merkle_root: U256,
+        /// Pocket money to be sent to the withdraw address to cover gas fees
+        pocket_money: U256,
     },
 }
 

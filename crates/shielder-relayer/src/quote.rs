@@ -1,5 +1,6 @@
 use alloy_provider::Provider;
 use axum::{extract::State, response::IntoResponse, Json};
+use price_feed::Price;
 use shielder_account::Token;
 use shielder_contract::{alloy_primitives::U256, providers::create_simple_provider};
 use shielder_relayer::{
@@ -10,7 +11,7 @@ use shielder_relayer::{
 use time::OffsetDateTime;
 use tracing::error;
 
-use crate::{price_feed::Price, quote_cache::CachedQuote, AppState};
+use crate::{quote_cache::CachedQuote, AppState};
 
 /// Get a quote for the fees associated with a relay.
 #[utoipa::path(
@@ -110,7 +111,7 @@ struct Prices {
 fn get_native_token_price(app_state: &AppState) -> Result<Price, String> {
     Ok(app_state
         .prices
-        .price(TokenKind::Native)
+        .price(&TokenKind::Native)
         .ok_or("Native token price not available")?)
 }
 
@@ -126,7 +127,7 @@ fn get_token_price(app_state: &AppState, token: Token) -> Result<Prices, String>
 
     let fee_token_price = app_state
         .prices
-        .price(token_kind)
+        .price(&token_kind)
         .ok_or("Fee token price not available")?;
 
     Ok(Prices {

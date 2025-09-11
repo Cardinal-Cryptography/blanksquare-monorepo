@@ -83,6 +83,8 @@ impl Server {
                             relayer_address,
                             relayer_fee,
                             merkle_path,
+	                merkle_root,
+                        pocket_money,
                         } => {
                             self.prepare_relay_calldata_response(
                                 &aws_config,
@@ -90,6 +92,8 @@ impl Server {
                                 relayer_address,
                                 relayer_fee,
                                 merkle_path,
+                        merkle_root,
+                        pocket_money,
                             )
                             .await
                         }
@@ -121,9 +125,10 @@ impl Server {
         &self,
         aws_config: &AwsConfig,
         encryption_envelope: EncryptionEnvelope,
-        _relayer_address: Address,
-        _relayer_fee: U256,
-        _merkle_path: MerklePath,
+        relayer_fee: U256,
+        merkle_path: Box<[[U256; ARITY]; TREE_HEIGHT]>,
+        merkle_root: U256,
+        pocket_money: U256,
     ) -> Result<Response, VsockError> {
         let decrypted_payload = self.kms.decrypt_payload(aws_config, &encryption_envelope)?;
 
@@ -132,26 +137,30 @@ impl Server {
                 VsockError::Protocol(format!("Failed to deserialize decrypted payload: {e:?}"))
             })?;
 
-        // TODO: Implement proof generation logic here
-        info!("Received payload: {:?}", deserialized_payload);
+       let token = match deserialized_payload.token_address {
+            Address::ZERO => shielder_account::Token::Native,
+            addr => shielder_account::Token::ERC20(addr),
+        };
+        let withdraw_circuit = WithdrawCircuit::new(deserialized_payload.account_id, token);
+        let relayer_calldata = withdraw_circuit.get_relayer_calldata(
+            deserialized_payload.withdrawal_value,
+            deserialized_payload.withdraw_address,
+            *merkle_path,
+            deserialized_payload.chain_id,
+            relayer_fee,
+            pocket_money,
+            relayer_address,
+            deserialized_payload.protocol_fee,
+            deserialized_payload.memo,
+            deserialized_payload.nullifier_old,
+            deserialized_payload.nullifier_new,
+            deserialized_payload.account_old_balance,
+            merkle_root,
+        );
 
         Ok(Response::PrepareRelayCalldata {
-            calldata: RelayCalldata {
-                expected_contract_version: [0, 0, 0].into(),
-                amount: deserialized_payload.withdrawal_value,
-                withdraw_address: Address::random(),
-                merkle_root: U256::from(0),
-                nullifier_hash: U256::from(0),
-                new_note: U256::from(0),
-                proof: Vec::new().into(),
-                fee_token: Default::default(),
-                fee_amount: U256::from(0),
-                mac_salt: U256::from(0),
-                mac_commitment: U256::from(0),
-                pocket_money: U256::from(0),
-                memo: Vec::new().into(),
-            },
-        }) // Placeholder response
+            calldata: relayer_calldata,
+        })
     }
 
     #[cfg(not(feature = "local-run"))]

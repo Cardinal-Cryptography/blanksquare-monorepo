@@ -32,11 +32,11 @@ pub struct CommandLineArgs {
     /// Internal port on which host and tee applications talks to each other
     /// This is the part of the vsock endpoint, which is tee_cid:tee_port
     #[clap(short, long, default_value_t = shielder_scheduler_common::protocol::VSOCK_PORT, env = "TEE_PORT")]
-    pub tee_port: u32,
+    pub tee_port: u16,
 
     /// A context identifier on which this server and TEE server communicate with each other
     /// This is the part of the vsock endpoint, which is tee_cid:tee_port
-    #[clap(long, default_value_t = shielder_scheduler_common::protocol::VMADDR_CID_HOST, env = "TEE_CID")]
+    #[clap(long, default_value_t = vsock::VMADDR_CID_HOST, env = "TEE_CID")]
     pub tee_cid: u32,
 
     /// How many tasks can be processed in parallel by the TEE task pool
@@ -175,4 +175,16 @@ impl CommandLineArgs {
 
         Ok(())
     }
+
+
+    /// Chain configuration
+    /// RPC URL of the Ethereum node to connect to
+    #[clap(long, env = "NODE_RPC_URL")]
+    pub node_rpc_url: String,
+    /// Address of the Shielder contract
+    #[clap(long, env = "SHIELDER_ADDRESS")]
+    pub shielder_address: String,
+    /// Relayer rpc URL
+    #[clap(long, env = "RELAYER_RPC_URL")]
+    pub relayer_rpc_url: String,
 }

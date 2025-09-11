@@ -40,7 +40,7 @@ export class TeeClient {
 
   async init(
     provingServiceUrl: string,
-    withoutAttestation: boolean
+    expectedPCRs?: Map<string, string>
   ): Promise<void> {
     this.provingServiceUrl = provingServiceUrl;
 
@@ -70,15 +70,16 @@ export class TeeClient {
 
     this.provingServicePublicKey = data.TeePublicKey.public_key;
 
-    if (withoutAttestation) return;
-
     if (!data.TeePublicKey.attestation_document) {
       throw new Error(
         "Invalid response from TEE service: missing attestation document"
       );
     }
 
-    await verifyAttestation(data.TeePublicKey.attestation_document);
+    await verifyAttestation(
+      data.TeePublicKey.attestation_document,
+      expectedPCRs
+    );
   }
 
   async prove(

@@ -1,11 +1,10 @@
 #[cfg(not(feature = "local-run"))]
-use serde::Deserialize;
-use tracing::{info, instrument};
-
-#[cfg(not(feature = "local-run"))]
 use reqwest::Client;
 #[cfg(not(feature = "local-run"))]
+use serde::Deserialize;
+#[cfg(not(feature = "local-run"))]
 use tracing::debug;
+use tracing::{info, instrument};
 
 use crate::error::SchedulerServerError;
 
@@ -34,19 +33,26 @@ struct Ec2MetadataResponse {
 /// Retrieves AWS credentials from EC2 instance metadata service
 #[cfg(not(feature = "local-run"))]
 #[instrument(level = "info")]
-pub async fn get_session_token(_aws_region: &str, refresh_period_seconds: i32, iam_role_name: &str) -> Result<AwsCredentials, SchedulerServerError> {
+pub async fn get_session_token(
+    _aws_region: &str,
+    refresh_period_seconds: i32,
+    iam_role_name: &str,
+) -> Result<AwsCredentials, SchedulerServerError> {
     info!("Retrieving AWS credentials from EC2 instance metadata");
 
     // Step 1: Get the metadata token
     let token_url = "http://169.254.169.254/latest/api/token";
     let client = Client::new();
-    
+
     // Calculate TTL as twice the refresh period
     let token_ttl = refresh_period_seconds * 2;
-    
+
     let token_response = client
         .put(token_url)
-        .header("X-aws-ec2-metadata-token-ttl-seconds", token_ttl.to_string())
+        .header(
+            "X-aws-ec2-metadata-token-ttl-seconds",
+            token_ttl.to_string(),
+        )
         .send()
         .await
         .map_err(|e| {
@@ -65,16 +71,17 @@ pub async fn get_session_token(_aws_region: &str, refresh_period_seconds: i32, i
     })?;
 
     // Step 2: Get the credentials using the token
-    let credentials_url = format!("http://169.254.169.254/latest/meta-data/iam/security-credentials/{}", iam_role_name);
-    
+    let credentials_url = format!(
+        "http://169.254.169.254/latest/meta-data/iam/security-credentials/{}",
+        iam_role_name
+    );
+
     let credentials_response = client
         .get(credentials_url)
         .header("X-aws-ec2-metadata-token", &token)
         .send()
         .await
-        .map_err(|e| {
-            SchedulerServerError::AwsError(format!("Failed to get credentials: {}", e))
-        })?;
+        .map_err(|e| SchedulerServerError::AwsError(format!("Failed to get credentials: {}", e)))?;
 
     if !credentials_response.status().is_success() {
         return Err(SchedulerServerError::AwsError(format!(
@@ -88,8 +95,8 @@ pub async fn get_session_token(_aws_region: &str, refresh_period_seconds: i32, i
     })?;
 
     // Step 3: Parse the JSON response
-    let metadata_response: Ec2MetadataResponse = serde_json::from_str(&credentials_text)
-        .map_err(|e| {
+    let metadata_response: Ec2MetadataResponse =
+        serde_json::from_str(&credentials_text).map_err(|e| {
             SchedulerServerError::AwsError(format!("Failed to parse credentials JSON: {}", e))
         })?;
 
@@ -104,27 +111,35 @@ pub async fn get_session_token(_aws_region: &str, refresh_period_seconds: i32, i
     // Step 5: Validate credentials are not empty
     if metadata_response.access_key_id.is_empty() {
         return Err(SchedulerServerError::AwsError(
-            "Access key ID is empty".to_string()
+            "Access key ID is empty".to_string(),
         ));
     }
-    
+
     if metadata_response.secret_access_key.is_empty() {
         return Err(SchedulerServerError::AwsError(
-            "Secret access key is empty".to_string()
+            "Secret access key is empty".to_string(),
         ));
     }
-    
+
     if metadata_response.token.is_empty() {
         return Err(SchedulerServerError::AwsError(
-            "Session token is empty".to_string()
+            "Session token is empty".to_string(),
         ));
     }
 
     // Step 6: Debug log credentials (first 4 characters only for security)
     debug!(
         "Retrieved AWS credentials - Access Key: {}..., Secret Key: {}..., Token: {}...",
-        &metadata_response.access_key_id.chars().take(4).collect::<String>(),
-        &metadata_response.secret_access_key.chars().take(4).collect::<String>(),
+        &metadata_response
+            .access_key_id
+            .chars()
+            .take(4)
+            .collect::<String>(),
+        &metadata_response
+            .secret_access_key
+            .chars()
+            .take(4)
+            .collect::<String>(),
         &metadata_response.token.chars().take(4).collect::<String>()
     );
 
@@ -140,7 +155,11 @@ pub async fn get_session_token(_aws_region: &str, refresh_period_seconds: i32, i
 /// Returns dummy AWS credentials for local development
 #[cfg(feature = "local-run")]
 #[instrument(level = "info")]
-pub async fn get_session_token(_aws_region: &str, _refresh_period_seconds: i32, _iam_role_name: &str) -> Result<AwsCredentials, SchedulerServerError> {
+pub async fn get_session_token(
+    _aws_region: &str,
+    _refresh_period_seconds: i32,
+    _iam_role_name: &str,
+) -> Result<AwsCredentials, SchedulerServerError> {
     info!("Using dummy AWS credentials for local development");
 
     Ok(AwsCredentials {

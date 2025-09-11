@@ -13,16 +13,17 @@ pub async fn tee_public_key(
 ) -> Result<Json<Response>, SchedulerServerError> {
     let tee_task_pool = state.tee_task_pool.clone();
     let state_cloned = state.clone();
-    let public_key_bytes = BASE64_STANDARD.decode(&state_cloned.options.kms_public_key)
+    let public_key_bytes = BASE64_STANDARD
+        .decode(&state_cloned.options.kms_public_key)
         .map_err(|e| {
             SchedulerServerError::ParseError(format!(
                 "Failed to decode base64 KMS_PUBLIC_KEY: {e:?}"
             ))
         })?;
-    
+
     // Get current AWS credentials
     let aws_credentials = state_cloned.aws_credentials.lock().await.clone();
-    
+
     tee_task_pool
         .spawn(async move {
             tee_request(

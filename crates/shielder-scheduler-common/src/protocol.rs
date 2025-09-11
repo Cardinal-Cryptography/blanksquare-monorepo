@@ -73,9 +73,7 @@ pub enum Request {
     Ping,
 
     /// Retrieves TEE Public Key, ie key which is used by the user to encrypt inputs to a circuit
-    TeePublicKey {
-        aws_config: AwsConfig,
-    },
+    TeePublicKey { aws_config: AwsConfig },
 
     /// Request to prepare calldata for a relay transaction.
     PrepareRelayCalldata {

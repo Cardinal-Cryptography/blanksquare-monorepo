@@ -6,13 +6,13 @@ use aes_gcm::{
     Aes256Gcm, Nonce,
 };
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine};
+#[cfg(feature = "local-run")]
+use log::info;
 #[cfg(not(feature = "local-run"))]
 use log::{debug, info};
 #[cfg(feature = "local-run")]
-use log::info;
-use rsa::{pkcs8::DecodePublicKey, sha2::Sha256, Oaep, RsaPublicKey};
-#[cfg(feature = "local-run")]
 use rsa::{pkcs8::DecodePrivateKey, RsaPrivateKey};
+use rsa::{pkcs8::DecodePublicKey, sha2::Sha256, Oaep, RsaPublicKey};
 use shielder_scheduler_common::{
     protocol::{AwsConfig, EncryptionEnvelope},
     vsock::VsockError,
@@ -73,12 +73,11 @@ impl KmsCrypto {
                 .arg(&aws_config.kms_encryption_algorithm)
                 .stdout(Stdio::piped())
                 .stderr(Stdio::piped());
-            
+
             debug!("Executing command: {:?}", cmd);
-            let output = cmd.output()
-                .map_err(|e| {
-                    VsockError::KMS(format!("failed to run kmstool_enclave_cli: {e:?}"))
-                })?;
+            let output = cmd.output().map_err(|e| {
+                VsockError::KMS(format!("failed to run kmstool_enclave_cli: {e:?}"))
+            })?;
 
             if !output.status.success() {
                 let stderr = String::from_utf8_lossy(&output.stderr);
@@ -155,7 +154,7 @@ impl KmsCrypto {
 
     pub fn verify_public_key(&self, aws_config: &AwsConfig) -> Result<(), VsockError> {
         let expected_data = "This is a correct key".to_string();
-        
+
         // Parse public key from DER bytes (the public_key field now contains base64-decoded DER bytes)
         let oaep_padding = Oaep::new::<Sha256>();
         let encrypted_data = RsaPublicKey::from_public_key_der(&aws_config.public_key)

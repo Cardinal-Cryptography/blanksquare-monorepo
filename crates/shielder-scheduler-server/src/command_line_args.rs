@@ -89,7 +89,6 @@ pub struct CommandLineArgs {
     pub db_ssl: bool,
 
     // KMS configuration
-
     #[clap(long, env = "KMS_PUBLIC_KEY")]
     pub kms_public_key: String,
 
@@ -120,7 +119,11 @@ pub struct CommandLineArgs {
 
     /// How often to refresh AWS STS credentials (in seconds, range: 900-1800)
     #[cfg(not(feature = "local-run"))]
-    #[clap(long, default_value_t = 900, env = "AWS_STS_REFRESH_CREDENTIALS_PERIOD_SECONDS")]
+    #[clap(
+        long,
+        default_value_t = 900,
+        env = "AWS_STS_REFRESH_CREDENTIALS_PERIOD_SECONDS"
+    )]
     pub aws_sts_refresh_period_secs: u64,
 
     #[cfg(feature = "local-run")]
@@ -141,7 +144,7 @@ impl CommandLineArgs {
                     self.aws_sts_refresh_period_secs
                 ));
             }
-            
+
             if self.aws_sts_refresh_period_secs > 1800 {
                 return Err(format!(
                     "AWS_STS_REFRESH_CREDENTIALS_PERIOD_SECONDS must be at most 1800 seconds, got: {}",
@@ -160,7 +163,7 @@ impl CommandLineArgs {
                         period
                     ));
                 }
-                
+
                 if period > 1800 {
                     return Err(format!(
                         "AWS_STS_REFRESH_CREDENTIALS_PERIOD_SECONDS must be at most 1800 seconds, got: {}",
@@ -169,7 +172,7 @@ impl CommandLineArgs {
                 }
             }
         }
-        
+
         Ok(())
     }
 }

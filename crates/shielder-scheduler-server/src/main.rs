@@ -5,8 +5,6 @@ mod error;
 mod handlers;
 mod scheduler_processor;
 
-pub use handlers::tee_prepare_relay_calldata::prepare_relay_calldata;
-
 use std::{net::SocketAddrV4, sync::Arc, time::Duration};
 
 use axum::{
@@ -16,6 +14,7 @@ use axum::{
 };
 use clap::Parser;
 use error::SchedulerServerError as Error;
+pub use handlers::tee_prepare_relay_calldata::prepare_relay_calldata;
 use metrics_exporter_prometheus::PrometheusBuilder;
 use shielder_scheduler_common::metrics::FutureHistogramLayer;
 use tokio::{net::TcpListener, sync::Mutex};
@@ -42,7 +41,7 @@ struct AppState {
 async fn main() -> Result<(), Error> {
     // Parse command line arguments
     let options = CommandLineArgs::parse();
-    
+
     // Validate command line arguments
     if let Err(validation_error) = options.validate() {
         return Err(Error::ParseError(validation_error));
@@ -85,8 +84,9 @@ async fn main() -> Result<(), Error> {
     let aws_credentials = aws_session_tokens::get_session_token(
         &options.aws_region,
         options.aws_sts_refresh_period_secs as i32,
-        &options.aws_iam_kms_role
-    ).await?;
+        &options.aws_iam_kms_role,
+    )
+    .await?;
 
     #[cfg(feature = "local-run")]
     let aws_credentials = if let (Some(region), Some(iam_role), Some(period)) = (
@@ -115,9 +115,10 @@ async fn main() -> Result<(), Error> {
 
     // Perform initial TEE public key verification to ensure the server is correctly configured
     info!("Performing initial TEE public key verification...");
-    let _verification_result = server_handlers::tee_public_key::tee_public_key(
-        axum::extract::State(app_state.clone())
-    ).await.map_err(|e| Error::ParseError(format!("TEE public key verification failed: {}", e)))?;
+    let _verification_result =
+        server_handlers::tee_public_key::tee_public_key(axum::extract::State(app_state.clone()))
+            .await
+            .map_err(|e| Error::ParseError(format!("TEE public key verification failed: {}", e)))?;
 
     info!("TEE public key verification successful");
 
@@ -180,15 +181,20 @@ async fn aws_credentials_refresh_task(app_state: Arc<AppState>) {
             match aws_session_tokens::get_session_token(
                 &app_state.options.aws_region,
                 app_state.options.aws_sts_refresh_period_secs as i32,
-                &app_state.options.aws_iam_kms_role
-            ).await {
+                &app_state.options.aws_iam_kms_role,
+            )
+            .await
+            {
                 Ok(new_credentials) => {
                     let mut credentials = app_state.aws_credentials.lock().await;
                     *credentials = new_credentials;
                     info!("AWS credentials refreshed successfully from EC2 metadata");
                 }
                 Err(e) => {
-                    tracing::error!("Failed to refresh AWS credentials from EC2 metadata: {:?}", e);
+                    tracing::error!(
+                        "Failed to refresh AWS credentials from EC2 metadata: {:?}",
+                        e
+                    );
                     // Continue running - don't crash the server on credential refresh failure
                     // The old credentials might still be valid for a while
                 }
@@ -220,7 +226,10 @@ async fn aws_credentials_refresh_task(app_state: Arc<AppState>) {
                         info!("AWS credentials refreshed successfully from EC2 metadata");
                     }
                     Err(e) => {
-                        tracing::error!("Failed to refresh AWS credentials from EC2 metadata: {:?}", e);
+                        tracing::error!(
+                            "Failed to refresh AWS credentials from EC2 metadata: {:?}",
+                            e
+                        );
                         // Continue running - don't crash the server on credential refresh failure
                         // The old credentials might still be valid for a while
                     }

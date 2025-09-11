@@ -11,7 +11,7 @@ pub struct CommandLineArgs {
     /// This is the part of the vsock endpoint, which is tee_cid:tee_port
     #[clap(long, default_value_t = shielder_scheduler_common::protocol::VMADDR_CID_ANY, env = "TEE_CID")]
     pub tee_cid: u32,
-    
+
     #[clap(long, default_value_t = 8000, env = "KMS_PROXY_PORT")]
     pub kms_proxy_port: u32,
 

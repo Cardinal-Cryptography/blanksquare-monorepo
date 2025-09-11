@@ -3,7 +3,7 @@ use serde::Deserialize;
 use tracing::{info, instrument};
 
 #[cfg(not(feature = "local-run"))]
-use reqwest;
+use reqwest::Client;
 #[cfg(not(feature = "local-run"))]
 use tracing::debug;
 
@@ -39,7 +39,7 @@ pub async fn get_session_token(_aws_region: &str, refresh_period_seconds: i32, i
 
     // Step 1: Get the metadata token
     let token_url = "http://169.254.169.254/latest/api/token";
-    let client = reqwest::Client::new();
+    let client = Client::new();
     
     // Calculate TTL as twice the refresh period
     let token_ttl = refresh_period_seconds * 2;

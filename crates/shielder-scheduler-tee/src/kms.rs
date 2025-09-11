@@ -149,13 +149,10 @@ impl KmsCrypto {
     pub fn verify_public_key(&self, aws_config: &AwsConfig) -> Result<(), VsockError> {
         let expected_data = "This is a correct key".to_string();
         
-        // Parse public key from PEM string instead of DER bytes
-        let public_key_pem = String::from_utf8(aws_config.public_key.clone())
-            .map_err(|e| VsockError::KMS(format!("Failed to parse public key as UTF-8: {e:?}")))?;
-        
+        // Parse public key from DER bytes (the public_key field now contains base64-decoded DER bytes)
         let oaep_padding = Oaep::new::<Sha256>();
-        let encrypted_data = RsaPublicKey::from_public_key_pem(&public_key_pem)
-            .map_err(|e| VsockError::KMS(format!("Failed to parse public key PEM: {e:?}")))?
+        let encrypted_data = RsaPublicKey::from_public_key_der(&aws_config.public_key)
+            .map_err(|e| VsockError::KMS(format!("Failed to parse public key DER: {e:?}")))?
             .encrypt(
                 &mut rand::thread_rng(),
                 oaep_padding,

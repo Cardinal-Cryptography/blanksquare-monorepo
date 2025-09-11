@@ -162,8 +162,14 @@ The service can be configured using environment variables or command-line argume
 - `AWS_REGION`: AWS region for STS and KMS operations (required)
 - `AWS_IAM_KMS_ROLE`: IAM role name for KMS access (default: kms-access)
 - `KMS_KEY_ID`: AWS KMS key identifier for encryption operations (required)  
-- `KMS_PUBLIC_KEY_PEM_FILE`: Path to the PEM file containing the KMS public key for verification (required)
+- `KMS_PUBLIC_KEY`: Base64-encoded public key for KMS verification (required)
 - `AWS_STS_REFRESH_CREDENTIALS_PERIOD_SECONDS`: How often to refresh AWS STS credentials in seconds (default: 900, range: 900-1800)
+
+**Converting PEM to Base64**: If you have a PEM file, you can convert it to base64:
+```bash
+# Remove PEM headers/footers and convert to single line base64
+cat your-public-key.pem | grep -v "BEGIN\|END" | tr -d '\n'
+```
 
 **Note**: AWS credentials are automatically retrieved using EC2 instance metadata at startup and refreshed periodically. Manual AWS credential configuration is no longer required.
 
@@ -217,10 +223,10 @@ The service is built with clear separation of concerns:
 ### Running the Service
 
 ```bash
-# With default configuration (requires AWS_REGION, KMS_KEY_ID, KMS_PUBLIC_KEY_PEM_FILE)
+# With default configuration (requires AWS_REGION, KMS_KEY_ID, KMS_PUBLIC_KEY)
 export AWS_REGION=us-east-1
 export KMS_KEY_ID=your-kms-key-id
-export KMS_PUBLIC_KEY_PEM_FILE=/path/to/public_key.pem
+export KMS_PUBLIC_KEY=base64-encoded-public-key
 cargo run
 
 # For local development - uses dummy AWS credentials (no EC2 metadata required)
@@ -236,7 +242,7 @@ export SCHEDULER_INTERVAL_SECS=10
 export AWS_REGION=us-east-1
 export AWS_IAM_KMS_ROLE=my-custom-role
 export KMS_KEY_ID=your-kms-key-id
-export KMS_PUBLIC_KEY_PEM_FILE=/path/to/public_key.pem
+export KMS_PUBLIC_KEY=base64-encoded-public-key
 export AWS_STS_REFRESH_CREDENTIALS_PERIOD_SECONDS=1800  # Refresh every 30 minutes
 cargo run
 ```
@@ -308,6 +314,6 @@ curl http://localhost:3001/metrics
 - Removed dependency on AWS STS SDK, now uses EC2 instance metadata directly
 - Added automatic TEE public key verification on server startup
 - Enhanced security through automatic temporary credential rotation from IAM roles
-- Simplified configuration by requiring only AWS_REGION, KMS_KEY_ID, and KMS_PUBLIC_KEY_PEM_FILE
+- Simplified configuration by requiring only AWS_REGION, KMS_KEY_ID, and KMS_PUBLIC_KEY
 
 The server now automatically handles AWS authentication and credential management with periodic refresh using EC2 instance metadata, providing improved security and simplified deployment.

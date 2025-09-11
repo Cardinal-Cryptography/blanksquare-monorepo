@@ -8,9 +8,10 @@ use axum::{
     response::IntoResponse,
 };
 use metrics_exporter_prometheus::{Matcher, PrometheusBuilder, PrometheusHandle};
+use price_feed::{Prices, TokenKind};
 use shielder_setup::native_token::NATIVE_TOKEN_DECIMALS;
 
-use crate::{monitor::rpc_monitor::RpcMonitor, price_feed::Prices, SignerInfo};
+use crate::{monitor::rpc_monitor::RpcMonitor, SignerInfo};
 
 pub const TOTAL_REQUESTS_METRIC: &str = "http_requests_total";
 pub const REQUEST_DURATION_METRIC: &str = "http_requests_duration_seconds";
@@ -27,7 +28,7 @@ pub async fn prometheus_endpoint(
     metrics_handle: PrometheusHandle,
     signer_info: SignerInfo,
     rpc_monitor: RpcMonitor,
-    prices: Prices,
+    prices: Prices<TokenKind>,
 ) -> impl IntoResponse {
     metrics::gauge!(HEALTH).set(rpc_monitor.is_healthy().await.is_ok() as u8 as f64);
     render_signer_balances(&signer_info).await;
@@ -76,12 +77,19 @@ pub fn setup_metrics_handle() -> Result<PrometheusHandle> {
         0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0, 20.0,
     ];
 
-    Ok(PrometheusBuilder::new()
+    let handle = PrometheusBuilder::new()
         .set_buckets_for_metric(
             Matcher::Full(REQUEST_DURATION_METRIC.to_string()),
             EXPONENTIAL_SECONDS,
         )?
-        .install_recorder()?)
+        .install_recorder()?;
+
+    // Initialize withdraw metrics to 0 so they appear on fresh start
+    metrics::counter!(WITHDRAW_SUCCESS).increment(0);
+    metrics::counter!(WITHDRAW_FAILURE).increment(0);
+    metrics::counter!(WITHDRAW_DRY_RUN_FAILURE).increment(0);
+
+    Ok(handle)
 }
 
 /// Middleware to record HTTP request metrics.
@@ -113,12 +121,12 @@ fn get_request_path(req: &Request) -> String {
     }
 }
 
-fn render_price_validity(prices: &Prices) {
+fn render_price_validity(prices: &Prices<TokenKind>) {
     render_expired_prices(prices);
     render_price_ages(prices);
 }
 
-fn render_expired_prices(prices: &Prices) {
+fn render_expired_prices(prices: &Prices<TokenKind>) {
     let current_prices = prices.current_prices();
     for (token, price) in current_prices.iter() {
         let expired = match price {
@@ -129,7 +137,7 @@ fn render_expired_prices(prices: &Prices) {
     }
 }
 
-fn render_price_ages(prices: &Prices) {
+fn render_price_ages(prices: &Prices<TokenKind>) {
     let ages = prices.price_ages();
     for (token, age) in ages.iter() {
         let age = match age {

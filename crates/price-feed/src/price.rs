@@ -1,7 +1,7 @@
 use rust_decimal::Decimal;
 use time::{Duration, OffsetDateTime};
 
-use crate::price_feed::fetching::PriceInfoFromProvider;
+use crate::fetching::PriceInfoFromProvider;
 
 /// The expiration of a price.
 #[derive(Clone, Debug)]
@@ -65,6 +65,15 @@ impl Price {
             }
         }
     }
+
+    /// Get the time when the price was fetched.
+    /// Note: For eternal prices, this returns the current time.
+    pub fn fetched_at(&self) -> OffsetDateTime {
+        match self.expiration {
+            Expiration::Eternal => OffsetDateTime::now_utc(),
+            Expiration::Timed { fetched, .. } => fetched,
+        }
+    }
 }
 
 #[cfg(test)]
@@ -72,7 +81,7 @@ mod tests {
     use rust_decimal::Decimal;
     use time::{Duration, OffsetDateTime};
 
-    use crate::price_feed::{price::Expiration, Price};
+    use crate::{price::Expiration, Price};
 
     #[test]
     fn static_price_is_always_valid() {

@@ -87,4 +87,15 @@ pub struct CommandLineArgs {
     /// If set to true, the server will use SSL to connect to the database
     #[clap(long, default_value_t = false, env = "DB_USE_SSL")]
     pub db_ssl: bool,
+
+    /// Chain configuration
+    /// RPC URL of the Ethereum node to connect to
+    #[clap(long, env = "NODE_RPC_URL")]
+    pub node_rpc_url: String,
+    /// Address of the Shielder contract
+    #[clap(long, env = "SHIELDER_ADDRESS")]
+    pub shielder_address: String,
+    /// Relayer rpc URL
+    #[clap(long, env = "RELAYER_RPC_URL")]
+    pub relayer_rpc_url: String,
 }

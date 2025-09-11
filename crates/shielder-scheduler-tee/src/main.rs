@@ -1,4 +1,6 @@
 mod server;
+mod withdraw;
+
 use log::info;
 use shielder_scheduler_common::{protocol::VSOCK_PORT, vsock::VsockError};
 

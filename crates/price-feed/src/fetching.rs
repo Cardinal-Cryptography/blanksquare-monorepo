@@ -1,7 +1,8 @@
 use rust_decimal::{Decimal, MathematicalOps as _};
 use serde::Deserialize;
-use shielder_relayer::PriceProvider;
 use time::OffsetDateTime;
+
+use crate::PriceProvider;
 
 /// This is the struct that we expect to receive at `https://api.diadata.org/v1/assetQuotation/`.
 #[derive(Clone, Debug, Deserialize)]
@@ -94,9 +95,8 @@ async fn fetch_dia(url: &str) -> Result<PriceInfoFromProvider, PriceFetchError> 
 
 #[cfg(test)]
 mod tests {
-    use shielder_relayer::PriceProvider;
-
     use super::fetch_price;
+    use crate::PriceProvider;
 
     const ETH: &str =
         "https://api.diadata.org/v1/assetQuotation/Ethereum/0x0000000000000000000000000000000000000000";

@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use alloy_primitives::{Address, U256};
-#[cfg(not(feature = "without_attestation"))]
+#[cfg(not(feature = "local-run"))]
 use aws_nitro_enclaves_nsm_api::{
     api::Request as NsmRequest,
     api::Response as NsmResponse,
@@ -21,7 +21,7 @@ use crate::{command_line_args::CommandLineArgs, kms::KmsCrypto};
 
 pub struct Server {
     kms: KmsCrypto,
-    #[cfg(not(feature = "without_attestation"))]
+    #[cfg(not(feature = "local-run"))]
     nsm_fd: i32,
 
     listener: VsockListener,
@@ -29,25 +29,25 @@ pub struct Server {
 
 impl Server {
     pub async fn new(options: CommandLineArgs) -> Result<Arc<Self>, VsockError> {
-        #[cfg(feature = "without_attestation")]
+        #[cfg(feature = "local-run")]
         info!("Running server without attestation (TEST BUILD).");
 
         let address = VsockAddr::new(options.tee_cid, options.tee_port);
         let listener = VsockListener::bind(address)?;
 
-        #[cfg(not(feature = "without_attestation"))]
+        #[cfg(not(feature = "local-run"))]
         let nsm_fd = Self::init_nsm_driver()?;
 
         let kms = KmsCrypto::new(
             options.kms_proxy_port,
-            #[cfg(feature = "without_attestation")]
+            #[cfg(feature = "local-run")]
             options.private_key,
         );
 
         Ok(Arc::new(Self {
             listener,
             kms,
-            #[cfg(not(feature = "without_attestation"))]
+            #[cfg(not(feature = "local-run"))]
             nsm_fd,
         }))
     }
@@ -104,11 +104,11 @@ impl Server {
     async fn public_key_response(&self, aws_config: &AwsConfig) -> Result<Response, VsockError> {
         self.kms.verify_public_key(aws_config)?;
 
-        #[cfg(not(feature = "without_attestation"))]
+        #[cfg(not(feature = "local-run"))]
         let attestation_document =
             self.request_attestation_from_nsm_driver(aws_config.public_key.clone())?;
 
-        #[cfg(feature = "without_attestation")]
+        #[cfg(feature = "local-run")]
         let attestation_document = Vec::new();
 
         Ok(Response::TeePublicKey {
@@ -154,7 +154,7 @@ impl Server {
         }) // Placeholder response
     }
 
-    #[cfg(not(feature = "without_attestation"))]
+    #[cfg(not(feature = "local-run"))]
     fn request_attestation_from_nsm_driver(
         &self,
         tee_public_key: Vec<u8>,
@@ -174,7 +174,7 @@ impl Server {
         }
     }
 
-    #[cfg(not(feature = "without_attestation"))]
+    #[cfg(not(feature = "local-run"))]
     fn init_nsm_driver() -> Result<i32, VsockError> {
         info!("Opening file descriptor to /dev/nsm driver.");
         let nsm_fd = nsm_init();
@@ -189,7 +189,7 @@ impl Server {
     }
 }
 
-#[cfg(not(feature = "without_attestation"))]
+#[cfg(not(feature = "local-run"))]
 impl Drop for Server {
     fn drop(&mut self) {
         info!("Closing file descriptor to /dev/nsm driver.");

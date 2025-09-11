@@ -42,4 +42,4 @@ shielder-circuits = { workspace = true }
 [features]
 default = ["dep:aws-nitro-enclaves-nsm-api"]
 # if enabled, TEE server does not query /dev/nsm driver, so enable this feature for local tests
-without_attestation = []
+local-run = []

@@ -1,4 +1,4 @@
-#[cfg(not(feature = "without_attestation"))]
+#[cfg(not(feature = "local-run"))]
 use std::process::{Command, Stdio};
 
 use aes_gcm::{
@@ -8,7 +8,7 @@ use aes_gcm::{
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine};
 use log::{debug, info};
 use rsa::{pkcs8::DecodePublicKey, sha2::Sha256, Oaep, RsaPublicKey};
-#[cfg(feature = "without_attestation")]
+#[cfg(feature = "local-run")]
 use rsa::{pkcs8::DecodePrivateKey, RsaPrivateKey};
 use shielder_scheduler_common::{
     protocol::{AwsConfig, EncryptionEnvelope},
@@ -17,22 +17,22 @@ use shielder_scheduler_common::{
 
 pub struct KmsCrypto {
     kms_proxy_port: u32,
-    #[cfg(feature = "without_attestation")]
+    #[cfg(feature = "local-run")]
     private_key: Vec<u8>,
 }
 
 impl KmsCrypto {
     pub fn new(
         kms_proxy_port: u32,
-        #[cfg(feature = "without_attestation")] private_key: String,
+        #[cfg(feature = "local-run")] private_key: String,
     ) -> Self {
         Self {
             kms_proxy_port,
-            #[cfg(feature = "without_attestation")]
+            #[cfg(feature = "local-run")]
             private_key: BASE64
                 .decode(private_key)
                 .map_err(|e| {
-                    panic!("Failed to decode PRIVATE_KEY from base64: {e:?}");
+                    panic!("Failed to decode PRIVATE_KEY_BASE64 from base64: {e:?}");
                 })
                 .unwrap(),
         }
@@ -43,7 +43,7 @@ impl KmsCrypto {
         aws_config: &AwsConfig,
         encrypted_dek: &[u8],
     ) -> Result<Vec<u8>, VsockError> {
-        #[cfg(not(feature = "without_attestation"))]
+        #[cfg(not(feature = "local-run"))]
         let decrypted_data = {
             info!("Decrypting data encryption key (DEK)");
             let mut cmd = Command::new("/usr/local/bin/kmstool_enclave_cli");
@@ -101,7 +101,7 @@ impl KmsCrypto {
                 .map_err(|_| VsockError::KMS("base64 decode failed".into()))?
         };
 
-        #[cfg(feature = "without_attestation")]
+        #[cfg(feature = "local-run")]
         let decrypted_data = {
             let padding = Oaep::new::<Sha256>();
             let private_key = RsaPrivateKey::from_pkcs8_der(&self.private_key).map_err(|e| {

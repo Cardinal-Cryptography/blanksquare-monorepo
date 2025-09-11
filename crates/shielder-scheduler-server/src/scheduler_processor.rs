@@ -2,6 +2,7 @@ use std::{sync::Arc, time::Duration};
 
 use alloy_primitives::{Address, U256};
 use alloy_signer_local::PrivateKeySigner;
+use base64::prelude::*;
 use chrono::Utc;
 use shielder_contract::{merkle_path::get_current_merkle_path, ConnectionPolicy, ShielderUser};
 use shielder_relayer::{QuoteFeeResponse, RelayQuery};
@@ -252,7 +253,7 @@ Please check the SHIELDER_ADDRESS environment variable or --shielder-address arg
     ) -> Result<Response> {
         let tee_task_pool = self.app_state.tee_task_pool.clone();
         let app_state = self.app_state.clone();
-        let payload = request.payload.clone();
+        let encryption_envelope = request.encryption_envelope.clone();
         let relayer_address = self
             .app_state
             .relayer_rpc_controller
@@ -261,10 +262,35 @@ Please check the SHIELDER_ADDRESS environment variable or --shielder-address arg
 
         let max_relayer_fee = quoted_fee.fee_details.total_cost_fee_token;
 
+        // Get current AWS credentials
+        let aws_credentials = self.app_state.aws_credentials.lock().await.clone();
+        let public_key_bytes = base64::prelude::BASE64_STANDARD
+            .decode(&self.app_state.options.kms_public_key)
+            .map_err(|e| {
+                SchedulerServerError::ParseError(format!(
+                    "Failed to decode base64 KMS_PUBLIC_KEY: {e:?}"
+                ))
+            })?;
+
         let response = tee_task_pool
             .spawn(async move {
                 let request = Request::PrepareRelayCalldata {
-                    payload,
+                    aws_config: shielder_scheduler_common::protocol::AwsConfig {
+                        public_key: public_key_bytes,
+                        #[cfg(not(feature = "local-run"))]
+                        kms_key_id: app_state.options.kms_key_id.clone(),
+                        #[cfg(feature = "local-run")]
+                        kms_key_id: app_state.options.kms_key_id.clone().unwrap_or_default(),
+                        #[cfg(not(feature = "local-run"))]
+                        aws_region: app_state.options.aws_region.clone(),
+                        #[cfg(feature = "local-run")]
+                        aws_region: app_state.options.aws_region.clone().unwrap_or_default(),
+                        aws_access_key_id: aws_credentials.access_key_id,
+                        aws_secret_access_key: aws_credentials.secret_access_key,
+                        aws_session_token: aws_credentials.session_token.unwrap_or_default(),
+                        kms_encryption_algorithm: "RSAES_OAEP_SHA_256".to_string(),
+                    },
+                    encryption_envelope,
                     max_relayer_fee,
                     relayer_address,
                     merkle_path: Box::new(merkle_path),
@@ -272,8 +298,7 @@ Please check the SHIELDER_ADDRESS environment variable or --shielder-address arg
                     pocket_money,
                 };
 
-                let json_response = tee_request(app_state, request).await?;
-                Ok::<Response, VsockError>(json_response.0)
+                tee_request(app_state, request).await
             })
             .await
             .map_err(SchedulerServerError::TaskPool)?
@@ -281,7 +306,7 @@ Please check the SHIELDER_ADDRESS environment variable or --shielder-address arg
             .map_err(SchedulerServerError::JoinHandleError)??
             .map_err(SchedulerServerError::ProvingServerError)?;
 
-        Ok(response)
+        Ok(response.0)
     }
 
     async fn process_tee_response(

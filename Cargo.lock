@@ -4452,6 +4452,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "price-feed"
+version = "0.1.0"
+dependencies = [
+ "alloy-primitives",
+ "anyhow",
+ "parking_lot",
+ "reqwest",
+ "rust_decimal",
+ "serde",
+ "shielder-account",
+ "thiserror 2.0.12",
+ "time",
+ "tokio",
+ "tracing",
+ "utoipa",
+]
+
+[[package]]
 name = "primitive-types"
 version = "0.12.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5840,6 +5858,7 @@ dependencies = [
  "openssl",
  "parameterized",
  "parking_lot",
+ "price-feed",
  "rand 0.8.5",
  "reqwest",
  "rust_decimal",
@@ -5886,6 +5905,7 @@ name = "shielder-scheduler-server"
 version = "0.1.0"
 dependencies = [
  "alloy-primitives",
+ "alloy-signer-local",
  "axum",
  "base64 0.22.1",
  "chrono",
@@ -5895,6 +5915,9 @@ dependencies = [
  "reqwest",
  "serde",
  "serde_json",
+ "shielder-account",
+ "shielder-contract",
+ "shielder-relayer",
  "shielder-scheduler-common",
  "shielder-setup",
  "sqlx",
@@ -5904,6 +5927,7 @@ dependencies = [
  "tower-http",
  "tracing",
  "tracing-subscriber",
+ "vsock",
 ]
 
 [[package]]
@@ -5915,6 +5939,7 @@ dependencies = [
  "aws-nitro-enclaves-nsm-api",
  "base64 0.22.1",
  "clap",
+ "halo2curves",
  "hex",
  "log",
  "powers-of-tau",
@@ -5922,7 +5947,10 @@ dependencies = [
  "rsa",
  "serde",
  "serde_json",
+ "shielder-account",
  "shielder-circuits",
+ "shielder-contract",
+ "shielder-relayer",
  "shielder-scheduler-common",
  "shielder-setup",
  "thiserror 2.0.12",

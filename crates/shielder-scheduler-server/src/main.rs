@@ -115,7 +115,7 @@ async fn main() -> Result<(), Error> {
         tee_task_pool,
         db_pool,
         aws_credentials: Arc::new(Mutex::new(aws_credentials)),
-        relayer_rpc_controller: RelayerRpcController,
+        relayer_rpc_controller,
     });
 
     // Perform initial TEE public key verification to ensure the server is correctly configured

@@ -14,9 +14,11 @@ use crate::{error::SchedulerServerError, handlers::tee_request, AppState};
 pub async fn prepare_relay_calldata(
     State(state): State<Arc<AppState>>,
     encryption_envelope: EncryptionEnvelope,
-    relayer_fee: U256,
+    max_relayer_fee: U256,
     relayer_address: Address,
     merkle_path: MerklePath,
+    merkle_root: U256,
+    pocket_money: U256,
 ) -> Result<Json<Response>, SchedulerServerError> {
     let tee_task_pool = state.tee_task_pool.clone();
     let public_key_bytes = BASE64_STANDARD
@@ -51,9 +53,11 @@ pub async fn prepare_relay_calldata(
                         kms_encryption_algorithm: "RSAES_OAEP_SHA_256".to_string(),
                     },
                     encryption_envelope,
-                    relayer_fee,
+                    max_relayer_fee,
                     relayer_address,
                     merkle_path,
+                    merkle_root,
+                    pocket_money,
                 },
             )
             .await

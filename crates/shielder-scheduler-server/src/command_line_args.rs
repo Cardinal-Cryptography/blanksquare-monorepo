@@ -31,7 +31,7 @@ pub struct CommandLineArgs {
     // TEE configuration
     /// Internal port on which host and tee applications talks to each other
     /// This is the part of the vsock endpoint, which is tee_cid:tee_port
-    #[clap(short, long, default_value_t = shielder_scheduler_common::protocol::VSOCK_PORT, env = "TEE_PORT")]
+    #[clap(short, long, default_value_t = shielder_scheduler_common::protocol::VSOCK_PORT as u16, env = "TEE_PORT")]
     pub tee_port: u16,
 
     /// A context identifier on which this server and TEE server communicate with each other
@@ -129,6 +129,17 @@ pub struct CommandLineArgs {
     #[cfg(feature = "local-run")]
     #[clap(long, env = "AWS_STS_REFRESH_CREDENTIALS_PERIOD_SECONDS")]
     pub aws_sts_refresh_period_secs: Option<u64>,
+
+    /// Chain configuration
+    /// RPC URL of the Ethereum node to connect to
+    #[clap(long, env = "NODE_RPC_URL")]
+    pub node_rpc_url: String,
+    /// Address of the Shielder contract
+    #[clap(long, env = "SHIELDER_ADDRESS")]
+    pub shielder_address: String,
+    /// Relayer rpc URL
+    #[clap(long, env = "RELAYER_RPC_URL")]
+    pub relayer_rpc_url: String,
 }
 
 impl CommandLineArgs {
@@ -175,16 +186,4 @@ impl CommandLineArgs {
 
         Ok(())
     }
-
-
-    /// Chain configuration
-    /// RPC URL of the Ethereum node to connect to
-    #[clap(long, env = "NODE_RPC_URL")]
-    pub node_rpc_url: String,
-    /// Address of the Shielder contract
-    #[clap(long, env = "SHIELDER_ADDRESS")]
-    pub shielder_address: String,
-    /// Relayer rpc URL
-    #[clap(long, env = "RELAYER_RPC_URL")]
-    pub relayer_rpc_url: String,
 }

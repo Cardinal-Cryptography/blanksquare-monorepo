@@ -10,14 +10,15 @@ use aws_nitro_enclaves_nsm_api::{
 use log::{debug, info};
 use shielder_scheduler_common::{
     protocol::{
-        AwsConfig, EncryptionEnvelope, MerklePath, Payload, RelayCalldata, Request, Response,
+        AwsConfig, EncryptionEnvelope, Payload, Request, Response,
         TEEServer,
     },
     vsock::VsockError,
 };
+use shielder_setup::consts::{ARITY, TREE_HEIGHT};
 use tokio_vsock::{VsockAddr, VsockListener, VsockStream};
 
-use crate::{command_line_args::CommandLineArgs, kms::KmsCrypto};
+use crate::{command_line_args::CommandLineArgs, kms::KmsCrypto, withdraw::WithdrawCircuit};
 
 pub struct Server {
     kms: KmsCrypto,
@@ -81,19 +82,18 @@ impl Server {
                             aws_config,
                             encryption_envelope,
                             relayer_address,
-                            relayer_fee,
+                            max_relayer_fee: _,
                             merkle_path,
-	                merkle_root,
-                        pocket_money,
+                            merkle_root,
+                            pocket_money,
                         } => {
                             self.prepare_relay_calldata_response(
                                 &aws_config,
                                 encryption_envelope,
                                 relayer_address,
-                                relayer_fee,
                                 merkle_path,
-                        merkle_root,
-                        pocket_money,
+                                merkle_root,
+                                pocket_money,
                             )
                             .await
                         }
@@ -125,7 +125,7 @@ impl Server {
         &self,
         aws_config: &AwsConfig,
         encryption_envelope: EncryptionEnvelope,
-        relayer_fee: U256,
+        relayer_address: Address,
         merkle_path: Box<[[U256; ARITY]; TREE_HEIGHT]>,
         merkle_root: U256,
         pocket_money: U256,
@@ -147,7 +147,7 @@ impl Server {
             deserialized_payload.withdraw_address,
             *merkle_path,
             deserialized_payload.chain_id,
-            relayer_fee,
+            deserialized_payload.max_relayer_fee,
             pocket_money,
             relayer_address,
             deserialized_payload.protocol_fee,

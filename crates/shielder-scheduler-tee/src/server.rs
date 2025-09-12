@@ -36,7 +36,7 @@ pub struct Server {
 impl Server {
     pub async fn new(options: CommandLineArgs) -> Result<Arc<Self>, VsockError> {
         #[cfg(feature = "local-run")]
-        info!("Running server without attestation and KMS (TEST BUILD).");
+         info!("local-run: attestation disabled; using locally provided private key (TEST BUILD).");
 
         let address = VsockAddr::new(options.tee_cid, options.tee_port);
         let listener = VsockListener::bind(address)?;
@@ -195,8 +195,8 @@ impl Server {
         let nsm_fd = nsm_init();
 
         if nsm_fd < 0 {
-            return Err(VsockError::Protocol(String::from(
-                "Failed to initialize NSM driver.",
+            return Err(VsockError::Protocol(format!(
+                "Failed to initialize NSM driver (return code) = {}", nsm_fd
             )));
         }
 

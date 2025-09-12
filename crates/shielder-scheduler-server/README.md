@@ -102,7 +102,7 @@ Schedule a withdrawal request to be processed at a future time.
 ## Request Statuses
 
 - **Pending**: Request is waiting to be processed
-- **Processing**: Request failed but did not reach max retry attempts count
+- **Processing**: Request is being retried or is in progress
 - **Completed**: Request has been successfully processed
 - **Failed**: Request processing failed and reached max retry attempts count
 
@@ -196,6 +196,8 @@ cat your-public-key.pem | grep -v "BEGIN\|END" | tr -d '\n'
 - Minimum security through frequent credential rotation (≤30 minutes)
 - Reasonable EC2 metadata service usage without excessive calls (≥15 minutes)
 - Optimal balance between security and operational efficiency
+
+**STS Refresh Failure Behavior**: If AWS STS credential refresh fails during runtime, the server will shut down gracefully. This ensures that the service does not continue operating with expired credentials, maintaining security compliance. Operators should monitor for service restarts and address any underlying AWS IAM or network connectivity issues that may cause credential refresh failures.
 
 ### Blockchain Configuration
 - `NODE_RPC_URL`: RPC URL of the Ethereum node to connect to (required)

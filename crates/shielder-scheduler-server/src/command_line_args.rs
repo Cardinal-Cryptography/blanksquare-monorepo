@@ -91,7 +91,7 @@ pub struct CommandLineArgs {
 
     // KMS configuration
     /// Disable KMS and use local private key for decryption (for development only)
-    #[clap(long, help = "Disable KMS and use local private key for decryption")]
+    #[clap(long, help = "MUST NOT BE USED IN PRODUCTION. Disable KMS and use local private key for decryption.", env = "DISABLE_KMS")]
     pub disable_kms: bool,
 
     #[clap(long, env = "KMS_PUBLIC_KEY")]
@@ -111,6 +111,7 @@ pub struct CommandLineArgs {
     #[clap(
         long,
         default_value_t = 900,
+        value_parser = clap::value_parser!(u64).range(900..=1800),
         env = "AWS_STS_REFRESH_CREDENTIALS_PERIOD_SECONDS"
     )]
     pub aws_sts_refresh_period_secs: u64,
@@ -141,21 +142,6 @@ impl CommandLineArgs {
         }
 
         if !self.disable_kms {
-            // In production mode, validate AWS settings are present
-            if self.aws_sts_refresh_period_secs < 900 {
-                return Err(format!(
-                    "AWS_STS_REFRESH_CREDENTIALS_PERIOD_SECONDS must be at least 900 seconds, got: {}",
-                    self.aws_sts_refresh_period_secs
-                ));
-            }
-
-            if self.aws_sts_refresh_period_secs > 1800 {
-                return Err(format!(
-                    "AWS_STS_REFRESH_CREDENTIALS_PERIOD_SECONDS must be at most 1800 seconds, got: {}",
-                    self.aws_sts_refresh_period_secs
-                ));
-            }
-
             if let Some(ref kms_key_id) = self.kms_key_id {
                 if kms_key_id.trim().is_empty() {
                     return Err("KMS_KEY_ID must not be empty".into());

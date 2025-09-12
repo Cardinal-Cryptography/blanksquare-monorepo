@@ -158,12 +158,10 @@ async fn main() -> Result<(), Error> {
         .layer(CorsLayer::permissive())
         .with_state(app_state);
 
-    info!("Starting local server on {}", listener.local_addr()?);
+    info!("Starting server on {}", listener.local_addr()?);
 
-    // Use graceful shutdown with signal handling
     let graceful = serve(listener, router).with_graceful_shutdown(async move {
         tokio::select! {
-            // Wait for shutdown signal from credential refresh failure
             _ = async {
                 let mut rx = shutdown_rx;
                 let _ = rx.changed().await;
@@ -171,11 +169,9 @@ async fn main() -> Result<(), Error> {
                     info!("Received shutdown signal due to AWS credential refresh failure");
                 }
             } => {},
-            // Wait for Ctrl+C
             _ = tokio::signal::ctrl_c() => {
                 info!("Received Ctrl+C signal, starting graceful shutdown...");
             },
-            // Wait for SIGTERM on Unix systems
             _ = async {
                 #[cfg(unix)]
                 {

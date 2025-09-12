@@ -30,7 +30,6 @@ pub struct Payload {
     /// Total amount to be withdrawn. This amount includes fees (protocol and relayer fees).
     pub withdrawal_value: U256,
     pub withdraw_address: Address,
-    pub pocket_money: U256,
     pub protocol_fee: U256,
     pub memo: Bytes,
 }

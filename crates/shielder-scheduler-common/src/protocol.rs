@@ -63,14 +63,19 @@ pub struct AwsConfig {
 }
 
 fn redact_mid(s: &str) -> String {
-    if s.len() <= 6 { return "******".into(); }
-    format!("{}******{}", &s[..3], &s[s.len()-3..])
+    if s.len() <= 6 {
+        return "******".into();
+    }
+    format!("{}******{}", &s[..3], &s[s.len() - 3..])
 }
 
 impl core::fmt::Debug for AwsConfig {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("AwsConfig")
-            .field("public_key", &format_args!("<{} bytes>", self.public_key.len()))
+            .field(
+                "public_key",
+                &format_args!("<{} bytes>", self.public_key.len()),
+            )
             .field("kms_key_id", &self.kms_key_id)
             .field("aws_region", &self.aws_region)
             .field("aws_access_key_id", &redact_mid(&self.aws_access_key_id))
@@ -87,12 +92,12 @@ pub enum Request {
     Ping,
 
     /// Retrieves TEE Public Key, ie key which is used by the user to encrypt inputs to a circuit
-    TeePublicKey { aws_config: AwsConfig },
+    TeePublicKey { aws_config: Box<AwsConfig> },
 
     /// Request to prepare calldata for a relay transaction.
     PrepareRelayCalldata {
-        aws_config: AwsConfig,
-        encryption_envelope: EncryptionEnvelope,
+        aws_config: Box<AwsConfig>,
+        encryption_envelope: Box<EncryptionEnvelope>,
         /// Relayer fee
         max_relayer_fee: U256,
         /// Address of the relayer which will receive the relayer fee

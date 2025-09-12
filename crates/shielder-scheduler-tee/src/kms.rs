@@ -35,11 +35,11 @@ impl KmsCrypto {
             #[cfg(not(feature = "local-run"))]
             kms_proxy_port,
             #[cfg(feature = "local-run")]
-            private_key: BASE64
-                .decode(private_key)
-                .map_err(|e| {
-                    VsockError::KMS(format!("Failed to decode PRIVATE_KEY_BASE64 from base64: {e:?}"))
-                })?,
+            private_key: BASE64.decode(private_key).map_err(|e| {
+                VsockError::KMS(format!(
+                    "Failed to decode PRIVATE_KEY_BASE64 from base64: {e:?}"
+                ))
+            })?,
         })
     }
 
@@ -136,7 +136,7 @@ impl KmsCrypto {
         }
 
         info!("Decrypting payload");
-        
+
         // Validate IV/nonce length - AES-GCM requires exactly 12 bytes (96 bits)
         if encryption_envelope.iv.len() != 12 {
             return Err(VsockError::KMS(format!(
@@ -144,7 +144,7 @@ impl KmsCrypto {
                 encryption_envelope.iv.len()
             )));
         }
-        
+
         // Validate auth tag length - AES-GCM typically uses 16 bytes (128 bits)
         if encryption_envelope.auth_tag.len() != 16 {
             return Err(VsockError::KMS(format!(
@@ -152,14 +152,14 @@ impl KmsCrypto {
                 encryption_envelope.auth_tag.len()
             )));
         }
-        
+
         // Validate that we have some ciphertext
         if encryption_envelope.encrypted_payload.is_empty() {
             return Err(VsockError::KMS(
-                "Invalid encrypted payload: cannot be empty".into()
+                "Invalid encrypted payload: cannot be empty".into(),
             ));
         }
-        
+
         let mut full_ciphertext = encryption_envelope.encrypted_payload.clone();
         full_ciphertext.extend(encryption_envelope.auth_tag.clone());
 

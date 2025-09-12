@@ -275,7 +275,7 @@ Please check the SHIELDER_ADDRESS environment variable or --shielder-address arg
         let response = tee_task_pool
             .spawn(async move {
                 let request = Request::PrepareRelayCalldata {
-                    aws_config: shielder_scheduler_common::protocol::AwsConfig {
+                    aws_config: Box::new(shielder_scheduler_common::protocol::AwsConfig {
                         public_key: public_key_bytes,
                         kms_key_id: app_state.options.kms_key_id.clone().unwrap_or_default(),
                         aws_region: app_state.options.aws_region.clone().unwrap_or_default(),
@@ -283,8 +283,8 @@ Please check the SHIELDER_ADDRESS environment variable or --shielder-address arg
                         aws_secret_access_key: aws_credentials.secret_access_key,
                         aws_session_token: aws_credentials.session_token.unwrap_or_default(),
                         kms_encryption_algorithm: "RSAES_OAEP_SHA_256".to_string(),
-                    },
-                    encryption_envelope,
+                    }),
+                    encryption_envelope: Box::new(encryption_envelope),
                     max_relayer_fee,
                     relayer_address,
                     merkle_path: Box::new(merkle_path),

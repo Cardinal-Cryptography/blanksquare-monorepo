@@ -17,7 +17,10 @@ use clap::Parser;
 use error::SchedulerServerError as Error;
 use metrics_exporter_prometheus::PrometheusBuilder;
 use shielder_scheduler_common::metrics::FutureHistogramLayer;
-use tokio::{net::TcpListener, sync::Mutex, sync::watch};
+use tokio::{
+    net::TcpListener,
+    sync::{watch, Mutex},
+};
 use tower_http::cors::CorsLayer;
 use tracing::info;
 use tracing_subscriber::{fmt, layer::SubscriberExt, util::SubscriberInitExt, EnvFilter, Layer};
@@ -98,10 +101,10 @@ async fn main() -> Result<(), Error> {
     };
 
     let relayer_rpc_controller = RelayerRpcController::new(options.relayer_rpc_url.clone());
-    
+
     // Create shutdown signal channel
     let (shutdown_tx, shutdown_rx) = watch::channel(false);
-    
+
     let app_state = Arc::new(AppState {
         options,
         tee_task_pool,
@@ -156,7 +159,7 @@ async fn main() -> Result<(), Error> {
         .with_state(app_state);
 
     info!("Starting local server on {}", listener.local_addr()?);
-    
+
     // Use graceful shutdown with signal handling
     let graceful = serve(listener, router).with_graceful_shutdown(async move {
         tokio::select! {
@@ -189,7 +192,7 @@ async fn main() -> Result<(), Error> {
             } => {},
         }
     });
-    
+
     graceful.await?;
 
     Ok(())
@@ -198,7 +201,10 @@ async fn main() -> Result<(), Error> {
 /// Background task that periodically refreshes AWS STS credentials
 async fn aws_credentials_refresh_task(app_state: Arc<AppState>) {
     if !app_state.options.disable_kms {
-        if let (Some(region), Some(iam_role)) = (&app_state.options.aws_region, &app_state.options.aws_iam_kms_role) {
+        if let (Some(region), Some(iam_role)) = (
+            &app_state.options.aws_region,
+            &app_state.options.aws_iam_kms_role,
+        ) {
             let mut interval = tokio::time::interval(Duration::from_secs(
                 app_state.options.aws_sts_refresh_period_secs,
             ));

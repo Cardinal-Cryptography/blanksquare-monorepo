@@ -62,20 +62,87 @@ When using the TEE for decryption operations, the `EncryptionEnvelope` must conf
 - **Encrypted Payload**: Cannot be empty, contains the AES-GCM encrypted data
 - **Encrypted DEK**: RSA-OAEP encrypted Data Encryption Key, decrypted using AWS KMS
 
-**Example encryption (Node.js/TypeScript):**
+**Complete envelope encryption example (Node.js/TypeScript):**
+
 ```javascript
-function encryptPayload(payload: Payload, aesKey: Buffer): EncryptionEnvelope {
-  const iv = crypto.randomBytes(12); // 12 bytes for GCM
-  const cipher = crypto.createCipheriv('aes-256-gcm', aesKey, iv);
+const crypto = require('crypto');
+
+function createEncryptionEnvelope(payload: Payload, teePublicKey: Buffer): EncryptionEnvelope {
+  // Step 1: Generate a random 256-bit Data Encryption Key (DEK) for AES-GCM
+  const dek = crypto.randomBytes(32); // 32 bytes = 256 bits
   
-  let encrypted = cipher.update(JSON.stringify(payload), 'utf8');
-  encrypted = Buffer.concat([encrypted, cipher.final()]);
+  // Step 2: Encrypt the payload using AES-256-GCM with the DEK
+  const iv = crypto.randomBytes(12); // 12 bytes (96 bits) for GCM
+  const cipher = crypto.createCipheriv('aes-256-gcm', dek, iv);
   
-  const authTag = cipher.getAuthTag(); // 16 bytes
+  let encryptedPayload = cipher.update(JSON.stringify(payload), 'utf8');
+  encryptedPayload = Buffer.concat([encryptedPayload, cipher.final()]);
   
-  return { encrypted_payload: encrypted, iv, auth_tag: authTag };
+  const authTag = cipher.getAuthTag(); // 16 bytes authentication tag
+  
+  // Step 3: Encrypt the DEK using RSA-OAEP with the TEE's public key
+  const encryptedDek = crypto.publicEncrypt(
+    {
+      key: teePublicKey,
+      padding: crypto.constants.RSA_PKCS1_OAEP_PADDING,
+      oaepHash: 'sha256'
+    },
+    dek
+  );
+  
+  // Step 4: Return the complete encryption envelope
+  return {
+    encrypted_payload: encryptedPayload,  // AES-GCM encrypted data
+    encrypted_dek: encryptedDek,          // RSA-OAEP encrypted DEK
+    iv: iv,                               // 12-byte initialization vector
+    auth_tag: authTag                     // 16-byte authentication tag
+  };
+}
+
+// Alternative using AWS KMS for DEK encryption (when available)
+async function createEncryptionEnvelopeWithKMS(
+  payload: Payload, 
+  kmsKeyId: string, 
+  kmsClient: any
+): Promise<EncryptionEnvelope> {
+  // Step 1: Generate random DEK
+  const dek = crypto.randomBytes(32);
+  
+  // Step 2: Encrypt payload with AES-256-GCM
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv('aes-256-gcm', dek, iv);
+  
+  let encryptedPayload = cipher.update(JSON.stringify(payload), 'utf8');
+  encryptedPayload = Buffer.concat([encryptedPayload, cipher.final()]);
+  const authTag = cipher.getAuthTag();
+  
+  // Step 3: Encrypt DEK using AWS KMS
+  const kmsResult = await kmsClient.encrypt({
+    KeyId: kmsKeyId,
+    Plaintext: dek,
+    EncryptionAlgorithm: 'RSAES_OAEP_SHA_256'
+  }).promise();
+  
+  return {
+    encrypted_payload: encryptedPayload,
+    encrypted_dek: Buffer.from(kmsResult.CiphertextBlob),
+    iv: iv,
+    auth_tag: authTag
+  };
 }
 ```
+
+**Encryption Process Overview:**
+
+1. **DEK Generation**: Create a random 32-byte symmetric key for AES-256-GCM
+2. **Payload Encryption**: Use the DEK to encrypt the JSON payload with AES-GCM, producing:
+   - `encrypted_payload`: The encrypted data
+   - `iv`: 12-byte initialization vector
+   - `auth_tag`: 16-byte authentication tag for integrity verification
+3. **DEK Protection**: Encrypt the DEK using either:
+   - **RSA-OAEP**: Direct encryption with the TEE's public key
+   - **AWS KMS**: Using the KMS encrypt operation with the configured key
+4. **Envelope Assembly**: Combine all components into the final `EncryptionEnvelope`
 
 The TEE will validate these requirements and return clear error messages if the format is incorrect.
 
@@ -152,7 +219,7 @@ The TEE server is configured via command-line arguments and environment variable
 
 | Parameter | Environment | Default | Description |
 |-----------|-------------|---------|-------------|
-| `--tee-port, -p` | `TEE_PORT` | `42000` | vsock port for TEE communication |
+| `--tee-port, -p` | `TEE_PORT` | `5000` | vsock port for TEE communication |
 | `--tee-cid` | `TEE_CID` | `VMADDR_CID_ANY` | Context ID for vsock endpoint |
 | `--kms-proxy-port` | `KMS_PROXY_PORT` | `8000` | Port for KMS proxy communication |
 | `--private-key-base64` | `PRIVATE_KEY_BASE64` | - | Base64-encoded RSA private key for local decryption (replaces AWS KMS, only with `local-run` feature) |
@@ -161,7 +228,7 @@ The TEE server is configured via command-line arguments and environment variable
 
 ```bash
 # Production mode (inside Nitro Enclave)
-./shielder-scheduler-tee --tee-port 42000 --kms-proxy-port 8000
+./shielder-scheduler-tee --tee-port 5000 --kms-proxy-port 8000
 
 # Local testing mode
 cargo run --features local-run -- --private-key-base64 "LS0t..."
@@ -190,7 +257,7 @@ For local development without AWS Nitro Enclaves:
 
 ```bash
 # Set environment variables
-export TEE_PORT=42000
+export TEE_PORT=5000
 export KMS_PROXY_PORT=8000
 export PRIVATE_KEY_BASE64="LS0tLS1CRUdJTi..." # Base64-encoded private key
 

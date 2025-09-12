@@ -21,7 +21,6 @@ pub async fn tee_public_key(
             ))
         })?;
 
-
     tee_task_pool
         .spawn(async move {
             // Get current AWS credentials
@@ -29,7 +28,7 @@ pub async fn tee_public_key(
             tee_request(
                 state_cloned.clone(),
                 Request::TeePublicKey {
-                    aws_config: shielder_scheduler_common::protocol::AwsConfig {
+                    aws_config: Box::new(shielder_scheduler_common::protocol::AwsConfig {
                         public_key: public_key_bytes,
                         kms_key_id: state_cloned.options.kms_key_id.clone().unwrap_or_default(),
                         aws_region: state_cloned.options.aws_region.clone().unwrap_or_default(),
@@ -37,7 +36,7 @@ pub async fn tee_public_key(
                         aws_secret_access_key: aws_credentials.secret_access_key,
                         aws_session_token: aws_credentials.session_token.unwrap_or_default(),
                         kms_encryption_algorithm: "RSAES_OAEP_SHA_256".to_string(),
-                    },
+                    }),
                 },
             )
             .await

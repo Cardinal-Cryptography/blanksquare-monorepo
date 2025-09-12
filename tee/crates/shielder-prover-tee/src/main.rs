@@ -7,7 +7,7 @@ use shielder_prover_common::{protocol::VSOCK_PORT, vsock::VsockError};
 async fn main() -> Result<(), VsockError> {
     tracing_subscriber::fmt::init();
 
-    let server = server::Server::new(VSOCK_PORT)?;
+    let server = server::Server::new(VSOCK_PORT as u16)?;
     info!("Server listening on: {:?}", server.local_addr()?);
 
     loop {

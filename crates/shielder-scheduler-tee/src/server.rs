@@ -9,16 +9,21 @@ use aws_nitro_enclaves_nsm_api::{
 };
 use log::{debug, info};
 use shielder_scheduler_common::{
-    protocol::{
-        AwsConfig, EncryptionEnvelope, Payload, Request, Response,
-        TEEServer,
-    },
+    protocol::{AwsConfig, EncryptionEnvelope, Payload, Request, Response, TEEServer},
     vsock::VsockError,
 };
 use shielder_setup::consts::{ARITY, TREE_HEIGHT};
 use tokio_vsock::{VsockAddr, VsockListener, VsockStream};
 
 use crate::{command_line_args::CommandLineArgs, kms::KmsCrypto, withdraw::WithdrawCircuit};
+
+struct RelayParams {
+    relayer_address: Address,
+    relayer_fee: U256,
+    merkle_path: Box<[[U256; ARITY]; TREE_HEIGHT]>,
+    merkle_root: U256,
+    pocket_money: U256,
+}
 
 pub struct Server {
     kms: KmsCrypto,
@@ -87,14 +92,17 @@ impl Server {
                             merkle_root,
                             pocket_money,
                         } => {
-                            self.prepare_relay_calldata_response(
-                                &aws_config,
-                                encryption_envelope,
+                            let relay_params = RelayParams {
                                 relayer_address,
-                                max_relayer_fee,
+                                relayer_fee: max_relayer_fee,
                                 merkle_path,
                                 merkle_root,
                                 pocket_money,
+                            };
+                            self.prepare_relay_calldata_response(
+                                &aws_config,
+                                *encryption_envelope,
+                                relay_params,
                             )
                             .await
                         }
@@ -126,11 +134,7 @@ impl Server {
         &self,
         aws_config: &AwsConfig,
         encryption_envelope: EncryptionEnvelope,
-        relayer_address: Address,
-        relayer_fee: U256,
-        merkle_path: Box<[[U256; ARITY]; TREE_HEIGHT]>,
-        merkle_root: U256,
-        pocket_money: U256,
+        relay_params: RelayParams,
     ) -> Result<Response, VsockError> {
         let decrypted_payload = self.kms.decrypt_payload(aws_config, &encryption_envelope)?;
 
@@ -139,7 +143,7 @@ impl Server {
                 VsockError::Protocol(format!("Failed to deserialize decrypted payload: {e:?}"))
             })?;
 
-       let token = match deserialized_payload.token_address {
+        let token = match deserialized_payload.token_address {
             Address::ZERO => shielder_account::Token::Native,
             addr => shielder_account::Token::ERC20(addr),
         };
@@ -147,17 +151,17 @@ impl Server {
         let relayer_calldata = withdraw_circuit.get_relayer_calldata(
             deserialized_payload.withdrawal_value,
             deserialized_payload.withdraw_address,
-            *merkle_path,
+            *relay_params.merkle_path,
             deserialized_payload.chain_id,
-            relayer_fee,
-            pocket_money,
-            relayer_address,
+            relay_params.relayer_fee,
+            relay_params.pocket_money,
+            relay_params.relayer_address,
             deserialized_payload.protocol_fee,
             deserialized_payload.memo,
             deserialized_payload.nullifier_old,
             deserialized_payload.nullifier_new,
             deserialized_payload.account_old_balance,
-            merkle_root,
+            relay_params.merkle_root,
         );
 
         Ok(Response::PrepareRelayCalldata {

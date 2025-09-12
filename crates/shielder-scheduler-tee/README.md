@@ -92,13 +92,12 @@ function createEncryptionEnvelope(payload: Payload, teePublicKey: Buffer): Encry
   
   // Step 4: Return the complete encryption envelope
   return {
-    encrypted_payload: encryptedPayload,  // AES-GCM encrypted data
-    encrypted_dek: encryptedDek,          // RSA-OAEP encrypted DEK
-    iv: iv,                               // 12-byte initialization vector
-    auth_tag: authTag                     // 16-byte authentication tag
+    encrypted_payload: encryptedPayload.toString('base64'),  // AES-GCM encrypted data
+    encrypted_dek: encryptedDek.toString('base64'),          // RSA-OAEP encrypted DEK
+    iv: iv.toString('base64'),                               // 12-byte initialization vector
+    auth_tag: authTag.toString('base64')                     // 16-byte authentication tag
   };
 }
-
 // Alternative using AWS KMS for DEK encryption (when available)
 async function createEncryptionEnvelopeWithKMS(
   payload: Payload, 

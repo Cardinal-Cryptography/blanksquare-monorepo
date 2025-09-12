@@ -1,0 +1,12 @@
+# Rust build artifacts
+target/
+**/*.rs.bk
+**/*.rlib
+**/*.d
+**/*.rlib.d
+**/*.o
+**/*.rmeta
+
+# Cargo cache and configuration files
+.cargo/
+

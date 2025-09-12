@@ -18,6 +18,10 @@ pub struct CommandLineArgs {
     /// Base64-encoded RSA private key for local testing (only available with local-run feature)
     /// This should be a PKCS#8 DER-encoded private key converted to base64
     #[cfg(feature = "local-run")]
-    #[clap(long, env = "PRIVATE_KEY_BASE64", help = "Base64-encoded RSA private key for local decryption (required with local-run feature)")]
+    #[clap(
+        long,
+        env = "PRIVATE_KEY_BASE64",
+        help = "Base64-encoded RSA private key for local decryption (required with local-run feature)"
+    )]
     pub private_key: String,
 }

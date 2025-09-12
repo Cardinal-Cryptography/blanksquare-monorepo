@@ -91,7 +91,11 @@ pub struct CommandLineArgs {
 
     // KMS configuration
     /// Disable KMS and use local private key for decryption (for development only)
-    #[clap(long, help = "MUST NOT BE USED IN PRODUCTION. Disable KMS and use local private key for decryption.", env = "DISABLE_KMS")]
+    #[clap(
+        long,
+        help = "MUST NOT BE USED IN PRODUCTION. Disable KMS and use local private key for decryption.",
+        env = "DISABLE_KMS"
+    )]
     pub disable_kms: bool,
 
     #[clap(long, env = "KMS_PUBLIC_KEY")]

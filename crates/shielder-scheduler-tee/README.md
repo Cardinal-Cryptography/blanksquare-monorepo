@@ -62,6 +62,11 @@ When using the TEE for decryption operations, the `EncryptionEnvelope` must conf
 - **Encrypted Payload**: Cannot be empty, contains the AES-GCM encrypted data
 - **Encrypted DEK**: RSA-OAEP encrypted Data Encryption Key, decrypted using AWS KMS
 
+**Important**: The `AwsConfig.public_key` field must contain the **base64-encoded DER format** of the RSA public key. The TEE expects this field to be a valid base64 string that, when decoded, produces valid DER-encoded public key bytes. If you encounter "Failed to parse public key as UTF-8" errors, ensure that:
+1. The public key is in DER format (not PEM)
+2. The DER bytes are properly base64-encoded
+3. The base64 string contains no invalid characters or encoding issues
+
 **Complete envelope encryption example (Node.js/TypeScript):**
 
 ```javascript

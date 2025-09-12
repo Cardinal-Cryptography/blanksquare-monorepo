@@ -51,7 +51,6 @@ pub struct EncryptionEnvelope {
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct AwsConfig {
-    #[serde(with = "base64_serialization")]
     pub public_key: Vec<u8>,
     pub kms_key_id: String,
     pub aws_region: String,

@@ -79,7 +79,7 @@ impl KmsCrypto {
             })?;
 
             if !output.status.success() {
-                let stderr = String::from_utf8_lossy(&output.stderr);
+                let stderr: std::borrow::Cow<'_, str> = String::from_utf8_lossy(&output.stderr);
                 info!("Decrypting data encryption key failed with {stderr}");
                 return Err(VsockError::KMS(format!("kmstool failed: {}", stderr)));
             }
@@ -180,7 +180,7 @@ impl KmsCrypto {
 
         // Parse public key from DER bytes (the public_key field now contains base64-decoded DER bytes)
         let oaep_padding = Oaep::new::<Sha256>();
-        let encrypted_data = RsaPublicKey::from_public_key_der(&aws_config.public_key)
+        let encrypted_data: Vec<u8> = RsaPublicKey::from_public_key_der(&aws_config.public_key)
             .map_err(|e| VsockError::KMS(format!("Failed to parse public key DER: {e:?}")))?
             .encrypt(
                 &mut rand::thread_rng(),

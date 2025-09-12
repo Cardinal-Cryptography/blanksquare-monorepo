@@ -14,7 +14,7 @@ pub async fn tee_public_key(
     let tee_task_pool = state.tee_task_pool.clone();
     let state_cloned = state.clone();
     let public_key_bytes = BASE64_STANDARD
-        .decode(&state_cloned.options.kms_public_key)
+        .decode(state_cloned.options.kms_public_key.trim())
         .map_err(|e| {
             SchedulerServerError::ParseError(format!(
                 "Failed to decode base64 KMS_PUBLIC_KEY: {e:?}"

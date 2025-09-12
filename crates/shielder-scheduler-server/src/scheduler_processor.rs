@@ -265,7 +265,7 @@ Please check the SHIELDER_ADDRESS environment variable or --shielder-address arg
         // Get current AWS credentials
         let aws_credentials = self.app_state.aws_credentials.lock().await.clone();
         let public_key_bytes = base64::prelude::BASE64_STANDARD
-            .decode(&self.app_state.options.kms_public_key)
+            .decode(self.app_state.options.kms_public_key.trim())
             .map_err(|e| {
                 SchedulerServerError::ParseError(format!(
                     "Failed to decode base64 KMS_PUBLIC_KEY: {e:?}"

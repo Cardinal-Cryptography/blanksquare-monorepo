@@ -62,12 +62,12 @@ When using the TEE for decryption operations, the `EncryptionEnvelope` must conf
 - **Encrypted Payload**: Cannot be empty, contains the AES-GCM encrypted data
 - **Encrypted DEK**: RSA-OAEP encrypted Data Encryption Key, decrypted using AWS KMS
 
-**Important**: The `AwsConfig.public_key` field must contain the **base64-encoded DER format** of the RSA public key. The TEE expects this field to be a valid base64 string that, when decoded, produces valid DER-encoded public key bytes. If you encounter "Failed to parse public key as UTF-8" errors, ensure that:
+**Important**: The `AwsConfig.public_key` field must contain the **raw DER-encoded bytes** of the RSA public key. The server manually decodes the base64 `KMS_PUBLIC_KEY` environment variable before putting it into this field, so this field contains the actual DER bytes ready for cryptographic operations (not base64). The TEE expects this field to contain valid DER-encoded public key bytes. If you encounter cryptographic operation errors, ensure that:
 1. The public key is in DER format (not PEM)
-2. The DER bytes are properly base64-encoded
-3. The base64 string contains no invalid characters or encoding issues
+2. The DER bytes are properly decoded from base64 before being placed in this field
+3. The original base64 string contains no invalid characters or encoding issues
 
-**Complete envelope encryption example (Node.js/TypeScript):**
+**Local-run envelope encryption example (Node.js/TypeScript):**
 
 ```javascript
 const crypto = require('crypto');
@@ -277,7 +277,7 @@ For local testing, you can generate RSA key pairs using OpenSSL:
 
 ```bash
 # Generate RSA private key in PKCS#8 format (2048-bit)
-openssl genpkey -algorithm RSA -out test_private_key.pem -pkcs8 -pkeyopt rsa_keygen_bits:2048
+openssl genpkey -algorithm RSA -out test_private_key.pem -pkeyopt rsa_keygen_bits:2048
 
 # Generate corresponding public key
 openssl pkey -in test_private_key.pem -pubout -out test_public_key.pem

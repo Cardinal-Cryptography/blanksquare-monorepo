@@ -139,10 +139,8 @@ impl CommandLineArgs {
         if self.kms_public_key.trim().is_empty() {
             return Err("KMS_PUBLIC_KEY must not be empty".into());
         }
-        if general_purpose::STANDARD
-            .decode(&self.kms_public_key)
-            .is_err()
-        {
+        let pk_b64 = self.kms_public_key.trim();
+        if general_purpose::STANDARD.decode(pk_b64).is_err() {
             return Err("KMS_PUBLIC_KEY must be a valid base64 string".into());
         }
 

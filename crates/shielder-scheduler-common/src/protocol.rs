@@ -43,14 +43,19 @@ pub struct EncryptionEnvelope {
     /// Encrypted data encryption key (DEK) using Tee Public Key.
     #[serde(with = "base64_serialization")]
     pub encrypted_dek: Vec<u8>,
+    /// 12-byte IV (nonce) for AES-256-GCM; must be exactly 12 bytes.
     #[serde(with = "base64_serialization")]
     pub iv: Vec<u8>,
+    /// 16-byte authentication tag for AES-256-GCM; must be exactly 16 bytes.
     #[serde(with = "base64_serialization")]
     pub auth_tag: Vec<u8>,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct AwsConfig {
+    /// Public key as raw DER-encoded bytes (not base64).
+    /// The server manually decodes the base64 KMS_PUBLIC_KEY before putting it here,
+    /// so this field contains the actual DER bytes ready for cryptographic operations.
     pub public_key: Vec<u8>,
     pub kms_key_id: String,
     pub aws_region: String,

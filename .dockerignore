@@ -1,5 +1,7 @@
 # Rust build artifacts
 target/
+# Exception: allow specific release binary needed for Docker build
+!target/release/shielder-relayer
 **/*.rs.bk
 **/*.rlib
 **/*.d

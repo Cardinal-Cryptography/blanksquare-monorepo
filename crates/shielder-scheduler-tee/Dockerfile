@@ -15,8 +15,8 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 ENV PATH="/root/.cargo/bin:${PATH}"
 
 COPY . .
-
-RUN cd crates/shielder-scheduler-tee && cargo build --release
+COPY Cargo.toml Cargo.lock ./
+RUN cargo build --release -p shielder-scheduler-server
 
 FROM ubuntu:22.04
 

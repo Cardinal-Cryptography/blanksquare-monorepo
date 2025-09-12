@@ -153,7 +153,9 @@ impl CommandLineArgs {
 
         // Validate AWS STS refresh period range
         if self.aws_sts_refresh_period_secs < 900 || self.aws_sts_refresh_period_secs > 1800 {
-            return Err("AWS_STS_REFRESH_CREDENTIALS_PERIOD_SECONDS must be between 900 and 1800".into());
+            return Err(
+                "AWS_STS_REFRESH_CREDENTIALS_PERIOD_SECONDS must be between 900 and 1800".into(),
+            );
         }
 
         if !self.disable_kms {

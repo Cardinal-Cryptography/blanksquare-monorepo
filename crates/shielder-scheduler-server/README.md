@@ -262,7 +262,7 @@ The service is built with clear separation of concerns:
 **Prerequisites**:
 - EC2 instance with an IAM role that has KMS permissions
 - The EC2 instance must have access to EC2 instance metadata service (IMDSv2)
-- The IAM role name must match the configured `AWS_IAM_KMS_ROLE` (default: kms-access)
+- The IAM role name must match the configured `AWS_IAM_KMS_ROLE`
 - The specified KMS key must be accessible and properly configured
 - AWS_STS_REFRESH_CREDENTIALS_PERIOD_SECONDS must be between 900 and 1800 seconds
 
@@ -285,7 +285,7 @@ cargo run  # Success
 
 Production mode (with KMS):
 ```bash
-cargo run -- --kms-public-key <base64-key> --aws-region us-east-1 --kms-key-id <key-id> --aws-iam-kms-role kms-access --node-rpc-url <rpc-url> --shielder-address <contract-addr> --relayer-rpc-url <relayer-url>
+cargo run -- --kms-public-key <base64-key> --aws-region us-east-1 --kms-key-id <key-id> --aws-iam-kms-role <iam-role-name> --node-rpc-url <rpc-url> --shielder-address <contract-addr> --relayer-rpc-url <relayer-url>
 ```
 
 Local development mode (without KMS):

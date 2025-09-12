@@ -177,10 +177,12 @@ Request::PrepareRelayCalldata {
     relayer_address,
     max_relayer_fee,
     merkle_path,
+    merkle_root,
+    pocket_money,
 }
 ```
 
-**Response:** `Response::RelayCalldata { calldata }`
+**Response:** `Response::PrepareRelayCalldata { calldata }`
 
 ## Building
 

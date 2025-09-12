@@ -43,7 +43,7 @@ pub struct CommandLineArgs {
     /// How many tasks can be processed in parallel by the TEE task pool
     /// Do not raise it above 128 as this is the limit of vsock connections, at least
     /// for the rust lib used by this server
-    #[clap(long, default_value_t = 100, env = "TEE_TASK_POOL_CAPACITY", value_parser = clap::value_parser!(usize).range(1..=128),)]
+    #[clap(long, default_value_t = 100, env = "TEE_TASK_POOL_CAPACITY")]
     pub tee_task_pool_capacity: usize,
 
     /// How much time this server waits for a task to be processed by the TEE task pool
@@ -115,7 +115,6 @@ pub struct CommandLineArgs {
     #[clap(
         long,
         default_value_t = 900,
-        value_parser = clap::value_parser!(u64).range(900..=1800),
         env = "AWS_STS_REFRESH_CREDENTIALS_PERIOD_SECONDS"
     )]
     pub aws_sts_refresh_period_secs: u64,
@@ -143,6 +142,16 @@ impl CommandLineArgs {
             .is_err()
         {
             return Err("KMS_PUBLIC_KEY must be a valid base64 string".into());
+        }
+
+        // Validate TEE task pool capacity range
+        if self.tee_task_pool_capacity < 1 || self.tee_task_pool_capacity > 128 {
+            return Err("TEE_TASK_POOL_CAPACITY must be between 1 and 128".into());
+        }
+
+        // Validate AWS STS refresh period range
+        if self.aws_sts_refresh_period_secs < 900 || self.aws_sts_refresh_period_secs > 1800 {
+            return Err("AWS_STS_REFRESH_CREDENTIALS_PERIOD_SECONDS must be between 900 and 1800".into());
         }
 
         if !self.disable_kms {

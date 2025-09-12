@@ -2,8 +2,7 @@
 #  Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 #  SPDX-License-Identifier: MIT-0
 
-set +x
-set -e
+set -Eeuo pipefail
 
 NITRO_ENCLAVE_CLI_VERSION="v0.4.3"
 KMS_FOLDER="./artifacts/kms"

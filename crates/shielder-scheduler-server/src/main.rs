@@ -17,7 +17,7 @@ use clap::Parser;
 use error::SchedulerServerError as Error;
 use metrics_exporter_prometheus::PrometheusBuilder;
 use shielder_scheduler_common::metrics::FutureHistogramLayer;
-use tokio::{net::TcpListener, sync::Mutex};
+use tokio::{net::TcpListener, sync::Mutex, sync::watch};
 use tower_http::cors::CorsLayer;
 use tracing::info;
 use tracing_subscriber::{fmt, layer::SubscriberExt, util::SubscriberInitExt, EnvFilter, Layer};
@@ -37,26 +37,23 @@ struct AppState {
     tee_task_pool: Arc<tokio_task_pool::Pool>,
     aws_credentials: Arc<Mutex<AwsCredentials>>,
     relayer_rpc_controller: RelayerRpcController,
+    shutdown_tx: watch::Sender<bool>,
 }
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
-    // Parse command line arguments
     let options = CommandLineArgs::parse();
 
-    // Validate command line arguments
     if let Err(validation_error) = options.validate() {
         return Err(Error::ParseError(validation_error));
     }
 
-    // Initialize logging
     tracing_subscriber::registry()
         .with(fmt::layer().with_filter(EnvFilter::from_default_env()))
         // Initialize metrics collection
         .with(FutureHistogramLayer::with_all_spans().with_filter(EnvFilter::new("info")))
         .init();
 
-    // Initialize Prometheus metrics
     PrometheusBuilder::new()
         .with_http_listener(SocketAddrV4::new(
             options
@@ -69,19 +66,14 @@ async fn main() -> Result<(), Error> {
         .upkeep_timeout(Duration::from_secs(options.metrics_upkeep_timeout_secs))
         .install()?;
 
-    // Connect to the database
     let db_pool = db::connect_to_db(&options).await?;
-
-    // Initialize database tables
     db::create_tables(&db_pool).await?;
 
-    // Initialize the TEE task pool
     let tee_task_pool = tokio_task_pool::Pool::bounded(options.tee_task_pool_capacity)
         .with_spawn_timeout(Duration::from_secs(options.tee_task_pool_timeout_secs))
         .with_run_timeout(Duration::from_secs(options.tee_compute_timeout_secs))
         .into();
 
-    // Get AWS credentials from EC2 instance metadata
     let aws_credentials = if !options.disable_kms {
         if let (Some(region), Some(iam_role)) = (&options.aws_region, &options.aws_iam_kms_role) {
             aws_session_tokens::get_session_token(
@@ -105,14 +97,18 @@ async fn main() -> Result<(), Error> {
         }
     };
 
-    // Create the application state
     let relayer_rpc_controller = RelayerRpcController::new(options.relayer_rpc_url.clone());
+    
+    // Create shutdown signal channel
+    let (shutdown_tx, shutdown_rx) = watch::channel(false);
+    
     let app_state = Arc::new(AppState {
         options,
         tee_task_pool,
         db_pool,
         aws_credentials: Arc::new(Mutex::new(aws_credentials)),
         relayer_rpc_controller,
+        shutdown_tx,
     });
 
     // Perform initial TEE public key verification to ensure the server is correctly configured
@@ -132,7 +128,6 @@ async fn main() -> Result<(), Error> {
         });
     }
 
-    // Start the scheduler processor
     let scheduler_processor = SchedulerProcessor::new(app_state.clone());
     tokio::spawn(async move {
         scheduler_processor.start().await;
@@ -144,7 +139,6 @@ async fn main() -> Result<(), Error> {
     ))
     .await?;
 
-    // Set up the application routes
     let router = Router::new()
         .route("/health", get(server_handlers::health::health))
         .route(
@@ -162,7 +156,41 @@ async fn main() -> Result<(), Error> {
         .with_state(app_state);
 
     info!("Starting local server on {}", listener.local_addr()?);
-    serve(listener, router).await?;
+    
+    // Use graceful shutdown with signal handling
+    let graceful = serve(listener, router).with_graceful_shutdown(async move {
+        tokio::select! {
+            // Wait for shutdown signal from credential refresh failure
+            _ = async {
+                let mut rx = shutdown_rx;
+                let _ = rx.changed().await;
+                if *rx.borrow() {
+                    info!("Received shutdown signal due to AWS credential refresh failure");
+                }
+            } => {},
+            // Wait for Ctrl+C
+            _ = tokio::signal::ctrl_c() => {
+                info!("Received Ctrl+C signal, starting graceful shutdown...");
+            },
+            // Wait for SIGTERM on Unix systems
+            _ = async {
+                #[cfg(unix)]
+                {
+                    let mut sigterm = tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
+                        .expect("Failed to register SIGTERM handler");
+                    sigterm.recv().await;
+                    info!("Received SIGTERM signal, starting graceful shutdown...");
+                }
+                #[cfg(not(unix))]
+                {
+                    // On non-Unix systems, just wait forever (this branch won't be taken due to tokio::select!)
+                    std::future::pending::<()>().await;
+                }
+            } => {},
+        }
+    });
+    
+    graceful.await?;
 
     Ok(())
 }
@@ -199,8 +227,10 @@ async fn aws_credentials_refresh_task(app_state: Arc<AppState>) {
                             "Failed to refresh AWS credentials from EC2 metadata: {:?}",
                             e
                         );
-                        // Continue running - don't crash the server on credential refresh failure
-                        // The old credentials might still be valid for a while
+                        // Signal graceful shutdown on credential refresh failure
+                        info!("Signaling server shutdown due to AWS credential refresh failure");
+                        let _ = app_state.shutdown_tx.send(true);
+                        return;
                     }
                 }
             }

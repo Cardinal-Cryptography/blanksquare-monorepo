@@ -30,18 +30,17 @@ impl KmsCrypto {
         #[cfg(not(feature = "local-run"))] kms_proxy_port: u32,
         #[cfg(feature = "local-run")] _kms_proxy_port: u32,
         #[cfg(feature = "local-run")] private_key: String,
-    ) -> Self {
-        Self {
+    ) -> Result<Self, VsockError> {
+        Ok(Self {
             #[cfg(not(feature = "local-run"))]
             kms_proxy_port,
             #[cfg(feature = "local-run")]
             private_key: BASE64
                 .decode(private_key)
                 .map_err(|e| {
-                    panic!("Failed to decode PRIVATE_KEY_BASE64 from base64: {e:?}");
-                })
-                .unwrap(),
-        }
+                    VsockError::KMS(format!("Failed to decode PRIVATE_KEY_BASE64 from base64: {e:?}"))
+                })?,
+        })
     }
 
     fn decrypt_dek(
@@ -137,6 +136,30 @@ impl KmsCrypto {
         }
 
         info!("Decrypting payload");
+        
+        // Validate IV/nonce length - AES-GCM requires exactly 12 bytes (96 bits)
+        if encryption_envelope.iv.len() != 12 {
+            return Err(VsockError::KMS(format!(
+                "Invalid IV length: expected 12 bytes for AES-GCM, got {}",
+                encryption_envelope.iv.len()
+            )));
+        }
+        
+        // Validate auth tag length - AES-GCM typically uses 16 bytes (128 bits)
+        if encryption_envelope.auth_tag.len() != 16 {
+            return Err(VsockError::KMS(format!(
+                "Invalid auth tag length: expected 16 bytes for AES-GCM, got {}",
+                encryption_envelope.auth_tag.len()
+            )));
+        }
+        
+        // Validate that we have some ciphertext
+        if encryption_envelope.encrypted_payload.is_empty() {
+            return Err(VsockError::KMS(
+                "Invalid encrypted payload: cannot be empty".into()
+            ));
+        }
+        
         let mut full_ciphertext = encryption_envelope.encrypted_payload.clone();
         full_ciphertext.extend(encryption_envelope.auth_tag.clone());
 

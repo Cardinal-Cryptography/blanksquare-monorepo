@@ -14,8 +14,4 @@ pub struct CommandLineArgs {
 
     #[clap(long, default_value_t = 8000, env = "KMS_PROXY_PORT")]
     pub kms_proxy_port: u32,
-
-    #[cfg(feature = "local-run")]
-    #[clap(long = "private-key-base64", env = "PRIVATE_KEY_BASE64")]
-    pub private_key: String,
 }

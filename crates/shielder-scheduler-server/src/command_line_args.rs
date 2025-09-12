@@ -1,4 +1,5 @@
 use clap::Parser;
+use base64::{Engine as _, engine::general_purpose};
 
 #[derive(Parser, Debug, Clone)]
 pub struct CommandLineArgs {
@@ -129,6 +130,14 @@ pub struct CommandLineArgs {
 impl CommandLineArgs {
     /// Validates the command line arguments
     pub fn validate(&self) -> Result<(), String> {
+
+        if self.kms_public_key.trim().is_empty() {
+            return Err("KMS_PUBLIC_KEY must not be empty".into());
+        }
+        if general_purpose::STANDARD.decode(&self.kms_public_key).is_err() {
+            return Err("KMS_PUBLIC_KEY must be a valid base64 string".into());
+        }
+        
         if !self.disable_kms {
             // In production mode, validate AWS settings are present
             if self.aws_sts_refresh_period_secs < 900 {
@@ -167,11 +176,6 @@ impl CommandLineArgs {
                 }
             } else {
                 return Err("AWS_IAM_KMS_ROLE is required when --disable-kms is not set".into());
-            }
-        } else {
-            // In local mode, ensure PRIVATE_KEY is not set (security check)
-            if std::env::var("PRIVATE_KEY").is_ok() {
-                return Err("PRIVATE_KEY environment variable must not be set in production. Use PRIVATE_KEY_BASE64 for local development only.".into());
             }
         }
         Ok(())

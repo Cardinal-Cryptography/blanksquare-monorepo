@@ -41,10 +41,9 @@ For local development and testing, you can use the `--disable-kms` command line 
 - **Dummy Credentials**: Uses hardcoded dummy AWS credentials instead of fetching from EC2 metadata
 - **No Credential Refresh**: Skips the background AWS credential refresh task when KMS is disabled
 - **Validation Changes**: AWS configuration parameters become optional when `--disable-kms` is used
-- **Security Check**: Ensures `PRIVATE_KEY` environment variable is not set in production mode
 
 When using `--disable-kms`:
-- The TEE must be run with `--disable-kms` flag and `PRIVATE_KEY_BASE64` environment variable
+- The `shielder-scheduler-tee` must be run with cargo feature `local-run` and `PRIVATE_KEY_BASE64` environment variable
 - AWS parameters (AWS_REGION, KMS_KEY_ID, AWS_IAM_KMS_ROLE) become optional
 - The server uses dummy AWS credentials for TEE communication
 - Background AWS credential refresh is disabled
@@ -181,9 +180,7 @@ The service can be configured using environment variables or command-line argume
 - `KMS_PUBLIC_KEY`: Base64-encoded public key for KMS verification (required)
 - `AWS_STS_REFRESH_CREDENTIALS_PERIOD_SECONDS`: How often to refresh AWS STS credentials in seconds (default: 900, range: 900-1800)
 
-**Local Development**: When using the `--disable-kms` flag, AWS-related environment variables become optional. If not provided, dummy AWS credentials are used for local testing. The TEE must be run with `--disable-kms` and `PRIVATE_KEY_BASE64` environment variable.
-
-**Security Note**: When `--disable-kms` is used, the system validates that the `PRIVATE_KEY` environment variable is not set to prevent accidental exposure of private keys in production.
+**Local Development**: When using the `--disable-kms` flag, AWS-related environment variables become optional. If not provided, dummy AWS credentials are used for local testing. The TEE must be run with cargo feature `local_run` and `PRIVATE_KEY_BASE64` environment variable.
 
 **Converting PEM to Base64**: If you have a PEM file, you can convert it to base64:
 ```bash
@@ -338,15 +335,8 @@ openssl pkey -in test_private_key.pem -pubout -out test_public_key.pem
 openssl pkey -in test_private_key.pem -pubout -outform DER -out test_public_key.der
 base64 -w 0 test_public_key.der > test_public_key_base64.txt
 
-# Convert private key to PKCS#8 DER format and encode as base64 (for TEE's PRIVATE_KEY_BASE64)
-openssl pkcs8 -topk8 -inform PEM -outform DER -in test_private_key.pem -out test_private_key.der -nocrypt
-base64 -w 0 test_private_key.der > test_private_key_base64.txt
-
 # Use the base64-encoded public key for KMS_PUBLIC_KEY
 export KMS_PUBLIC_KEY=$(cat test_public_key_base64.txt)
-
-# Use the base64-encoded private key for TEE's PRIVATE_KEY_BASE64 (when running TEE with --disable-kms flag)
-export PRIVATE_KEY_BASE64=$(cat test_private_key_base64.txt)
 ```
 
 **Security Note**: Test keys should only be used for local development. Never use test keys in production environments.

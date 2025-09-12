@@ -43,7 +43,7 @@ impl Server {
             options.kms_proxy_port,
             #[cfg(feature = "local-run")]
             options.private_key,
-        );
+        )?;
 
         Ok(Arc::new(Self {
             listener,
@@ -82,7 +82,7 @@ impl Server {
                             aws_config,
                             encryption_envelope,
                             relayer_address,
-                            max_relayer_fee: _,
+                            max_relayer_fee,
                             merkle_path,
                             merkle_root,
                             pocket_money,
@@ -91,6 +91,7 @@ impl Server {
                                 &aws_config,
                                 encryption_envelope,
                                 relayer_address,
+                                max_relayer_fee,
                                 merkle_path,
                                 merkle_root,
                                 pocket_money,
@@ -126,6 +127,7 @@ impl Server {
         aws_config: &AwsConfig,
         encryption_envelope: EncryptionEnvelope,
         relayer_address: Address,
+        relayer_fee: U256,
         merkle_path: Box<[[U256; ARITY]; TREE_HEIGHT]>,
         merkle_root: U256,
         pocket_money: U256,
@@ -147,7 +149,7 @@ impl Server {
             deserialized_payload.withdraw_address,
             *merkle_path,
             deserialized_payload.chain_id,
-            deserialized_payload.max_relayer_fee,
+            relayer_fee,
             pocket_money,
             relayer_address,
             deserialized_payload.protocol_fee,

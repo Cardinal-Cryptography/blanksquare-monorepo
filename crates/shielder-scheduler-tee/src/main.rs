@@ -4,7 +4,7 @@ mod kms;
 mod server;
 mod withdraw;
 
-use log::info;
+use tracing::info;
 use shielder_scheduler_common::vsock::VsockError;
 
 use crate::command_line_args::CommandLineArgs;

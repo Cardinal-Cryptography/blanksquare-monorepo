@@ -33,9 +33,6 @@ pub struct Payload {
     pub pocket_money: U256,
     pub protocol_fee: U256,
     pub memo: Bytes,
-
-    /// Maximum relayer fee.
-    pub max_relayer_fee: U256,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

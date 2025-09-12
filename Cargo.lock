@@ -5956,6 +5956,7 @@ dependencies = [
  "thiserror 2.0.12",
  "tokio",
  "tokio-vsock",
+ "tracing",
  "tracing-subscriber",
  "type-conversions",
 ]

@@ -53,6 +53,32 @@ The TEE server works in conjunction with `shielder-scheduler-server` (the host-s
 - **RSA Operations**: RSA-OAEP for key exchange and envelope encryption
 - **Attestation**: Cryptographic proof of execution environment
 
+### 📋 Data Format Requirements
+
+When using the TEE for decryption operations, the `EncryptionEnvelope` must conform to specific format requirements:
+
+- **IV (Initialization Vector)**: Must be exactly **12 bytes** (96 bits) for AES-GCM
+- **Auth Tag**: Must be exactly **16 bytes** (128 bits) for AES-GCM authentication
+- **Encrypted Payload**: Cannot be empty, contains the AES-GCM encrypted data
+- **Encrypted DEK**: RSA-OAEP encrypted Data Encryption Key, decrypted using AWS KMS
+
+**Example encryption (Node.js/TypeScript):**
+```javascript
+function encryptPayload(payload: Payload, aesKey: Buffer): EncryptionEnvelope {
+  const iv = crypto.randomBytes(12); // 12 bytes for GCM
+  const cipher = crypto.createCipheriv('aes-256-gcm', aesKey, iv);
+  
+  let encrypted = cipher.update(JSON.stringify(payload), 'utf8');
+  encrypted = Buffer.concat([encrypted, cipher.final()]);
+  
+  const authTag = cipher.getAuthTag(); // 16 bytes
+  
+  return { encrypted_payload: encrypted, iv, auth_tag: authTag };
+}
+```
+
+The TEE will validate these requirements and return clear error messages if the format is incorrect.
+
 ### 🌐 Communication
 - **vsock Protocol**: Secure communication with host via Virtual Socket
 - **Request/Response**: Handles ping, public key retrieval, and relay preparation
@@ -138,7 +164,10 @@ The TEE server is configured via command-line arguments and environment variable
 ./shielder-scheduler-tee --tee-port 42000 --kms-proxy-port 8000
 
 # Local testing mode
-./shielder-scheduler-tee --features local-run --private-key-base64 "LS0t..."
+cargo run --features local-run -- --private-key-base64 "LS0t..."
+# or:
+# cargo build --features local-run --release
+# ./target/release/shielder-scheduler-tee --private-key-base64 "LS0t..."
 ```
 
 ## Features

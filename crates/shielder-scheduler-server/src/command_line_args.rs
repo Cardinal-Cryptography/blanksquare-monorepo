@@ -90,10 +90,12 @@ pub struct CommandLineArgs {
     pub db_ssl: bool,
 
     // KMS configuration
-    /// Disable KMS and use local private key for decryption (for development only)
+    /// Disable KMS integration (development only).
+    /// Note: The scheduler server never handles private keys; when this flag is set,
+    /// the TEE server must run in local-run mode and use its local private key.
     #[clap(
         long,
-        help = "MUST NOT BE USED IN PRODUCTION. Disable KMS integration (TEE must run in local-run mode)",
+        help = "MUST NOT BE USED IN PRODUCTION. Disables KMS integration; TEE must run in local-run mode and will use its local private key. The scheduler server never handles private keys.",
         env = "DISABLE_KMS"
     )]
     pub disable_kms: bool,

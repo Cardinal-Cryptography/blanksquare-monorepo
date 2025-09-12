@@ -43,7 +43,7 @@ pub struct CommandLineArgs {
     /// How many tasks can be processed in parallel by the TEE task pool
     /// Do not raise it above 128 as this is the limit of vsock connections, at least
     /// for the rust lib used by this server
-    #[clap(long, default_value_t = 100, env = "TEE_TASK_POOL_CAPACITY")]
+    #[clap(long, default_value_t = 100, env = "TEE_TASK_POOL_CAPACITY", value_parser = clap::value_parser!(usize).range(1..=128),)]
     pub tee_task_pool_capacity: usize,
 
     /// How much time this server waits for a task to be processed by the TEE task pool
@@ -93,7 +93,7 @@ pub struct CommandLineArgs {
     /// Disable KMS and use local private key for decryption (for development only)
     #[clap(
         long,
-        help = "MUST NOT BE USED IN PRODUCTION. Disable KMS and use local private key for decryption.",
+        help = "MUST NOT BE USED IN PRODUCTION. Disable KMS integration (TEE must run in local-run mode)",
         env = "DISABLE_KMS"
     )]
     pub disable_kms: bool,
@@ -108,7 +108,7 @@ pub struct CommandLineArgs {
     pub aws_region: Option<String>,
 
     /// AWS IAM role name for KMS access
-    #[clap(long, default_value = "kms-access", env = "AWS_IAM_KMS_ROLE")]
+    #[clap(long, env = "AWS_IAM_KMS_ROLE")]
     pub aws_iam_kms_role: Option<String>,
 
     /// How often to refresh AWS STS credentials (in seconds, range: 900-1800)

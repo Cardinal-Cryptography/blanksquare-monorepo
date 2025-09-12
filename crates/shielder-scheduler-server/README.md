@@ -175,7 +175,7 @@ The service can be configured using environment variables or command-line argume
 ### AWS & KMS Configuration
 - `--disable-kms`: Command line flag to disable KMS and use local private key for decryption (for development only)
 - `AWS_REGION`: AWS region for STS and KMS operations (required when KMS is enabled, optional with `--disable-kms`)
-- `AWS_IAM_KMS_ROLE`: IAM role name for KMS access (default: kms-access, optional with `--disable-kms`)
+- `AWS_IAM_KMS_ROLE`: IAM role name for KMS access (required when KMS is enabled, optional with `--disable-kms`)
 - `KMS_KEY_ID`: AWS KMS key identifier for encryption operations (required when KMS is enabled, optional with `--disable-kms`)  
 - `KMS_PUBLIC_KEY`: Base64-encoded public key for KMS verification (required)
 - `AWS_STS_REFRESH_CREDENTIALS_PERIOD_SECONDS`: How often to refresh AWS STS credentials in seconds (default: 900, range: 900-1800)

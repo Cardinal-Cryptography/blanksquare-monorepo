@@ -112,8 +112,7 @@ impl Server {
         }
     }
 
-    /// Return the public key (base64) and
-    /// an attestation document that embeds the same public key.
+    /// Return the KMS public key (base64) and an attestation document embedding the same key.
     async fn public_key_response(&self, aws_config: &AwsConfig) -> Result<Response, VsockError> {
         self.kms.verify_public_key(aws_config)?;
 

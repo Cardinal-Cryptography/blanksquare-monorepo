@@ -175,7 +175,7 @@ Request::PrepareRelayCalldata {
     aws_config,
     encryption_envelope,
     relayer_address,
-    relayer_fee,
+    max_relayer_fee,
     merkle_path,
 }
 ```

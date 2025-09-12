@@ -16,7 +16,7 @@ ENV PATH="/root/.cargo/bin:${PATH}"
 
 COPY . .
 COPY Cargo.toml Cargo.lock ./
-RUN cargo build --release -p shielder-scheduler-server
+RUN cargo build --release -p shielder-scheduler-tee
 
 FROM ubuntu:22.04
 

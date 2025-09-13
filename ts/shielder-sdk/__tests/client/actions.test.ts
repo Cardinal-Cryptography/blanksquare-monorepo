@@ -35,6 +35,7 @@ describe("ShielderActions", () => {
   let mockNewAccountAction: Mocked<NewAccountAction>;
   let mockDepositAction: Mocked<DepositAction>;
   let mockWithdrawAction: Mocked<WithdrawAction>;
+  let unsubscribeFromBlockNumber: () => void;
   let mockPublicClient: Mocked<PublicClient>;
   let mockCallbacks: ShielderCallbacks;
   let mockAccountState: AccountStateMerkleIndexed;
@@ -254,10 +255,21 @@ describe("ShielderActions", () => {
       sendCalldataWithRelayer: vitest.fn()
     } as unknown as Mocked<WithdrawAction>;
 
+    unsubscribeFromBlockNumber = vitest.fn();
+
     mockPublicClient = {
       waitForTransactionReceipt: vitest.fn().mockResolvedValue({
-        status: "success"
-      })
+        status: "success",
+        blockNumber: 2n
+      }),
+      watchBlockNumber: vitest.fn().mockImplementation(
+        (options: { onBlockNumber: (blockNumber: bigint) => void }) => {
+          setTimeout(options.onBlockNumber, 0, 1n);
+          setTimeout(options.onBlockNumber, 0, 2n);
+
+          return unsubscribeFromBlockNumber;
+        }
+      ),
     } as unknown as Mocked<PublicClient>;
 
     mockCallbacks = {
@@ -302,6 +314,7 @@ describe("ShielderActions", () => {
           gas_cost_native: 0n,
           gas_cost_fee_token: 0n,
           relayer_cost_native: 0n,
+          relayer_cost_fee_token: 0n,
           pocket_money_native: 0n,
           pocket_money_fee_token: 0n,
           commission_native: 0n,
@@ -313,7 +326,8 @@ describe("ShielderActions", () => {
           native_token_unit_price: "1",
           fee_token_price: "1",
           fee_token_unit_price: "1",
-          token_price_ratio: "1"
+          token_price_ratio: "1",
+          token_unit_price_ratio: "1"
         }
       };
 
@@ -380,6 +394,8 @@ describe("ShielderActions", () => {
             hash: mockTxHash
           }
         );
+        expect(mockPublicClient.watchBlockNumber).toHaveBeenCalledOnce();
+        expect(unsubscribeFromBlockNumber).toHaveBeenCalledOnce();
         expect(mockStateSynchronizer.syncSingleAccount).toHaveBeenCalledWith(
           mockToken
         );

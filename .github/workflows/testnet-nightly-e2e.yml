@@ -5,6 +5,9 @@ on:
   schedule:
     - cron: "00 23 * * *"
   workflow_dispatch:
+  push:
+    branches:
+      - investigate-nightly
 
 concurrency:
   group: "${{ github.ref }}-${{ github.workflow }}"
@@ -14,7 +17,7 @@ jobs:
   e2e-tests:
     name: Run E2E tests on testnet
     runs-on: ubuntu-22.04
-    timeout-minutes: 60
+    timeout-minutes: 120
     env:
       RUSTC_WRAPPER: sccache
       CACHE_VERSION: 1

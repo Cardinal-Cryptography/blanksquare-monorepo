@@ -15,7 +15,9 @@ use shielder_scheduler_common::{
 use shielder_setup::consts::{ARITY, TREE_HEIGHT};
 use tokio_vsock::{VsockAddr, VsockListener, VsockStream};
 
-use crate::{command_line_args::CommandLineArgs, kms::KmsDecryptionController, withdraw::WithdrawCircuit};
+use crate::{
+    command_line_args::CommandLineArgs, kms::KmsDecryptionController, withdraw::WithdrawCircuit,
+};
 
 struct RelayParams {
     relayer_address: Address,

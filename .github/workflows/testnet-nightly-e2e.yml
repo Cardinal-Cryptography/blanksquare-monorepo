@@ -49,7 +49,7 @@ jobs:
         uses: ./.github/actions/get-workflow-run-id
         with:
           workflow-name: on-push-main.yml
-          full-sha: ${{ steps.get-ref-properties.outputs.full-sha }}
+          full-sha: a5cd8fa39fc411123ede34f3be3da55a51914c89
           github_token: ${{ secrets.CI_GH_TOKEN }}
 
       - name: Get artifact ID
@@ -74,7 +74,7 @@ jobs:
         id: setup-prover
         uses: ./.github/actions/setup-prover-server
         with:
-          proxy_image: public.ecr.aws/p5g6f1p8/shielder-prover:${{ steps.get-ref-properties.outputs.sha }}
+          proxy_image: public.ecr.aws/p5g6f1p8/shielder-prover:a5cd8fa
           eif_url: ${{ steps.build-download-url.outputs.download-url }}
           create: "true"
           ssh_private_key: ${{ secrets.TF_MODULES_PROVER_SERVER_PRIVATE_KEY }}

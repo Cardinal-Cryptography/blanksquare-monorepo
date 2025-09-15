@@ -9,6 +9,7 @@ on:
         required: true
         type: choice
         options:
+          - enclaves
           - shielder-sdk
           - shielder-sdk-crypto
           - shielder-sdk-crypto-wasm
@@ -26,6 +27,7 @@ jobs:
   publish:
     name: Build and push ${{ github.event.inputs.package }}
     if: |
+      github.event.inputs.package == 'enclaves' ||
       github.event.inputs.package == 'shielder-sdk' ||
       github.event.inputs.package == 'shielder-sdk-crypto' ||
       github.event.inputs.package == 'shielder-sdk-crypto-wasm' ||
@@ -90,6 +92,8 @@ jobs:
             pnpm build-package:crypto-wasm
           elif [ "${{ github.event.inputs.package }}" = "shielder-sdk-crypto-wasm-light" ]; then
             pnpm build-package:crypto-wasm-light
+          elif [ "${{ github.event.inputs.package }}" = "enclaves" ]; then
+            pnpm build-package:enclaves
           else
             echo "Unknown package: ${{ github.event.inputs.package }}"
             exit 1

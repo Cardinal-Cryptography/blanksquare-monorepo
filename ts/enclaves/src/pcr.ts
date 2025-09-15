@@ -2,7 +2,7 @@
  * PCR (Platform Configuration Register) validation for AWS Nitro attestation verification
  */
 
-import { uint8ToHex } from "@/utils";
+import { uint8ToHex } from "./utils";
 
 /**
  * Verify PCR measurements against expected values

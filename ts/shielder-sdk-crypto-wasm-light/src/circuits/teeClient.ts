@@ -1,4 +1,4 @@
-import { verifyAttestation } from "@/nitro-attestation";
+import { verifyAttestation } from "@cardinal-cryptography/enclaves";
 import {
   decryptPadded,
   encryptPadded,

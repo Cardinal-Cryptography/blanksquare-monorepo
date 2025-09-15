@@ -36,6 +36,64 @@ importers:
         specifier: ^8.16.0
         version: 8.23.0(eslint@9.19.0)(typescript@5.7.3)
 
+  enclaves:
+    dependencies:
+      '@cardinal-cryptography/ecies-encryption-lib':
+        specifier: ^0.2.0
+        version: 0.2.0
+      '@noble/secp256k1':
+        specifier: ^2.3.0
+        version: 2.3.0
+      asn1js:
+        specifier: ^3.0.6
+        version: 3.0.6
+      cbor:
+        specifier: ^10.0.9
+        version: 10.0.9
+      cbor-web:
+        specifier: ^10.0.9
+        version: 10.0.9
+      pkijs:
+        specifier: ^3.2.5
+        version: 3.2.5
+    devDependencies:
+      '@eslint/js':
+        specifier: ^9.15.0
+        version: 9.19.0
+      '@types/cbor':
+        specifier: ^6.0.4
+        version: 6.0.4
+      '@types/node':
+        specifier: ^22.10.0
+        version: 22.13.1
+      eslint:
+        specifier: ^9.15.0
+        version: 9.19.0
+      eslint-config-prettier:
+        specifier: ^9.1.0
+        version: 9.1.0(eslint@9.19.0)
+      eslint-plugin-prettier:
+        specifier: ^5.2.1
+        version: 5.2.3(@types/eslint@9.6.1)(eslint-config-prettier@9.1.0(eslint@9.19.0))(eslint@9.19.0)(prettier@3.4.2)
+      globals:
+        specifier: ^15.12.0
+        version: 15.14.0
+      prettier:
+        specifier: ^3.4.1
+        version: 3.4.2
+      tsc-alias:
+        specifier: ^1.8.10
+        version: 1.8.10
+      typescript:
+        specifier: ^5.7.2
+        version: 5.7.3
+      typescript-eslint:
+        specifier: ^8.16.0
+        version: 8.24.1(eslint@9.19.0)(typescript@5.7.3)
+      vitest:
+        specifier: ^3.0.1
+        version: 3.0.5(@types/node@22.13.1)(less@4.2.2)(lightningcss@1.29.1)(sass@1.85.0)(yaml@2.7.0)
+
   shielder-sdk:
     dependencies:
       '@cardinal-cryptography/ecies-encryption-lib':
@@ -191,34 +249,19 @@ importers:
       '@cardinal-cryptography/ecies-encryption-lib':
         specifier: ^0.2.0
         version: 0.2.0
+      '@cardinal-cryptography/enclaves':
+        specifier: workspace:*
+        version: link:../enclaves
       '@cardinal-cryptography/shielder-sdk-crypto':
         specifier: workspace:*
         version: link:../shielder-sdk-crypto
-      '@noble/secp256k1':
-        specifier: ^2.3.0
-        version: 2.3.0
-      asn1js:
-        specifier: ^3.0.6
-        version: 3.0.6
-      cbor:
-        specifier: ^10.0.9
-        version: 10.0.9
-      cbor-web:
-        specifier: ^10.0.9
-        version: 10.0.9
       comlink:
         specifier: ^4.4.2
         version: 4.4.2
-      pkijs:
-        specifier: ^3.2.5
-        version: 3.2.5
     devDependencies:
       '@eslint/js':
         specifier: ^9.15.0
         version: 9.19.0
-      '@types/cbor':
-        specifier: ^6.0.4
-        version: 6.0.4
       '@types/node':
         specifier: ^22.10.0
         version: 22.13.1

@@ -93,7 +93,7 @@ export const setupShielderTest = async (globalConfig: GlobalConfigFixture) => {
           transport: http(globalConfig.chainConfig.rpcHttpEndpoint)
         });
         const gasPrice = await publicClient.getGasPrice();
-        const amount = (2_000_000n * gasPrice * 120n) / 100n;
+        const amount = (2_000_000n * gasPrice * 200n) / 100n;
         const { protocolFee } = await shielderClient.shield(
           action.op.token,
           amount

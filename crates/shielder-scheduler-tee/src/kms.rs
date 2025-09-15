@@ -18,14 +18,14 @@ use shielder_scheduler_common::{
     vsock::VsockError,
 };
 
-pub struct KmsCrypto {
+pub struct KmsDecryptionController {
     #[cfg(not(feature = "local-run"))]
     kms_proxy_port: u32,
     #[cfg(feature = "local-run")]
     private_key: Vec<u8>,
 }
 
-impl KmsCrypto {
+impl KmsDecryptionController {
     pub fn new(
         #[cfg(not(feature = "local-run"))] kms_proxy_port: u32,
         #[cfg(feature = "local-run")] _kms_proxy_port: u32,

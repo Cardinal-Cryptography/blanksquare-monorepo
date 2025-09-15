@@ -78,16 +78,15 @@ async fn main() -> Result<(), Error> {
         .into();
 
     let aws_credentials = if !options.disable_kms {
-        if let (Some(region), Some(iam_role)) = (&options.aws_region, &options.aws_iam_kms_role) {
+        if let Some(iam_role) = &options.aws_iam_kms_role {
             aws_session_tokens::get_session_token(
-                region,
                 options.aws_sts_refresh_period_secs as i32,
                 iam_role,
             )
             .await?
         } else {
             return Err(Error::ParseError(
-                "AWS_REGION and AWS_IAM_KMS_ROLE are required when --disable-kms is not set".into(),
+                "AWS_IAM_KMS_ROLE is required when --disable-kms is not set".into(),
             ));
         }
     } else {
@@ -197,10 +196,7 @@ async fn main() -> Result<(), Error> {
 /// Background task that periodically refreshes AWS STS credentials
 async fn aws_credentials_refresh_task(app_state: Arc<AppState>) {
     if !app_state.options.disable_kms {
-        if let (Some(region), Some(iam_role)) = (
-            &app_state.options.aws_region,
-            &app_state.options.aws_iam_kms_role,
-        ) {
+        if let Some(iam_role) = &app_state.options.aws_iam_kms_role {
             let mut interval = tokio::time::interval(Duration::from_secs(
                 app_state.options.aws_sts_refresh_period_secs,
             ));
@@ -213,7 +209,6 @@ async fn aws_credentials_refresh_task(app_state: Arc<AppState>) {
 
                 info!("Refreshing AWS credentials from EC2 metadata");
                 match aws_session_tokens::get_session_token(
-                    region,
                     app_state.options.aws_sts_refresh_period_secs as i32,
                     iam_role,
                 )

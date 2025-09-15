@@ -28,7 +28,6 @@ struct Ec2MetadataResponse {
 /// Retrieves AWS credentials from EC2 instance metadata service
 #[instrument(level = "info")]
 pub async fn get_session_token(
-    _aws_region: &str,
     refresh_period_seconds: i32,
     iam_role_name: &str,
 ) -> Result<AwsCredentials, SchedulerServerError> {

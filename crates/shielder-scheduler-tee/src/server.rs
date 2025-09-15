@@ -15,7 +15,7 @@ use shielder_scheduler_common::{
 use shielder_setup::consts::{ARITY, TREE_HEIGHT};
 use tokio_vsock::{VsockAddr, VsockListener, VsockStream};
 
-use crate::{command_line_args::CommandLineArgs, kms::KmsCrypto, withdraw::WithdrawCircuit};
+use crate::{command_line_args::CommandLineArgs, kms::KmsDecryptionController, withdraw::WithdrawCircuit};
 
 struct RelayParams {
     relayer_address: Address,
@@ -26,7 +26,7 @@ struct RelayParams {
 }
 
 pub struct Server {
-    kms: KmsCrypto,
+    kms: KmsDecryptionController,
     #[cfg(not(feature = "local-run"))]
     nsm_fd: i32,
 
@@ -44,7 +44,7 @@ impl Server {
         #[cfg(not(feature = "local-run"))]
         let nsm_fd = Self::init_nsm_driver()?;
 
-        let kms = KmsCrypto::new(
+        let kms = KmsDecryptionController::new(
             options.kms_proxy_port,
             #[cfg(feature = "local-run")]
             options.private_key,

@@ -31,12 +31,6 @@ jobs:
         id: get-ref-properties
         uses: Cardinal-Cryptography/github-actions/get-ref-properties@v7
 
-      - name: Prepare Rust env
-        uses: ./.github/actions/prepare-rust-env
-
-      - name: Build fee-estimator
-        run: cd crates/fee-estimator && cargo build --release
-
       - name: DOCKER | Docker Buildx
         id: buildx
         uses: docker/setup-buildx-action@v2

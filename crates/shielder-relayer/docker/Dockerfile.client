@@ -1,3 +1,19 @@
+# Builder stage
+FROM rust:1.88 AS builder
+
+WORKDIR /app
+
+# Copy workspace files for dependency resolution
+COPY Cargo.toml Cargo.lock ./
+COPY rust-toolchain.toml ./
+
+# Copy the entire source code (needed for workspace builds)
+COPY . .
+
+# Build the shielder-relayer binary
+RUN cargo build --release -p shielder-relayer
+
+# Runtime stage
 FROM debian:trixie-slim
 
 RUN apt-get update && \
@@ -7,7 +23,10 @@ RUN apt-get update && \
       ca-certificates && \
       rm -rf /tmp/* /var/{tmp,cache}/* /var/lib/{apt,dpkg}/
 
-COPY ./target/release/shielder-relayer /usr/local/bin
+WORKDIR /app
+
+# Copy the built binary from builder stage
+COPY --from=builder /app/target/release/shielder-relayer /usr/local/bin/shielder-relayer
 RUN chmod +x /usr/local/bin/shielder-relayer
 
 RUN useradd server

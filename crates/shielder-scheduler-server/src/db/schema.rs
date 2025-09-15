@@ -1,6 +1,7 @@
 use alloy_primitives::{Address, U256};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use shielder_scheduler_common::protocol::EncryptionEnvelope;
 use sqlx::{PgPool, Row};
 
 use crate::error::SchedulerServerError as Error;
@@ -8,7 +9,7 @@ use crate::error::SchedulerServerError as Error;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ScheduledRequest {
     pub id: i64,
-    pub payload: Vec<u8>,
+    pub encryption_envelope: EncryptionEnvelope,
     pub last_note_index: String, // U256 as string for PostgreSQL
     pub max_relayer_fee: String, // U256 as string for PostgreSQL
     pub pocket_money: String,    // U256 as string for PostgreSQL
@@ -73,7 +74,10 @@ pub async fn create_tables(pool: &PgPool) -> Result<(), Error> {
         r#"
         CREATE TABLE IF NOT EXISTS scheduled_requests (
             id BIGSERIAL PRIMARY KEY,
-            payload BYTEA NOT NULL,
+            encrypted_payload BYTEA NOT NULL,
+            encrypted_dek BYTEA NOT NULL,
+            iv BYTEA NOT NULL,
+            auth_tag BYTEA NOT NULL,
             last_note_index TEXT NOT NULL,
             max_relayer_fee TEXT NOT NULL,
             pocket_money TEXT NOT NULL,
@@ -96,7 +100,7 @@ pub async fn create_tables(pool: &PgPool) -> Result<(), Error> {
 
 pub async fn insert_scheduled_request(
     pool: &PgPool,
-    payload: &[u8],
+    encryption_envelope: EncryptionEnvelope,
     last_note_index: U256,
     max_relayer_fee: U256,
     pocket_money: U256,
@@ -105,12 +109,15 @@ pub async fn insert_scheduled_request(
 ) -> Result<i64, Error> {
     let row = sqlx::query(
         r#"
-        INSERT INTO scheduled_requests (payload, last_note_index, max_relayer_fee, pocket_money, token_address, relay_after)
-        VALUES ($1, $2, $3, $4, $5, $6)
+        INSERT INTO scheduled_requests (encrypted_payload, encrypted_dek, iv, auth_tag, last_note_index, max_relayer_fee, pocket_money, token_address, relay_after)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
         RETURNING id
         "#,
     )
-    .bind(payload)
+    .bind(encryption_envelope.encrypted_payload)
+    .bind(encryption_envelope.encrypted_dek)
+    .bind(encryption_envelope.iv)
+    .bind(encryption_envelope.auth_tag)
     .bind(last_note_index.to_string())
     .bind(max_relayer_fee.to_string())
     .bind(pocket_money.to_string())
@@ -128,7 +135,7 @@ pub async fn get_pending_requests(
 ) -> Result<Vec<ScheduledRequest>, Error> {
     let rows = sqlx::query(
         r#"
-        SELECT id, payload, last_note_index, max_relayer_fee, pocket_money, token_address, relay_after, 
+        SELECT id, encrypted_payload, encrypted_dek, iv, auth_tag, last_note_index, max_relayer_fee, pocket_money, token_address, relay_after, 
                status, created_at, processed_at, retry_count, error_message
         FROM scheduled_requests
         WHERE status IN ('pending', 'processing') 
@@ -146,7 +153,12 @@ pub async fn get_pending_requests(
     for row in rows {
         requests.push(ScheduledRequest {
             id: row.get("id"),
-            payload: row.get("payload"),
+            encryption_envelope: EncryptionEnvelope {
+                encrypted_payload: row.get("encrypted_payload"),
+                encrypted_dek: row.get("encrypted_dek"),
+                iv: row.get("iv"),
+                auth_tag: row.get("auth_tag"),
+            },
             last_note_index: row.get("last_note_index"),
             max_relayer_fee: row.get("max_relayer_fee"),
             pocket_money: row.get("pocket_money"),

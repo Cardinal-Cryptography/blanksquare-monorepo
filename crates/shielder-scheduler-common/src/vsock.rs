@@ -1,3 +1,4 @@
+use core::future::Future;
 use std::marker::PhantomData;
 
 use futures::{SinkExt as _, StreamExt as _};
@@ -16,6 +17,9 @@ pub enum VsockError {
 
     #[error("Protocol error: {0}")]
     Protocol(String),
+
+    #[error("KMS error: {0}")]
+    KMS(String),
 
     #[error("Connection closed")]
     Closed,
@@ -46,12 +50,13 @@ pub struct VsockServer<Req, Resp> {
 }
 
 impl<'de, Req: Deserialize<'de>, Resp: Serialize> VsockServer<Req, Resp> {
-    pub async fn handle_request<F: FnOnce(Req) -> Result<Resp, VsockError>>(
-        &mut self,
-        handler: F,
-    ) -> Result<(), VsockError> {
+    pub async fn handle_request<F, Fut>(&mut self, handler: F) -> Result<(), VsockError>
+    where
+        F: FnOnce(Req) -> Fut,
+        Fut: Future<Output = Result<Resp, VsockError>>,
+    {
         let req = self.vsock.recv().await?;
-        let res = handler(req)?;
+        let res = handler(req).await?;
         self.vsock.send(&res).await?;
         Ok(())
     }

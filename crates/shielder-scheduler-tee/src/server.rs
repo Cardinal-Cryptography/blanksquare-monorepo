@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use alloy_primitives::{Address, U256};
-#[cfg(not(feature = "without_attestation"))]
+#[cfg(not(feature = "local-run"))]
 use aws_nitro_enclaves_nsm_api::{
     api::Request as NsmRequest,
     api::Response as NsmResponse,
@@ -9,36 +9,53 @@ use aws_nitro_enclaves_nsm_api::{
 };
 use log::{debug, info};
 use shielder_scheduler_common::{
-    protocol::{Payload, Request, Response, TEEServer},
+    protocol::{AwsConfig, EncryptionEnvelope, Payload, Request, Response, TEEServer},
     vsock::VsockError,
 };
 use shielder_setup::consts::{ARITY, TREE_HEIGHT};
-use tokio_vsock::{VsockAddr, VsockListener, VsockStream, VMADDR_CID_ANY};
+use tokio_vsock::{VsockAddr, VsockListener, VsockStream};
 
-use crate::withdraw::WithdrawCircuit;
+use crate::{
+    command_line_args::CommandLineArgs, kms::KmsDecryptionController, withdraw::WithdrawCircuit,
+};
+
+struct RelayParams {
+    relayer_address: Address,
+    relayer_fee: U256,
+    merkle_path: Box<[[U256; ARITY]; TREE_HEIGHT]>,
+    merkle_root: U256,
+    pocket_money: U256,
+}
 
 pub struct Server {
-    #[cfg(not(feature = "without_attestation"))]
+    kms: KmsDecryptionController,
+    #[cfg(not(feature = "local-run"))]
     nsm_fd: i32,
 
     listener: VsockListener,
 }
 
 impl Server {
-    pub fn new(port: u16) -> Result<Arc<Self>, VsockError> {
-        let address = VsockAddr::new(VMADDR_CID_ANY, port as u32);
+    pub async fn new(options: CommandLineArgs) -> Result<Arc<Self>, VsockError> {
+        #[cfg(feature = "local-run")]
+        info!("local-run: attestation disabled; using locally provided private key (TEST BUILD).");
+
+        let address = VsockAddr::new(options.tee_cid, options.tee_port);
         let listener = VsockListener::bind(address)?;
 
-        #[cfg(not(feature = "without_attestation"))]
+        #[cfg(not(feature = "local-run"))]
         let nsm_fd = Self::init_nsm_driver()?;
 
-        #[cfg(feature = "without_attestation")]
-        info!("Running server without attestation (TEST BUILD).");
+        let kms = KmsDecryptionController::new(
+            options.kms_proxy_port,
+            #[cfg(feature = "local-run")]
+            options.private_key,
+        )?;
 
         Ok(Arc::new(Self {
             listener,
-
-            #[cfg(not(feature = "without_attestation"))]
+            kms,
+            #[cfg(not(feature = "local-run"))]
             nsm_fd,
         }))
     }
@@ -51,73 +68,81 @@ impl Server {
         &self.listener
     }
 
-    pub fn public_key(&self) -> Vec<u8> {
-        // TODO: Implement public key retrieval logic
-        vec![0; 32] // Placeholder for the public key
-    }
-
     pub async fn handle_client(self: Arc<Self>, stream: VsockStream) {
         let result = self.do_handle_client(stream).await;
         debug!("Client disconnected: {result:?}");
     }
 
+    /// Accept and serve a single vsock client connection, handling requests in a loop.
     async fn do_handle_client(&self, stream: VsockStream) -> Result<(), VsockError> {
         let mut server: TEEServer = stream.into();
 
         loop {
             server
-                .handle_request(|request| match request {
-                    Request::Ping => Ok(Response::Pong),
-                    Request::TeePublicKey => self.public_key_response(),
-                    Request::PrepareRelayCalldata {
-                        payload,
-                        relayer_address,
-                        max_relayer_fee: relayer_fee,
-                        merkle_path,
-                        merkle_root,
-                        pocket_money,
-                    } => self.prepare_relay_calldata_response(
-                        payload,
-                        relayer_address,
-                        relayer_fee,
-                        merkle_path,
-                        merkle_root,
-                        pocket_money,
-                    ),
+                .handle_request(|request| async move {
+                    match request {
+                        Request::Ping => Ok(Response::Pong),
+                        Request::TeePublicKey { aws_config } => {
+                            self.public_key_response(&aws_config).await
+                        }
+                        Request::PrepareRelayCalldata {
+                            aws_config,
+                            encryption_envelope,
+                            relayer_address,
+                            max_relayer_fee,
+                            merkle_path,
+                            merkle_root,
+                            pocket_money,
+                        } => {
+                            let relay_params = RelayParams {
+                                relayer_address,
+                                relayer_fee: max_relayer_fee,
+                                merkle_path,
+                                merkle_root,
+                                pocket_money,
+                            };
+                            self.prepare_relay_calldata_response(
+                                &aws_config,
+                                *encryption_envelope,
+                                relay_params,
+                            )
+                            .await
+                        }
+                    }
                 })
                 .await?;
         }
     }
 
-    fn public_key_response(&self) -> Result<Response, VsockError> {
-        let public_key = self.public_key();
-        let public_key_hex = hex::encode(&public_key);
+    /// Return the KMS public key (base64) and an attestation document embedding the same key.
+    async fn public_key_response(&self, aws_config: &AwsConfig) -> Result<Response, VsockError> {
+        self.kms.verify_public_key(aws_config)?;
 
-        #[cfg(not(feature = "without_attestation"))]
-        let attestation_document = self.request_attestation_from_nsm_driver(public_key)?;
+        #[cfg(not(feature = "local-run"))]
+        let attestation_document =
+            self.request_attestation_from_nsm_driver(aws_config.public_key.clone())?;
 
-        #[cfg(feature = "without_attestation")]
+        #[cfg(feature = "local-run")]
         let attestation_document = Vec::new();
 
         Ok(Response::TeePublicKey {
-            public_key: public_key_hex,
+            public_key: aws_config.public_key.clone(),
             attestation_document,
         })
     }
 
-    fn prepare_relay_calldata_response(
+    async fn prepare_relay_calldata_response(
         &self,
-        payload: Vec<u8>,
-        relayer_address: Address,
-        relayer_fee: U256,
-        merkle_path: Box<[[U256; ARITY]; TREE_HEIGHT]>,
-        merkle_root: U256,
-        pocket_money: U256,
+        aws_config: &AwsConfig,
+        encryption_envelope: EncryptionEnvelope,
+        relay_params: RelayParams,
     ) -> Result<Response, VsockError> {
-        let decrypted_payload = self.decrypt_payload(&payload)?;
+        let decrypted_payload = self.kms.decrypt_payload(aws_config, &encryption_envelope)?;
 
-        let deserialized_payload: Payload = serde_json::from_slice(&decrypted_payload)
-            .map_err(|e| VsockError::Protocol(format!("Failed to deserialize payload: {}", e)))?;
+        let deserialized_payload: Payload =
+            serde_json::from_slice(&decrypted_payload).map_err(|e| {
+                VsockError::Protocol(format!("Failed to deserialize decrypted payload: {e:?}"))
+            })?;
 
         let token = match deserialized_payload.token_address {
             Address::ZERO => shielder_account::Token::Native,
@@ -127,17 +152,17 @@ impl Server {
         let relayer_calldata = withdraw_circuit.get_relayer_calldata(
             deserialized_payload.withdrawal_value,
             deserialized_payload.withdraw_address,
-            *merkle_path,
+            *relay_params.merkle_path,
             deserialized_payload.chain_id,
-            relayer_fee,
-            pocket_money,
-            relayer_address,
+            relay_params.relayer_fee,
+            relay_params.pocket_money,
+            relay_params.relayer_address,
             deserialized_payload.protocol_fee,
             deserialized_payload.memo,
             deserialized_payload.nullifier_old,
             deserialized_payload.nullifier_new,
             deserialized_payload.account_old_balance,
-            merkle_root,
+            relay_params.merkle_root,
         );
 
         Ok(Response::PrepareRelayCalldata {
@@ -145,12 +170,7 @@ impl Server {
         })
     }
 
-    fn decrypt_payload(&self, _payload: &[u8]) -> Result<Vec<u8>, VsockError> {
-        // TODO: Implement decryption logic here
-        Ok(_payload.to_vec()) // Placeholder for decrypted payload
-    }
-
-    #[cfg(not(feature = "without_attestation"))]
+    #[cfg(not(feature = "local-run"))]
     fn request_attestation_from_nsm_driver(
         &self,
         tee_public_key: Vec<u8>,
@@ -170,14 +190,15 @@ impl Server {
         }
     }
 
-    #[cfg(not(feature = "without_attestation"))]
+    #[cfg(not(feature = "local-run"))]
     fn init_nsm_driver() -> Result<i32, VsockError> {
         info!("Opening file descriptor to /dev/nsm driver.");
         let nsm_fd = nsm_init();
 
         if nsm_fd < 0 {
-            return Err(VsockError::Protocol(String::from(
-                "Failed to initialize NSM driver.",
+            return Err(VsockError::Protocol(format!(
+                "Failed to initialize NSM driver (return code) = {}",
+                nsm_fd
             )));
         }
 
@@ -185,7 +206,7 @@ impl Server {
     }
 }
 
-#[cfg(not(feature = "without_attestation"))]
+#[cfg(not(feature = "local-run"))]
 impl Drop for Server {
     fn drop(&mut self) {
         info!("Closing file descriptor to /dev/nsm driver.");

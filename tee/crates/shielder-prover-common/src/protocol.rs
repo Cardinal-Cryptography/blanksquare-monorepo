@@ -5,7 +5,7 @@ use crate::{
     vsock::{VsockClient, VsockServer},
 };
 
-pub const VSOCK_PORT: u16 = 5000;
+pub const VSOCK_PORT: u32 = 5000;
 
 /// Padding constant for decrypting incoming payloads.
 /// The value is chosen to be large enough to accommodate typical payloads while also being efficient for transmission.

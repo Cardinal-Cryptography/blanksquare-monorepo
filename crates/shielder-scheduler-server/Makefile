@@ -6,6 +6,10 @@ format-rust:
 lint-rust:
 	cargo clippy --release -- -D warnings
 
+.PHONY: build
+build:
+	cargo build --release
+
 .PHONY: test
 test:
 	cargo check

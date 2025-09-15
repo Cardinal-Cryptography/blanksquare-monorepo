@@ -1,0 +1,14 @@
+# Rust build artifacts
+target/
+# Exception: allow specific release binary needed for Docker build
+!target/release/shielder-relayer
+**/*.rs.bk
+**/*.rlib
+**/*.d
+**/*.rlib.d
+**/*.o
+**/*.rmeta
+
+# Cargo cache and configuration files
+.cargo/
+

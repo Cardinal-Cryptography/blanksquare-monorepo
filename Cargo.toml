@@ -13,6 +13,7 @@ categories = ["cryptography"]
 repository = "https://github.com/Cardinal-Cryptography/blanksquare-monorepo"
 
 [workspace.dependencies]
+aes-gcm = { version = "0.10.3" }
 alloy-contract = { version = "0.9.1" }
 alloy-network = { version = "0.9.1" }
 alloy-primitives = { version = "0.8.15" }
@@ -72,6 +73,7 @@ reqwest = { version = "0.12.5" }
 regex = { version = "1.11.1" }
 revm = { version = "18.0.0", default-features = false }
 revm-primitives = { version = "14.0.0", default-features = false }
+rsa = { version = "0.9", features = ["sha2"] }
 rstest = { version = "0.23.0" }
 ruint = { version = "1" }
 rust-argon2 = { version = "2.1.0" }

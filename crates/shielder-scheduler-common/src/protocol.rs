@@ -2,13 +2,15 @@ use alloy_primitives::{Address, Bytes, FixedBytes, U256};
 use serde::{Deserialize, Serialize};
 pub use shielder_relayer::RelayCalldata;
 use shielder_setup::consts::{ARITY, TREE_HEIGHT};
+pub use tokio_vsock::{VMADDR_CID_ANY, VMADDR_CID_HOST};
 
 use crate::{
     base64_serialization,
     vsock::{VsockClient, VsockServer},
 };
+pub const VSOCK_PORT: u32 = 5000;
 
-pub const VSOCK_PORT: u16 = 5000;
+pub type MerklePath = Box<[[U256; ARITY]; TREE_HEIGHT]>;
 
 /// Payload for the `PrepareRelayCalldata` request.
 /// The payload is encrypted using the TEE Public Key.
@@ -28,8 +30,63 @@ pub struct Payload {
     /// Total amount to be withdrawn. This amount includes fees (protocol and relayer fees).
     pub withdrawal_value: U256,
     pub withdraw_address: Address,
-    pub memo: Bytes,
     pub protocol_fee: U256,
+    pub memo: Bytes,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct EncryptionEnvelope {
+    /// Encrypted payload, see [`Payload`].
+    /// It is encrypted using user generated DEK.
+    #[serde(with = "base64_serialization")]
+    pub encrypted_payload: Vec<u8>,
+    /// Encrypted data encryption key (DEK) using Tee Public Key.
+    #[serde(with = "base64_serialization")]
+    pub encrypted_dek: Vec<u8>,
+    /// 12-byte IV (nonce) for AES-256-GCM; must be exactly 12 bytes.
+    #[serde(with = "base64_serialization")]
+    pub iv: Vec<u8>,
+    /// 16-byte authentication tag for AES-256-GCM; must be exactly 16 bytes.
+    #[serde(with = "base64_serialization")]
+    pub auth_tag: Vec<u8>,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct AwsConfig {
+    /// Public key as raw DER-encoded bytes (not base64).
+    /// The server manually decodes the base64 KMS_PUBLIC_KEY before putting it here,
+    /// so this field contains the actual DER bytes ready for cryptographic operations.
+    pub public_key: Vec<u8>,
+    pub kms_key_id: String,
+    pub aws_region: String,
+    pub aws_access_key_id: String,
+    pub aws_secret_access_key: String,
+    pub aws_session_token: String,
+    pub kms_encryption_algorithm: String,
+}
+
+fn redact_mid(s: &str) -> String {
+    if s.len() <= 6 {
+        return "******".into();
+    }
+    format!("{}******{}", &s[..3], &s[s.len() - 3..])
+}
+
+impl core::fmt::Debug for AwsConfig {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("AwsConfig")
+            .field(
+                "public_key",
+                &format_args!("<{} bytes>", self.public_key.len()),
+            )
+            .field("kms_key_id", &self.kms_key_id)
+            .field("aws_region", &self.aws_region)
+            .field("aws_access_key_id", &redact_mid(&self.aws_access_key_id))
+            .field("aws_secret_access_key", &"<redacted>")
+            .field("aws_session_token", &"<redacted>")
+            .field("kms_encryption_algorithm", &self.kms_encryption_algorithm)
+            .finish()
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -38,20 +95,18 @@ pub enum Request {
     Ping,
 
     /// Retrieves TEE Public Key, ie key which is used by the user to encrypt inputs to a circuit
-    TeePublicKey,
+    TeePublicKey { aws_config: Box<AwsConfig> },
 
     /// Request to prepare calldata for a relay transaction.
     PrepareRelayCalldata {
-        /// Encrypted payload, see [`Payload`].
-        /// It is encrypted using TEE Public Key.
-        #[serde(with = "base64_serialization")]
-        payload: Vec<u8>,
+        aws_config: Box<AwsConfig>,
+        encryption_envelope: Box<EncryptionEnvelope>,
         /// Relayer fee
         max_relayer_fee: U256,
         /// Address of the relayer which will receive the relayer fee
         relayer_address: Address,
         /// Current merkle path
-        merkle_path: Box<[[U256; ARITY]; TREE_HEIGHT]>,
+        merkle_path: MerklePath,
         /// Current merkle root
         merkle_root: U256,
         /// Pocket money to be sent to the withdraw address to cover gas fees
@@ -66,7 +121,8 @@ pub enum Response {
 
     /// TEE Server public key, used to encrypt payload sent in [`Request::PrepareRelayCalldata`]
     TeePublicKey {
-        public_key: String,
+        #[serde(with = "base64_serialization")]
+        public_key: Vec<u8>,
         #[serde(with = "base64_serialization")]
         attestation_document: Vec<u8>,
     },

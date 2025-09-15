@@ -6,6 +6,50 @@ This service provides the ability to schedule withdrawal requests that will be p
 2. **Background Scheduler Processor**: Processes requests when their scheduled time arrives
 3. **TEE Task Pool**: Manages communication with the Trusted Execution Environment
 
+## Architecture & Security
+
+### AWS Integration & Session Management
+
+The server uses EC2 instance metadata service to dynamically retrieve temporary AWS credentials at startup. This provides enhanced security by:
+
+- Eliminating the need to hardcode long-term AWS credentials in environment variables
+- Using temporary session tokens that have a limited lifespan
+- Automatically refreshing credentials every 15 minutes (configurable via `AWS_STS_REFRESH_CREDENTIALS_PERIOD_SECONDS`)
+- Thread-safe credential updates during runtime without service interruption
+
+The server performs the following AWS-related operations on startup:
+
+1. **EC2 Metadata Authentication**: Calls EC2 instance metadata service to obtain temporary credentials from the assigned IAM role
+2. **TEE Verification**: Performs an initial `TeePublicKey` request to verify proper TEE and KMS integration
+3. **Credential Storage**: Stores the retrieved credentials in the application state for subsequent use
+
+**Important**: The server will fail to start if AWS authentication or TEE verification fails, ensuring that only properly configured instances can process withdrawal requests.
+
+### KMS Key Verification
+
+The server maintains proper security by verifying the KMS key relationship with the TEE:
+
+- **Startup Verification**: The `Request::TeePublicKey` is called once during server startup to verify the TEE configuration
+- **Runtime Verification**: KMS key verification must be performed every time attestation is requested to maintain the correct relationship between the public key in the TEE and the key in KMS
+- **Failure Handling**: Any verification failure causes the server to bail, preventing operation with invalid configurations
+
+### Local Development
+
+For local development and testing, you can use the `--disable-kms` command line flag to skip AWS KMS integration:
+
+- **Command Line Flag**: `--disable-kms`
+- **Dummy Credentials**: Uses hardcoded dummy AWS credentials instead of fetching from EC2 metadata
+- **No Credential Refresh**: Skips the background AWS credential refresh task when KMS is disabled
+- **Validation Changes**: AWS configuration parameters become optional when `--disable-kms` is used
+
+When using `--disable-kms`:
+- The `shielder-scheduler-tee` must be run with cargo feature `local-run` and `PRIVATE_KEY_BASE64` environment variable
+- AWS parameters (AWS_REGION, KMS_KEY_ID, AWS_IAM_KMS_ROLE) become optional
+- The server uses dummy AWS credentials for TEE communication
+- Background AWS credential refresh is disabled
+
+This allows developers to run the server locally without requiring EC2 instance metadata or proper AWS IAM roles.
+
 ## API Endpoints
 
 ### 1. Health Check
@@ -58,7 +102,7 @@ Schedule a withdrawal request to be processed at a future time.
 ## Request Statuses
 
 - **Pending**: Request is waiting to be processed
-- **Processing**: Request is currently being processed
+- **Processing**: Request is being retried or is in progress
 - **Completed**: Request has been successfully processed
 - **Failed**: Request processing failed and reached max retry attempts count
 
@@ -128,10 +172,38 @@ The service can be configured using environment variables or command-line argume
 - `SCHEDULER_MAX_RETRY_COUNT`: Maximum retry attempts per request (default: 3)
 - `SCHEDULER_RETRY_DELAY_SECS`: Delay between retry attempts (default: 60)
 
+### AWS & KMS Configuration
+- `--disable-kms`: Command line flag to disable KMS and use local private key for decryption (for development only)
+- `AWS_REGION`: AWS region for STS and KMS operations (required when KMS is enabled, optional with `--disable-kms`)
+- `AWS_IAM_KMS_ROLE`: IAM role name for KMS access (required when KMS is enabled, optional with `--disable-kms`)
+- `KMS_KEY_ID`: AWS KMS key identifier for encryption operations (required when KMS is enabled, optional with `--disable-kms`)  
+- `KMS_PUBLIC_KEY`: Base64-encoded public key for KMS verification (required)
+- `AWS_STS_REFRESH_CREDENTIALS_PERIOD_SECONDS`: How often to refresh AWS STS credentials in seconds (default: 900, range: 900-1800)
+
+**Local Development**: When using the `--disable-kms` flag, AWS-related environment variables become optional. If not provided, dummy AWS credentials are used for local testing. The TEE must be run with cargo feature `local_run` and `PRIVATE_KEY_BASE64` environment variable.
+
+**Converting PEM to Base64**: If you have a PEM file, you can convert it to base64:
+```bash
+# Remove PEM headers/footers and convert to single line base64
+cat your-public-key.pem | grep -v "BEGIN\|END" | tr -d '\n'
+```
+
+**Note**: AWS credentials are automatically retrieved using EC2 instance metadata at startup and refreshed periodically. Manual AWS credential configuration is no longer required.
+
+**Token Management**: The metadata token TTL is automatically set to twice the refresh period to ensure adequate overlap during credential rotation.
+
+**Validation**: The refresh period is constrained to 900-1800 seconds (15-30 minutes) to ensure:
+- Minimum security through frequent credential rotation (≤30 minutes)
+- Reasonable EC2 metadata service usage without excessive calls (≥15 minutes)
+- Optimal balance between security and operational efficiency
+
+**STS Refresh Failure Behavior**: If AWS STS credential refresh fails during runtime, the server will shut down gracefully. This ensures that the service does not continue operating with expired credentials, maintaining security compliance. Operators should monitor for service restarts and address any underlying AWS IAM or network connectivity issues that may cause credential refresh failures.
+
 ### Blockchain Configuration
 - `NODE_RPC_URL`: RPC URL of the Ethereum node to connect to (required)
 - `SHIELDER_ADDRESS`: Address of the Shielder contract (required)
 - `RELAYER_RPC_URL`: URL of the relayer service (required)
+
 
 ### Metrics Configuration
 - `METRICS_UPKEEP_TIMEOUT_SECS`: How often to perform metric upkeep (default: 60)
@@ -187,23 +259,38 @@ The service is built with clear separation of concerns:
 
 ## Example Usage
 
-### Running the Service
+**Prerequisites**:
+- EC2 instance with an IAM role that has KMS permissions
+- The EC2 instance must have access to EC2 instance metadata service (IMDSv2)
+- The IAM role name must match the configured `AWS_IAM_KMS_ROLE`
+- The specified KMS key must be accessible and properly configured
+- AWS_STS_REFRESH_CREDENTIALS_PERIOD_SECONDS must be between 900 and 1800 seconds
 
+**Validation Examples**:
 ```bash
-# With default configuration (requires blockchain configuration)
-cargo run -- --node-rpc-url "http://localhost:8545" --shielder-address "0x..." --relayer-rpc-url "http://localhost:8080"
+# This will fail - refresh period too short
+export AWS_STS_REFRESH_CREDENTIALS_PERIOD_SECONDS=600
+cargo run  # Error: AWS_STS_REFRESH_CREDENTIALS_PERIOD_SECONDS must be at least 900 seconds
 
-# With custom configuration
-cargo run -- --public-port 8080 --db-host mydb.example.com --scheduler-interval-secs 10 --node-rpc-url "http://localhost:8545" --shielder-address "0x..." --relayer-rpc-url "http://localhost:8080"
+# This will fail - refresh period too long  
+export AWS_STS_REFRESH_CREDENTIALS_PERIOD_SECONDS=2000
+cargo run  # Error: AWS_STS_REFRESH_CREDENTIALS_PERIOD_SECONDS must be at most 1800 seconds
 
-# Using environment variables
-export DB_HOST=mydb.example.com
-export PUBLIC_PORT=8080
-export SCHEDULER_INTERVAL_SECS=10
-export NODE_RPC_URL="http://localhost:8545"
-export SHIELDER_ADDRESS="0x..."
-export RELAYER_RPC_URL="http://localhost:8080"
-cargo run
+# This will work - within valid range
+export AWS_STS_REFRESH_CREDENTIALS_PERIOD_SECONDS=1200
+cargo run  # Success
+```
+
+**Command Line Usage Examples**:
+
+Production mode (with KMS):
+```bash
+cargo run -- --kms-public-key <base64-key> --aws-region us-east-1 --kms-key-id <key-id> --aws-iam-kms-role <iam-role-name> --node-rpc-url <rpc-url> --shielder-address <contract-addr> --relayer-rpc-url <relayer-url>
+```
+
+Local development mode (without KMS):
+```bash
+cargo run -- --disable-kms --kms-public-key <base64-key> --node-rpc-url <rpc-url> --shielder-address <contract-addr> --relayer-rpc-url <relayer-url>
 ```
 
 ### API Testing
@@ -234,6 +321,27 @@ Get TEE public key:
 ```bash
 curl http://localhost:3000/public_key
 ```
+
+### Generating Test RSA Keys
+
+For local testing, you can generate RSA key pairs using OpenSSL:
+
+```bash
+# Generate RSA private key in PKCS#8 format (2048-bit)
+openssl genpkey -algorithm RSA -out test_private_key.pem -pkcs8 -pkeyopt rsa_keygen_bits:2048
+
+# Generate corresponding public key
+openssl pkey -in test_private_key.pem -pubout -out test_public_key.pem
+
+# Convert public key to DER format and encode as base64 (for KMS_PUBLIC_KEY)
+openssl pkey -in test_private_key.pem -pubout -outform DER -out test_public_key.der
+base64 -w 0 test_public_key.der > test_public_key_base64.txt
+
+# Use the base64-encoded public key for KMS_PUBLIC_KEY
+export KMS_PUBLIC_KEY=$(cat test_public_key_base64.txt)
+```
+
+**Security Note**: Test keys should only be used for local development. Never use test keys in production environments.
 
 ### Monitoring
 

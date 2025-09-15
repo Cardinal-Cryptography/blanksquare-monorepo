@@ -4,7 +4,7 @@ use alloy_primitives::{Address, U256};
 use axum::{extract::State, response::IntoResponse, Json};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use shielder_scheduler_common::base64_serialization;
+use shielder_scheduler_common::protocol::EncryptionEnvelope;
 use tracing::{error, info, instrument};
 
 use crate::{db::insert_scheduled_request, AppState};
@@ -12,23 +12,20 @@ use crate::{db::insert_scheduled_request, AppState};
 /// When requesting a withdraw schedule, user sends this struct as a JSON
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ScheduleWithdrawRequest {
-    /// For `payload` schema, see [`shielder_scheduler_common::protocol::Payload`].
-    #[serde(with = "base64_serialization")]
-    payload: Vec<u8>,
-
+    pub encryption_envelope: EncryptionEnvelope,
     // Unecrypted data useful for basic checks.
     // It should be consistent with the data in `payload`.
     /// Index of the last leaf in the Merkle tree containing the account's note.
     /// Necessary to get the merkle path from this leaf to the current root.
-    last_note_index: U256,
+    pub last_note_index: U256,
     /// Maximum fee that the relayer can charge for this transaction.
-    max_relayer_fee: U256,
-    /// Pocket money amount for the withdrawal.
-    pocket_money: U256,
-    /// Token address for the withdrawal.
-    token_address: Address,
+    pub max_relayer_fee: U256,
     /// Timestamp after which the relay is allowed (Unix timestamp in seconds).
-    relay_after: i64,
+    pub relay_after: i64,
+    /// Pocket money amount for the withdrawal.
+    pub pocket_money: U256,
+    /// Token address for the withdrawal.
+    pub token_address: Address,
 }
 
 #[derive(Debug, Serialize)]
@@ -51,7 +48,6 @@ pub async fn schedule_withdraw(
         schedule_withdraw_request.relay_after
     );
 
-    // Convert Unix timestamp to DateTime<Utc>
     let relay_after = match DateTime::from_timestamp(schedule_withdraw_request.relay_after, 0) {
         Some(dt) => dt,
         None => {
@@ -69,18 +65,6 @@ pub async fn schedule_withdraw(
         }
     };
 
-    // Basic validation
-    // TBD: more comprehensive validation
-    if schedule_withdraw_request.payload.is_empty() {
-        return (
-            axum::http::StatusCode::BAD_REQUEST,
-            Json(serde_json::json!({
-                "error": "Payload cannot be empty"
-            })),
-        )
-            .into_response();
-    }
-
     if relay_after <= Utc::now() {
         return (
             axum::http::StatusCode::BAD_REQUEST,
@@ -91,10 +75,9 @@ pub async fn schedule_withdraw(
             .into_response();
     }
 
-    // Insert the request into the database
     match insert_scheduled_request(
         &state.db_pool,
-        &schedule_withdraw_request.payload,
+        schedule_withdraw_request.encryption_envelope,
         schedule_withdraw_request.last_note_index,
         schedule_withdraw_request.max_relayer_fee,
         schedule_withdraw_request.pocket_money,

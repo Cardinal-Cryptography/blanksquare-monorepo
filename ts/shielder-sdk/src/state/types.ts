@@ -32,16 +32,28 @@ export type AccountStateMerkleIndexed = AccountState & {
   currentNoteIndex: bigint;
 };
 
-export type ShielderTransaction = {
-  type: "NewAccount" | "Deposit" | "Withdraw";
+type ShielderTransactionBase = {
   amount: bigint;
-  to?: Address;
-  relayerFee?: bigint;
   txHash: Hex;
   block: bigint;
   token: Token;
-  pocketMoney?: bigint;
   newNote: Scalar;
   protocolFee: bigint;
   memo: `0x${string}`;
 };
+
+export type ShielderTransaction = ShielderTransactionBase &
+  (
+    | {
+        type: "NewAccount" | "Deposit";
+        to?: undefined;
+        relayerFee?: undefined;
+        pocketMoney?: undefined;
+      }
+    | {
+        type: "Withdraw";
+        to: Address;
+        relayerFee: bigint;
+        pocketMoney: bigint;
+      }
+  );

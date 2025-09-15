@@ -19,6 +19,7 @@ import { contractVersion } from "@/constants";
 import { Calldata } from "@/actions/types";
 import { AccountStateMerkleIndexed } from "@/state/types";
 import { handleShielderError } from "@/utils/errorHandler";
+import waitForTransactionInclusion from "@/utils/waitForTransactionInclusion";
 
 export class ShielderActions {
   constructor(
@@ -270,9 +271,11 @@ export class ShielderActions {
   }
 
   private async waitAndSync(token: Token, txHash: Hash) {
-    const txReceipt = await this.publicClient.waitForTransactionReceipt({
-      hash: txHash
+    const txReceipt = await waitForTransactionInclusion({
+      hash: txHash,
+      publicClient: this.publicClient
     });
+
     if (txReceipt.status !== "success") {
       throw new Error("Transaction failed");
     }

@@ -33,12 +33,14 @@ import { base64ToBytes, bytesToBase64 } from "./utils";
  *
  * @param attestationDocBase64 - Base64-encoded attestation document from the enclave
  * @param expectedPCRs - Optional map of expected PCR index to hex-encoded PCR value for validation
+ * @param validationDate - Optional date to use for certificate validity checks (defaults to current date)
  * @returns Verified attestation data
  * @throws Error if verification fails at any step
  */
 export async function verifyAttestation(
   attestationDocBase64: string,
-  expectedPCRs?: Map<string, string>
+  expectedPCRs?: Map<string, string>,
+  validationDate?: Date
 ): Promise<AttestationResult> {
   try {
     // Step 1: Parse the attestation document from base64
@@ -58,7 +60,8 @@ export async function verifyAttestation(
     // Step 5: Verify the certificate chain against AWS root certificate
     const publicKey = await validateCertificateChain(
       attestationDocument.certificate,
-      attestationDocument.cabundle
+      attestationDocument.cabundle,
+      validationDate
     );
 
     // Step 6: Verify the cryptographic signature

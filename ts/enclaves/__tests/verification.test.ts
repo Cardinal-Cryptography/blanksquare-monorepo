@@ -39,6 +39,10 @@ const EXPECTED_PCRS = new Map([
   ]
 ]);
 
+// Valid date for certificate validation in tests (when the test certificates were valid)
+// Based on the certificate data, they were valid around September 9, 2025
+const VALID_CERT_DATE = new Date("2025-09-09T18:00:00Z");
+
 beforeAll(() => {
   console.log(crypto);
   if (typeof self !== "undefined") {
@@ -83,10 +87,11 @@ describe("AWS Nitro Enclaves Verification", () => {
       const attestationDocument =
         SERVER_RESPONSE.TeePublicKey.attestation_document;
 
-      // Verify attestation with expected PCR values
+      // Verify attestation with expected PCR values using valid certificate date
       const result: AttestationResult = await verifyAttestation(
         attestationDocument,
-        EXPECTED_PCRS
+        EXPECTED_PCRS,
+        VALID_CERT_DATE
       );
 
       // Validate the result structure
@@ -100,9 +105,12 @@ describe("AWS Nitro Enclaves Verification", () => {
       const attestationDocument =
         SERVER_RESPONSE.TeePublicKey.attestation_document;
 
-      // Verify attestation without PCR validation
-      const result: AttestationResult =
-        await verifyAttestation(attestationDocument);
+      // Verify attestation without PCR validation using valid certificate date
+      const result: AttestationResult = await verifyAttestation(
+        attestationDocument,
+        undefined,
+        VALID_CERT_DATE
+      );
 
       // Validate the result structure
       expect(result).toBeDefined();
@@ -115,7 +123,11 @@ describe("AWS Nitro Enclaves Verification", () => {
     it("should extract PCR values correctly", async () => {
       const attestationDocument =
         SERVER_RESPONSE.TeePublicKey.attestation_document;
-      const result = await verifyAttestation(attestationDocument);
+      const result = await verifyAttestation(
+        attestationDocument,
+        new Map(), // No PCR validation
+        VALID_CERT_DATE
+      );
 
       // Extract PCR values
       const pcrValues = extractPCRs(result);
@@ -137,7 +149,8 @@ describe("AWS Nitro Enclaves Verification", () => {
         SERVER_RESPONSE.TeePublicKey.attestation_document;
       const result = await verifyAttestation(
         attestationDocument,
-        EXPECTED_PCRS
+        EXPECTED_PCRS,
+        VALID_CERT_DATE
       );
 
       const extractedPCRs = extractPCRs(result);
@@ -155,7 +168,11 @@ describe("AWS Nitro Enclaves Verification", () => {
       const attestationDocument =
         SERVER_RESPONSE.TeePublicKey.attestation_document;
 
-      const result = await verifyAttestation(attestationDocument);
+      const result = await verifyAttestation(
+        attestationDocument,
+        new Map(),
+        VALID_CERT_DATE
+      );
 
       // If the attestation contains a public key, it should match the server response
       if (result.publicKey) {
@@ -217,20 +234,16 @@ describe("AWS Nitro Enclaves Verification", () => {
       // Step 1: Verify attestation document
       const attestationResult = await verifyAttestation(
         TeePublicKey.attestation_document,
-        EXPECTED_PCRS
+        EXPECTED_PCRS,
+        VALID_CERT_DATE
       );
 
       // Step 2: Extract and validate PCRs
       const extractedPCRs = extractPCRs(attestationResult);
 
-      // Step 3: Validate timestamp is recent (within reasonable bounds)
-      const now = Date.now();
+      // Step 3: Validate timestamp
       const attestationTime = attestationResult.timestamp;
-      const timeDifference = Math.abs(now - attestationTime);
-
-      // Allow for reasonable time difference (e.g., within 24 hours)
-      const maxTimeDifference = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
-      expect(timeDifference).toBeLessThan(maxTimeDifference);
+      expect(attestationTime).toBe(1757440781958);
 
       // Step 4: Validate optional fields
       if (attestationResult.publicKey) {

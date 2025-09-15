@@ -15,12 +15,14 @@ import { getCrypto } from "@cardinal-cryptography/ecies-encryption-lib";
  *
  * @param certificateBytes - DER-encoded target certificate that signed the attestation
  * @param caBundleBytes - Array of DER-encoded CA certificates
+ * @param validationDate - Optional date to use for certificate validity checks (defaults to current date)
  * @returns The public key from the validated certificate for signature verification
  * @throws Error if certificate validation fails
  */
 export async function validateCertificateChain(
   certificateBytes: Uint8Array,
-  caBundleBytes: Uint8Array[]
+  caBundleBytes: Uint8Array[],
+  validationDate?: Date
 ): Promise<CryptoKey> {
   try {
     // Parse the target certificate (the one that signed the attestation)
@@ -48,7 +50,8 @@ export async function validateCertificateChain(
     // Validate the certificate chain
     const validationEngine = new pkijs.CertificateChainValidationEngine({
       certs: certificateChain,
-      trustedCerts: [rootCert]
+      trustedCerts: [rootCert],
+      checkDate: validationDate
     });
 
     const validationResult = await validationEngine.verify();

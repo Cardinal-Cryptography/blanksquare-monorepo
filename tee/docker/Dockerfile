@@ -2,9 +2,6 @@ FROM rust:1.88 AS builder
 
 WORKDIR /app
 
-COPY Cargo.toml Cargo.lock ./
-
-# Copy the rest of your source code
 COPY . .
 
 RUN cargo build --release -p shielder-prover-server

@@ -3,10 +3,6 @@ FROM rust:1.88 AS builder
 
 WORKDIR /app
 
-# Copy workspace files for dependency resolution
-COPY Cargo.toml Cargo.lock ./
-COPY rust-toolchain.toml ./
-
 # Copy the entire source code (needed for workspace builds)
 COPY . .
 

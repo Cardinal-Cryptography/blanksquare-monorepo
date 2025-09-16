@@ -151,10 +151,10 @@ jobs:
           solc-version: 0.8.26
 
       - name: Run tests
-        run: cd ${{ matrix.crate }} && BUILD=docker make test
+        run: cd ${{ matrix.crate }} make test
 
   e2e-tests:
-    name: Run E2E tests
+    name: github-large-runner-x64-8-cpu-32-gb-ram-300-gb-disk
     runs-on: ubuntu-22.04
     timeout-minutes: 20
     steps:

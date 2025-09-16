@@ -188,7 +188,6 @@ For deployment or testing in containerized environments:
 
 ```bash
 # Build relayer image
-export BUILD=docker
 run tooling-e2e-tests/full_scenario.sh
 ```
 
@@ -212,7 +211,6 @@ run tooling-e2e-tests/full_scenario.sh
 For maximum compatibility, use Docker mode (slower but more reliable):
 
 ```bash
-export BUILD=docker
 run tooling-e2e-tests/full_scenario.sh
 ```
 

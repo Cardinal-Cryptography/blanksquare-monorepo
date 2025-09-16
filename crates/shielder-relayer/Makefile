@@ -26,6 +26,7 @@ lint: ## Run linter
 	@cargo +nightly fmt --all
 
 .PHONY: build-image
+build-image:
 	@cd ../.. && DOCKER_BUILDKIT=1 docker build --tag "${RELAYER_DOCKER_IMAGE}" -f "crates/shielder-relayer/docker/Dockerfile" .
 
 .PHONY: run

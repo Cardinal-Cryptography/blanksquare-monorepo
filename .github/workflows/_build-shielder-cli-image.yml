@@ -7,7 +7,7 @@ on:
 jobs:
   build-shielder-cli-image:
     name: Build shielder-cli Docker image
-    runs-on: ubuntu-22.04
+    runs-on: github-large-runner-x64-8-cpu-32-gb-ram-300-gb-disk
     timeout-minutes: 10
     steps:
       - name: Checkout source code

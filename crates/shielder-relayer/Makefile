@@ -17,7 +17,7 @@ build:
 	@cargo build --release
 
 .PHONY: test
-test: build-image ## Run tests
+test: ## Run tests
 	@./test.sh
 
 .PHONY: lint
@@ -29,7 +29,7 @@ lint: ## Run linter
 build-image:
 	@if ! docker image inspect ${RELAYER_DOCKER_IMAGE} >/dev/null 2>&1; then \
 		echo "Building ${RELAYER_DOCKER_IMAGE} Docker image..."; \
-		cd ../.. && DOCKER_BUILDKIT=1 docker build --tag "${RELAYER_DOCKER_IMAGE}" -f "crates/shielder-relayer/docker/Dockerfile" .; \
+		cd ../.. && docker build --tag "${RELAYER_DOCKER_IMAGE}" -f "crates/shielder-relayer/docker/Dockerfile" .; \
 	else \
 		echo "${RELAYER_DOCKER_IMAGE} Docker image already exists, skipping build"; \
 	fi

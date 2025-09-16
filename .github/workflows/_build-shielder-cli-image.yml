@@ -1,0 +1,27 @@
+---
+name: Build shielder-cli Docker image
+
+on:
+  workflow_call:
+
+jobs:
+  build-shielder-cli-image:
+    name: Build shielder-cli Docker image
+    runs-on: github-large-runner-x64-8-cpu-32-gb-ram-300-gb-disk
+    timeout-minutes: 10
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      - name: Build shielder-cli Docker image
+        run: cd crates/shielder-cli && make build-image
+
+      - name: Save Docker image to tar
+        run: docker save shielder-cli:latest -o shielder-cli-image.tar
+
+      - name: Upload Docker image as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: shielder-cli-docker-image
+          path: shielder-cli-image.tar
+          retention-days: 1

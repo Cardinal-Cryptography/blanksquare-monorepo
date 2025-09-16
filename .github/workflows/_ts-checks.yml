@@ -147,8 +147,14 @@ jobs:
           name: generated-build-cache
           path: cache
 
-      - name: Prepare Rust env
-        uses: ./.github/actions/prepare-rust-env
+      - name: Download shielder-relayer Docker image
+        uses: actions/download-artifact@v4
+        with:
+          name: shielder-relayer-docker-image
+          path: .
+
+      - name: Load Docker image
+        run: docker load -i shielder-relayer-image.tar
 
       - name: Install Node.js
         uses: actions/setup-node@v4

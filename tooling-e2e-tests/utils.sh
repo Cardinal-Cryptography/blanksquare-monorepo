@@ -171,21 +171,46 @@ stop_relayer() {
 #### CLI ###########################################################################################
 ####################################################################################################
 build_cli() {
-  cargo build --release -p shielder-cli &>> output.log
+  cd "${ROOT_DIR}/crates/shielder-cli/"
+  make build-image &>> output.log
+  cd "${ROOT_DIR}"
 
-  log_progress "✅ CLI built"
+  log_progress "✅ CLI Docker image built"
+}
+
+run_cli() {
+  local state_file="$1"
+  shift # Remove the first argument, leaving the CLI command arguments
+  
+  # Ensure state file directory exists on host with proper permissions
+  mkdir -p "$(dirname "${state_file}")"
+  
+  # Ensure CLI cache directory exists on host with proper permissions - note the CLI expects "shielder-cli" not ".shielder-cli"
+  mkdir -p "${HOME}/shielder-cli"
+  
+  docker run --rm \
+    -w /workspace \
+    -v "${ROOT_DIR}:/workspace" \
+    -v "$(dirname "${state_file}"):/home/shielder/state-dir" \
+    -v "${HOME}/shielder-cli:/home/shielder/shielder-cli" \
+    --network host \
+    --user "$(id -u):$(id -g)" \
+    -e RUST_LOG=warning \
+    -e HOME=/home/shielder \
+    -e PTAU_RESOURCES_DIR=/workspace/resources \
+    shielder-cli:latest --no-password --state-file "/home/shielder/state-dir/$(basename "${state_file}")" "$@"
 }
 
 alice() {
-  RUST_LOG=warning target/release/shielder-cli --no-password  --state-file ${ALICE_STATE_FILE} "$@"
+  run_cli "${ALICE_STATE_FILE}" "$@"
 }
 
 bob() {
-  RUST_LOG=warning target/release/shielder-cli --no-password --state-file ${BOB_STATE_FILE} "$@"
+  run_cli "${BOB_STATE_FILE}" "$@"
 }
 
 charlie() {
-  RUST_LOG=warning target/release/shielder-cli --no-password --state-file ${CHARLIE_STATE_FILE} "$@"
+  run_cli "${CHARLIE_STATE_FILE}" "$@"
 }
 
 clear_local_cli_state() {

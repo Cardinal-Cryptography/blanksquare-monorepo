@@ -21,12 +21,6 @@ jobs:
       - name: GIT | Checkout
         uses: actions/checkout@v4
 
-      - name: Prepare Rust env
-        uses: ./.github/actions/prepare-rust-env
-
-      - name: Build relayer
-        run: cd crates/shielder-relayer && make build
-
       - name: DOCKER | Build and push
         uses: ./.github/actions/shielder-relayer/build-and-push
         id: build_shielder_relayer

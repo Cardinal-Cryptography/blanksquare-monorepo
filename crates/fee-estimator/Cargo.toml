@@ -2,7 +2,7 @@
 name = "fee-estimator"
 version = "0.1.0"
 readme = "README.md"
-description = "Fee estimator for the zkOS Shielder contract"
+description = "Fee estimator for the Shielder contract"
 
 edition.workspace = true
 authors.workspace = true

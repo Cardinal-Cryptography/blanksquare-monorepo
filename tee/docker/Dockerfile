@@ -1,21 +1,18 @@
-FROM rust:1.88 AS builder
+FROM rust:1.88-slim-bookworm as builder
 
 WORKDIR /app
 
-COPY Cargo.toml Cargo.lock ./
-
-# Copy the rest of your source code
 COPY . .
 
 RUN cargo build --release -p shielder-prover-server
 
-FROM ubuntu:jammy
+FROM debian:bookworm-slim
+RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
 COPY --from=builder /app/target/release/shielder-prover-server .
 
-# Expose the default public port
 EXPOSE 3000
 
 ENTRYPOINT ["/app/shielder-prover-server"]

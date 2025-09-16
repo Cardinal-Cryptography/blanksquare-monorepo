@@ -16,29 +16,35 @@ jobs:
     uses: ./.github/workflows/_check-vars-and-secrets.yml
     secrets: inherit
 
+  build-shielder-relayer-image:
+    name: Build shielder-relayer Docker image
+    uses: ./.github/workflows/_build-shielder-relayer-image.yml
+
+  build-shielder-cli-image:
+    name: Build shielder-cli Docker image
+    uses: ./.github/workflows/_build-shielder-cli-image.yml
+
   build-contracts:
     name: Generate and compile contracts
-    needs: [check-vars-and-secrets]
     uses: ./.github/workflows/_build-contracts.yml
-    secrets: inherit
 
   deploy-contracts:
     name: Deploy contracts
-    needs: [build-contracts]
+    needs:
+      - build-contracts
     uses: ./.github/workflows/_deploy-contracts.yml
-    secrets: inherit
 
   rust-crates-checks:
     name: Rust crates checks
-    needs: [build-contracts]
+    needs:
+      - build-contracts
+      - build-shielder-relayer-image
+      - build-shielder-cli-image
     uses: ./.github/workflows/_rust-crates-checks.yml
-    secrets: inherit
 
   build-wasm-package:
     name: Build wasm package
-    needs: [check-vars-and-secrets]
     uses: ./.github/workflows/_build-wasm-packages.yml
-    secrets: inherit
     with:
       target: wasm
       artifact-name: wasm-pkg
@@ -47,9 +53,7 @@ jobs:
 
   build-wasm-package-without-circuits:
     name: Build wasm package without circuits
-    needs: [check-vars-and-secrets]
     uses: ./.github/workflows/_build-wasm-packages.yml
-    secrets: inherit
     with:
       target: wasm-without-circuits
       artifact-name: wasm-pkg-without-circuits
@@ -58,16 +62,25 @@ jobs:
 
   ts-checks:
     name: Typescript modules checks
-    needs: [build-contracts, build-wasm-package, build-wasm-package-without-circuits]
+    needs:
+      - build-contracts
+      - build-wasm-package
+      - build-wasm-package-without-circuits
+      - build-shielder-relayer-image
     uses: ./.github/workflows/_ts-checks.yml
-    secrets: inherit
 
   clean-wasm-artifact:
     name: Clean wasm artifact
     runs-on: ubuntu-22.04
     if: ${{ always() }}
     # dependencies should include all jobs, which interact with wasm artifact
-    needs: [build-wasm-package, build-wasm-package-without-circuits, ts-checks]
+    needs:
+      - build-wasm-package
+      - build-wasm-package-without-circuits
+      - ts-checks
+      - build-shielder-relayer-image
+      - build-shielder-cli-image
+      - rust-crates-checks
     steps:
       - uses: geekyeggo/delete-artifact@v5
         with:
@@ -75,12 +88,13 @@ jobs:
             wasm-pkg
             wasm-pkg-without-circuits
             proving-keys-pkg
+            shielder-relayer-docker-image
+            shielder-cli-docker-image
 
   measure-gas-usage-and-verifier-code-size:
     name: Measure gas usage
     if: github.event_name == 'pull_request'
     uses: ./.github/workflows/_measure-gas-and-contract-size.yml
-    secrets: inherit
 
   all-jobs-completed:
     name: All jobs completed
@@ -93,6 +107,8 @@ jobs:
       - rust-crates-checks
       - build-wasm-package
       - build-wasm-package-without-circuits
+      - build-shielder-relayer-image
+      - build-shielder-cli-image
       - ts-checks
       - clean-wasm-artifact
       - measure-gas-usage-and-verifier-code-size

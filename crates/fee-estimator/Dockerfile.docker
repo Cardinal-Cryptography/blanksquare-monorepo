@@ -1,6 +1,4 @@
-# syntax=docker/dockerfile:experimental
-
-FROM debian:bookworm-slim AS build
+FROM rust:1.88-slim-bookworm as builder
 
 RUN apt-get update && \
     apt-get install -y \
@@ -11,26 +9,20 @@ RUN apt-get update && \
       pkg-config && \
     rm -rf /tmp/* /var/{tmp,cache}/* /var/lib/{apt,dpkg}/
 
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain none
-ENV PATH="/root/.cargo/bin:${PATH}"
-
-COPY ./crates ./zkos/crates
-COPY ./Cargo.toml ./zkos/Cargo.toml
-COPY ./Cargo.lock ./zkos/Cargo.lock
-COPY ./rust-toolchain.toml ./zkos/rust-toolchain.toml
-
-RUN cd zkos && cargo build --release -p fee-estimator
+WORKDIR /app
+COPY . .
+RUN cargo build --release -p fee-estimator
 
 FROM debian:bookworm-slim
 
 RUN apt-get update && \
     apt-get install -y \
-      libssl-dev \
+      libssl3 \
       tini \
       ca-certificates && \
       rm -rf /tmp/* /var/{tmp,cache}/* /var/lib/{apt,dpkg}/
 
-COPY --from=build /zkos/target/release/fee-estimator /usr/local/bin
+COPY --from=builder /app/target/release/fee-estimator /usr/local/bin
 RUN chmod +x /usr/local/bin/fee-estimator
 
 # Copy resources directory for ptau files

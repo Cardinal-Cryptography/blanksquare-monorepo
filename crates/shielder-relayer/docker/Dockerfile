@@ -14,8 +14,8 @@ WORKDIR /app
 # Copy the entire source code (needed for workspace builds)
 COPY . .
 
-# Build the fee-estimator binary
-RUN cargo build --release -p fee-estimator
+# Build the shielder-relayer binary
+RUN cargo build --release -p shielder-relayer
 
 # Runtime stage
 FROM debian:bookworm-slim
@@ -30,19 +30,10 @@ RUN apt-get update && \
 WORKDIR /app
 
 # Copy the built binary from builder stage
-COPY --from=builder /app/target/release/fee-estimator /usr/local/bin/fee-estimator
-RUN chmod +x /usr/local/bin/fee-estimator
+COPY --from=builder /app/target/release/shielder-relayer /usr/local/bin/shielder-relayer
+RUN chmod +x /usr/local/bin/shielder-relayer
 
-# Copy resources directory for ptau files
-COPY --from=builder /app/resources /app/resources
-
-# Create data directory with proper permissions
-RUN mkdir -p /app/data && \
-    useradd server && \
-    chown -R server:server /app
-
+RUN useradd server
 USER server
-ENV FEE_ESTIMATOR_DATA_DIR=/app/data
-ENV PTAU_RESOURCES_DIR=/app/resources
 
-ENTRYPOINT ["tini", "--", "fee-estimator"]
+ENTRYPOINT ["tini", "--", "shielder-relayer"]

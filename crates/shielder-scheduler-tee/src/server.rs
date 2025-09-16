@@ -7,6 +7,7 @@ use aws_nitro_enclaves_nsm_api::{
     api::Response as NsmResponse,
     driver::{nsm_exit, nsm_init, nsm_process_request},
 };
+use chrono::Utc;
 use log::{debug, info};
 use shielder_scheduler_common::{
     protocol::{AwsConfig, EncryptionEnvelope, Payload, Request, Response, TEEServer},
@@ -24,7 +25,6 @@ struct RelayParams {
     relayer_fee: U256,
     merkle_path: Box<[[U256; ARITY]; TREE_HEIGHT]>,
     merkle_root: U256,
-    pocket_money: U256,
 }
 
 pub struct Server {
@@ -89,17 +89,15 @@ impl Server {
                             aws_config,
                             encryption_envelope,
                             relayer_address,
-                            max_relayer_fee,
+                            relayer_fee,
                             merkle_path,
                             merkle_root,
-                            pocket_money,
                         } => {
                             let relay_params = RelayParams {
                                 relayer_address,
-                                relayer_fee: max_relayer_fee,
+                                relayer_fee,
                                 merkle_path,
                                 merkle_root,
-                                pocket_money,
                             };
                             self.prepare_relay_calldata_response(
                                 &aws_config,
@@ -139,29 +137,43 @@ impl Server {
     ) -> Result<Response, VsockError> {
         let decrypted_payload = self.kms.decrypt_payload(aws_config, &encryption_envelope)?;
 
-        let deserialized_payload: Payload =
+        let payload: Payload =
             serde_json::from_slice(&decrypted_payload).map_err(|e| {
                 VsockError::Protocol(format!("Failed to deserialize decrypted payload: {e:?}"))
             })?;
 
-        let token = match deserialized_payload.token_address {
+        if payload.relay_after > Utc::now().timestamp() {
+            return Err(VsockError::Protocol(format!(
+                "Request scheduled for future timestamp: {}",
+                payload.relay_after
+            )));
+        }
+
+        if relay_params.relayer_fee > payload.max_relayer_fee {
+            return Err(VsockError::Protocol(format!(
+                "Relayer fee {} exceeds max relayer fee {}",
+                relay_params.relayer_fee, payload.max_relayer_fee
+            )));
+        }
+
+        let token = match payload.token_address {
             Address::ZERO => shielder_account::Token::Native,
             addr => shielder_account::Token::ERC20(addr),
         };
-        let withdraw_circuit = WithdrawCircuit::new(deserialized_payload.account_id, token);
+        let withdraw_circuit = WithdrawCircuit::new(payload.account_id, token);
         let relayer_calldata = withdraw_circuit.get_relayer_calldata(
-            deserialized_payload.withdrawal_value,
-            deserialized_payload.withdraw_address,
+            payload.withdrawal_value,
+            payload.withdraw_address,
             *relay_params.merkle_path,
-            deserialized_payload.chain_id,
+            payload.chain_id,
             relay_params.relayer_fee,
-            relay_params.pocket_money,
+            payload.pocket_money,
             relay_params.relayer_address,
-            deserialized_payload.protocol_fee,
-            deserialized_payload.memo,
-            deserialized_payload.nullifier_old,
-            deserialized_payload.nullifier_new,
-            deserialized_payload.account_old_balance,
+            payload.protocol_fee,
+            payload.memo,
+            payload.nullifier_old,
+            payload.nullifier_new,
+            payload.account_old_balance,
             relay_params.merkle_root,
         );
 

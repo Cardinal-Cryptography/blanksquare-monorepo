@@ -18,6 +18,7 @@ RUN cargo build --release -p shielder-scheduler-server
 
 FROM debian:bookworm-slim
 # Runtime image doesn't need OpenSSL - the binary uses RustLS with statically linked crypto
+RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*
 COPY --from=builder /app/target/release/shielder-scheduler-server /usr/local/bin/
 
 RUN chmod +x /usr/local/bin/shielder-scheduler-server

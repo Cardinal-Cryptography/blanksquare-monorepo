@@ -149,6 +149,18 @@ jobs:
         uses: ./.github/actions/install-solc
         with:
           solc-version: 0.8.26
+
+      # test binary actually calls docker run, somewhere in the test code...
+      - name: Download shielder-relayer Docker image
+        if: matrix.crate != 'crates/integration-tests'
+        uses: actions/download-artifact@v4
+        with:
+          name: shielder-relayer-docker-image
+          path: .
+
+      - name: Load Docker image
+        if: matrix.crate != 'crates/integration-tests'
+        run: docker load -i shielder-relayer-image.tar
       
       - name: Run tests
         run: cd ${{ matrix.crate }} && make test

@@ -6,7 +6,8 @@ COPY . .
 
 RUN cargo build --release -p shielder-prover-server
 
-FROM ubuntu:jammy
+FROM debian:bookworm-slim
+RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 

@@ -8,9 +8,6 @@ on:
         description: 'git ref: hash, branch, tag to build shielder-scheduler-server files from'
         type: string
         required: true
-  push:
-    branches:
-      - BAC-289
 
 jobs:
   main:

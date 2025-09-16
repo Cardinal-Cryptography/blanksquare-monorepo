@@ -161,7 +161,7 @@ jobs:
       - name: Load Docker image
         if: matrix.crate != 'crates/integration-tests'
         run: docker load -i shielder-relayer-image.tar
-      
+
       - name: Run tests
         run: cd ${{ matrix.crate }} && make test
 

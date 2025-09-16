@@ -137,10 +137,9 @@ impl Server {
     ) -> Result<Response, VsockError> {
         let decrypted_payload = self.kms.decrypt_payload(aws_config, &encryption_envelope)?;
 
-        let payload: Payload =
-            serde_json::from_slice(&decrypted_payload).map_err(|e| {
-                VsockError::Protocol(format!("Failed to deserialize decrypted payload: {e:?}"))
-            })?;
+        let payload: Payload = serde_json::from_slice(&decrypted_payload).map_err(|e| {
+            VsockError::Protocol(format!("Failed to deserialize decrypted payload: {e:?}"))
+        })?;
 
         if payload.relay_after > Utc::now().timestamp() {
             return Err(VsockError::Protocol(format!(

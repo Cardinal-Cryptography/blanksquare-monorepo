@@ -33,7 +33,7 @@ pub struct Payload {
     pub withdraw_address: Address,
     pub protocol_fee: U256,
     pub memo: Bytes,
-    
+
     /// Maximum fee that the relayer can charge for this transaction.
     pub max_relayer_fee: U256,
     /// Timestamp after which the relay is allowed (Unix timestamp in seconds).

@@ -172,12 +172,7 @@ Please check the SHIELDER_ADDRESS environment variable or --shielder-address arg
             .await?;
 
         let tee_response = self
-            .call_tee_prepare_relay_calldata(
-                &request,
-                &quoted_fee,
-                merkle_root,
-                merkle_path,
-            )
+            .call_tee_prepare_relay_calldata(&request, &quoted_fee, merkle_root, merkle_path)
             .await?;
 
         self.process_tee_response(tee_response, quoted_fee, request.id)

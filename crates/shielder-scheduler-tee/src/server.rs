@@ -7,7 +7,6 @@ use aws_nitro_enclaves_nsm_api::{
     api::Response as NsmResponse,
     driver::{nsm_exit, nsm_init, nsm_process_request},
 };
-use chrono::Utc;
 use log::{debug, info};
 use shielder_scheduler_common::{
     protocol::{AwsConfig, EncryptionEnvelope, Payload, Request, Response, TEEServer},
@@ -140,13 +139,6 @@ impl Server {
         let payload: Payload = serde_json::from_slice(&decrypted_payload).map_err(|e| {
             VsockError::Protocol(format!("Failed to deserialize decrypted payload: {e:?}"))
         })?;
-
-        if payload.relay_after > Utc::now().timestamp() {
-            return Err(VsockError::Protocol(format!(
-                "Request scheduled for future timestamp: {}",
-                payload.relay_after
-            )));
-        }
 
         if relay_params.relayer_fee > payload.max_relayer_fee {
             return Err(VsockError::Protocol(format!(

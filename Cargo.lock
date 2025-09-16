@@ -5938,7 +5938,6 @@ dependencies = [
  "alloy-primitives",
  "aws-nitro-enclaves-nsm-api",
  "base64 0.22.1",
- "chrono",
  "clap",
  "halo2curves",
  "hex",

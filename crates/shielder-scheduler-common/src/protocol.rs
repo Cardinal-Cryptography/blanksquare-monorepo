@@ -36,8 +36,6 @@ pub struct Payload {
 
     /// Maximum fee that the relayer can charge for this transaction.
     pub max_relayer_fee: U256,
-    /// Timestamp after which the relay is allowed (Unix timestamp in seconds).
-    pub relay_after: i64,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

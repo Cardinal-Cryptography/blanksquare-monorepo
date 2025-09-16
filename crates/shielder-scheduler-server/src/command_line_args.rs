@@ -128,9 +128,9 @@ pub struct CommandLineArgs {
     /// Address of the Shielder contract
     #[clap(long, env = "SHIELDER_ADDRESS")]
     pub shielder_address: String,
-    /// Relayer rpc URL
-    #[clap(long, env = "RELAYER_RPC_URL")]
-    pub relayer_rpc_url: String,
+    /// Relayer URL
+    #[clap(long, env = "RELAYER_URL")]
+    pub relayer_url: String,
 }
 
 impl CommandLineArgs {

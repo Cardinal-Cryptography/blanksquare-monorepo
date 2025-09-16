@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use shielder_scheduler_common::protocol::EncryptionEnvelope;
 use sqlx::{PgPool, Row};
 
-use crate::error::SchedulerServerError as Error;
+use crate::{error::SchedulerServerError as Error, handlers::get_status::GetStatusResponse};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ScheduledRequest {
@@ -84,14 +84,13 @@ pub async fn create_tables(pool: &PgPool) -> Result<(), Error> {
             token_address TEXT NOT NULL,
             relay_after TIMESTAMPTZ NOT NULL,
             status request_status NOT NULL DEFAULT 'pending',
-            created_at TIMESTAMPTZ NOT NULL DEFAULT &1,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
             processed_at TIMESTAMPTZ,
             retry_count INTEGER NOT NULL DEFAULT 0,
             error_message TEXT
         )
         "#,
     )
-    .bind(Utc::now())
     .execute(pool)
     .await?;
 
@@ -227,4 +226,31 @@ pub async fn update_retry_attempt(
     .await?;
 
     Ok(())
+}
+
+pub async fn get_request_by_last_note_index(
+    pool: &PgPool,
+    last_note_index: &str,
+) -> Result<Option<GetStatusResponse>, Error> {
+    let row = sqlx::query(
+        r#"
+        SELECT last_note_index, status, created_at, processed_at
+        FROM scheduled_requests
+        WHERE last_note_index = $1
+        "#,
+    )
+    .bind(last_note_index)
+    .fetch_optional(pool)
+    .await?;
+
+    if let Some(row) = row {
+        Ok(Some(GetStatusResponse {
+            last_note_index: row.get("last_note_index"),
+            status: row.get("status"),
+            created_at: row.get("created_at"),
+            processed_at: row.get("processed_at"),
+        }))
+    } else {
+        Ok(None)
+    }
 }

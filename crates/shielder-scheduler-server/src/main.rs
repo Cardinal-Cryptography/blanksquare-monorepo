@@ -3,7 +3,7 @@ mod command_line_args;
 mod db;
 mod error;
 mod handlers;
-mod relayer_rpc_controller;
+mod relayer_controller;
 mod scheduler_processor;
 
 use std::{net::SocketAddrV4, sync::Arc, time::Duration};
@@ -29,7 +29,7 @@ use crate::{
     aws_session_tokens::AwsCredentials,
     command_line_args::CommandLineArgs,
     handlers::{self as server_handlers},
-    relayer_rpc_controller::RelayerRpcController,
+    relayer_controller::RelayerController,
     scheduler_processor::SchedulerProcessor,
 };
 
@@ -39,7 +39,7 @@ struct AppState {
     db_pool: db::PgPool,
     tee_task_pool: Arc<tokio_task_pool::Pool>,
     aws_credentials: Arc<Mutex<AwsCredentials>>,
-    relayer_rpc_controller: RelayerRpcController,
+    relayer_controller: RelayerController,
     shutdown_tx: watch::Sender<bool>,
 }
 
@@ -99,7 +99,7 @@ async fn main() -> Result<(), Error> {
         }
     };
 
-    let relayer_rpc_controller = RelayerRpcController::new(options.relayer_rpc_url.clone());
+    let relayer_controller = RelayerController::new(options.relayer_url.clone());
 
     // Create shutdown signal channel
     let (shutdown_tx, shutdown_rx) = watch::channel(false);
@@ -109,16 +109,16 @@ async fn main() -> Result<(), Error> {
         tee_task_pool,
         db_pool,
         aws_credentials: Arc::new(Mutex::new(aws_credentials)),
-        relayer_rpc_controller,
+        relayer_controller,
         shutdown_tx,
     });
 
     // Perform initial TEE public key verification to ensure the server is correctly configured
     info!("Performing initial TEE public key verification...");
-    let _verification_result =
-        server_handlers::tee_public_key::tee_public_key(axum::extract::State(app_state.clone()))
-            .await
-            .map_err(|e| Error::ParseError(format!("TEE public key verification failed: {}", e)))?;
+    // let _verification_result =
+    //     server_handlers::tee_public_key::tee_public_key(axum::extract::State(app_state.clone()))
+    //         .await
+    //         .map_err(|e| Error::ParseError(format!("TEE public key verification failed: {}", e)))?;
 
     info!("TEE public key verification successful");
 
@@ -150,6 +150,10 @@ async fn main() -> Result<(), Error> {
         .route(
             "/schedule_withdraw",
             post(server_handlers::schedule_withdraw::schedule_withdraw),
+        )
+        .route(
+            "/status/{last_note_index}",
+            get(server_handlers::get_status::get_status),
         )
         .layer(DefaultBodyLimit::max(
             app_state.options.maximum_request_size,

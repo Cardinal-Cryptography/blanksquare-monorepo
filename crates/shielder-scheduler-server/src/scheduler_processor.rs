@@ -222,7 +222,7 @@ Please check the SHIELDER_ADDRESS environment variable or --shielder-address arg
         };
 
         self.app_state
-            .relayer_rpc_controller
+            .relayer_controller
             .get_relayer_total_fee(token, pocket_money)
             .await
     }
@@ -256,7 +256,7 @@ Please check the SHIELDER_ADDRESS environment variable or --shielder-address arg
         let encryption_envelope = request.encryption_envelope.clone();
         let relayer_address = self
             .app_state
-            .relayer_rpc_controller
+            .relayer_controller
             .get_relayer_fee_address()
             .await?;
 
@@ -320,7 +320,7 @@ Please check the SHIELDER_ADDRESS environment variable or --shielder-address arg
                     quote: quoted_fee.into(),
                 };
                 self.app_state
-                    .relayer_rpc_controller
+                    .relayer_controller
                     .send_relay_query(relay_query)
                     .await?;
                 Ok(ProcessingResult { request_id })

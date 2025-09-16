@@ -26,17 +26,13 @@ jobs:
 
   build-contracts:
     name: Generate and compile contracts
-    needs:
-      - check-vars-and-secrets
     uses: ./.github/workflows/_build-contracts.yml
-    secrets: inherit
 
   deploy-contracts:
     name: Deploy contracts
     needs:
       - build-contracts
     uses: ./.github/workflows/_deploy-contracts.yml
-    secrets: inherit
 
   rust-crates-checks:
     name: Rust crates checks
@@ -45,14 +41,10 @@ jobs:
       - build-shielder-relayer-image
       - build-shielder-cli-image
     uses: ./.github/workflows/_rust-crates-checks.yml
-    secrets: inherit
 
   build-wasm-package:
     name: Build wasm package
-    needs:
-      - check-vars-and-secrets
     uses: ./.github/workflows/_build-wasm-packages.yml
-    secrets: inherit
     with:
       target: wasm
       artifact-name: wasm-pkg
@@ -61,10 +53,7 @@ jobs:
 
   build-wasm-package-without-circuits:
     name: Build wasm package without circuits
-    needs:
-      - check-vars-and-secrets
     uses: ./.github/workflows/_build-wasm-packages.yml
-    secrets: inherit
     with:
       target: wasm-without-circuits
       artifact-name: wasm-pkg-without-circuits
@@ -79,7 +68,6 @@ jobs:
       - build-wasm-package-without-circuits
       - build-shielder-relayer-image
     uses: ./.github/workflows/_ts-checks.yml
-    secrets: inherit
 
   clean-wasm-artifact:
     name: Clean wasm artifact
@@ -107,7 +95,6 @@ jobs:
     name: Measure gas usage
     if: github.event_name == 'pull_request'
     uses: ./.github/workflows/_measure-gas-and-contract-size.yml
-    secrets: inherit
 
   all-jobs-completed:
     name: All jobs completed

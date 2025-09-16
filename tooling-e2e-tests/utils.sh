@@ -178,9 +178,12 @@ build_cli() {
   log_progress "✅ CLI Docker image built"
 }
 
-alice() {
+run_cli() {
+  local state_file="$1"
+  shift # Remove the first argument, leaving the CLI command arguments
+  
   # Ensure state file directory exists on host with proper permissions
-  mkdir -p "$(dirname "${ALICE_STATE_FILE}")"
+  mkdir -p "$(dirname "${state_file}")"
   
   # Ensure CLI cache directory exists on host with proper permissions - note the CLI expects "shielder-cli" not ".shielder-cli"
   mkdir -p "${HOME}/shielder-cli"
@@ -188,51 +191,26 @@ alice() {
   docker run --rm \
     -w /workspace \
     -v "${ROOT_DIR}:/workspace" \
-    -v "$(dirname "${ALICE_STATE_FILE}"):/home/shielder/state-dir" \
+    -v "$(dirname "${state_file}"):/home/shielder/state-dir" \
     -v "${HOME}/shielder-cli:/home/shielder/shielder-cli" \
     --network host \
     --user "$(id -u):$(id -g)" \
     -e RUST_LOG=warning \
     -e HOME=/home/shielder \
-    shielder-cli:latest --no-password --state-file "/home/shielder/state-dir/$(basename "${ALICE_STATE_FILE}")" "$@"
+    -e PTAU_RESOURCES_DIR=/workspace/resources \
+    shielder-cli:latest --no-password --state-file "/home/shielder/state-dir/$(basename "${state_file}")" "$@"
+}
+
+alice() {
+  run_cli "${ALICE_STATE_FILE}" "$@"
 }
 
 bob() {
-  # Ensure state file directory exists on host with proper permissions
-  mkdir -p "$(dirname "${BOB_STATE_FILE}")"
-  
-  # Ensure CLI cache directory exists on host with proper permissions - note the CLI expects "shielder-cli" not ".shielder-cli"
-  mkdir -p "${HOME}/shielder-cli"
-  
-  docker run --rm \
-    -w /workspace \
-    -v "${ROOT_DIR}:/workspace" \
-    -v "$(dirname "${BOB_STATE_FILE}"):/home/shielder/state-dir" \
-    -v "${HOME}/shielder-cli:/home/shielder/shielder-cli" \
-    --network host \
-    --user "$(id -u):$(id -g)" \
-    -e RUST_LOG=warning \
-    -e HOME=/home/shielder \
-    shielder-cli:latest --no-password --state-file "/home/shielder/state-dir/$(basename "${BOB_STATE_FILE}")" "$@"
+  run_cli "${BOB_STATE_FILE}" "$@"
 }
 
 charlie() {
-  # Ensure state file directory exists on host with proper permissions
-  mkdir -p "$(dirname "${CHARLIE_STATE_FILE}")"
-  
-  # Ensure CLI cache directory exists on host with proper permissions - note the CLI expects "shielder-cli" not ".shielder-cli"
-  mkdir -p "${HOME}/shielder-cli"
-  
-  docker run --rm \
-    -w /workspace \
-    -v "${ROOT_DIR}:/workspace" \
-    -v "$(dirname "${CHARLIE_STATE_FILE}"):/home/shielder/state-dir" \
-    -v "${HOME}/shielder-cli:/home/shielder/shielder-cli" \
-    --network host \
-    --user "$(id -u):$(id -g)" \
-    -e RUST_LOG=warning \
-    -e HOME=/home/shielder \
-    shielder-cli:latest --no-password --state-file "/home/shielder/state-dir/$(basename "${CHARLIE_STATE_FILE}")" "$@"
+  run_cli "${CHARLIE_STATE_FILE}" "$@"
 }
 
 clear_local_cli_state() {

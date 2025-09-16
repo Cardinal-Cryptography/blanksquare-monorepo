@@ -18,25 +18,37 @@ jobs:
 
   build-contracts:
     name: Generate and compile contracts
-    needs: [check-vars-and-secrets]
+    needs:
+      - check-vars-and-secrets
     uses: ./.github/workflows/_build-contracts.yml
     secrets: inherit
 
   deploy-contracts:
     name: Deploy contracts
-    needs: [build-contracts]
+    needs:
+      - build-contracts
     uses: ./.github/workflows/_deploy-contracts.yml
+    secrets: inherit
+
+  build-shielder-relayer-image:
+    name: Build shielder-relayer Docker image
+    needs:
+      - build-contracts
+    uses: ./.github/workflows/_build-shielder-relayer-image.yml
     secrets: inherit
 
   rust-crates-checks:
     name: Rust crates checks
-    needs: [build-contracts]
+    needs:
+      - build-contracts
+      - build-shielder-relayer-image
     uses: ./.github/workflows/_rust-crates-checks.yml
     secrets: inherit
 
   build-wasm-package:
     name: Build wasm package
-    needs: [check-vars-and-secrets]
+    needs:
+      - check-vars-and-secrets
     uses: ./.github/workflows/_build-wasm-packages.yml
     secrets: inherit
     with:
@@ -47,7 +59,8 @@ jobs:
 
   build-wasm-package-without-circuits:
     name: Build wasm package without circuits
-    needs: [check-vars-and-secrets]
+    needs:
+      - check-vars-and-secrets
     uses: ./.github/workflows/_build-wasm-packages.yml
     secrets: inherit
     with:
@@ -58,7 +71,11 @@ jobs:
 
   ts-checks:
     name: Typescript modules checks
-    needs: [build-contracts, build-wasm-package, build-wasm-package-without-circuits]
+    needs:
+      - build-contracts
+      - build-wasm-package
+      - build-wasm-package-without-circuits
+      - build-shielder-relayer-image
     uses: ./.github/workflows/_ts-checks.yml
     secrets: inherit
 
@@ -67,7 +84,12 @@ jobs:
     runs-on: ubuntu-22.04
     if: ${{ always() }}
     # dependencies should include all jobs, which interact with wasm artifact
-    needs: [build-wasm-package, build-wasm-package-without-circuits, ts-checks]
+    needs:
+      - build-wasm-package
+      - build-wasm-package-without-circuits
+      - ts-checks
+      - build-shielder-relayer-image
+      - rust-crates-checks
     steps:
       - uses: geekyeggo/delete-artifact@v5
         with:
@@ -75,6 +97,7 @@ jobs:
             wasm-pkg
             wasm-pkg-without-circuits
             proving-keys-pkg
+            shielder-relayer-docker-image
 
   measure-gas-usage-and-verifier-code-size:
     name: Measure gas usage
@@ -93,6 +116,7 @@ jobs:
       - rust-crates-checks
       - build-wasm-package
       - build-wasm-package-without-circuits
+      - build-shielder-relayer-image
       - ts-checks
       - clean-wasm-artifact
       - measure-gas-usage-and-verifier-code-size

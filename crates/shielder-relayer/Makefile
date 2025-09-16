@@ -6,7 +6,7 @@ DOCKER_USER = "$(id -u):$(id -g)"
 DETACHED ?= true
 
 RELAYER_CONTAINER_NAME = shielder-relayer
-RELAYER_DOCKER_IMAGE = shielder-relayer
+RELAYER_DOCKER_IMAGE = shielder-relayer:latest
 
 .PHONY: help
 help: ## Displays this help

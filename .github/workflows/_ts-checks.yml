@@ -93,7 +93,7 @@ jobs:
 
   e2e-tests:
     name: Run E2E tests on local anvil node (${{ matrix.fee_scenario }} fee)
-    runs-on: github-large-runner-x64-8-cpu-32-gb-ram-300-gb-disk
+    runs-on: ubuntu-22.04
     timeout-minutes: 20
     strategy:
       fail-fast: false
@@ -147,8 +147,14 @@ jobs:
           name: generated-build-cache
           path: cache
 
-      - name: Prepare Rust env
-        uses: ./.github/actions/prepare-rust-env
+      - name: Download shielder-relayer Docker image
+        uses: actions/download-artifact@v4
+        with:
+          name: shielder-relayer-docker-image
+          path: .
+
+      - name: Load Docker image
+        run: docker load -i shielder-relayer-image.tar
 
       - name: Install Node.js
         uses: actions/setup-node@v4
@@ -169,9 +175,6 @@ jobs:
       - name: Build all (workspace)
         run: pnpm build
         working-directory: ts
-
-      - name: Build shielder-relayer
-        run: cd crates/shielder-relayer && make build-image
 
       - name: Run e2e sdk tests
         env:

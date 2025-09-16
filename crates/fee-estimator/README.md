@@ -1,6 +1,6 @@
 # Fee Estimator Service
 
-This service provides fee estimation for the zkOS Shielder contract.
+This service provides fee estimation for the Shielder contract.
 
 ## Docker Setup
 

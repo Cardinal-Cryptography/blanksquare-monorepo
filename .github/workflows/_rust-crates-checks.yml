@@ -104,7 +104,7 @@ jobs:
 
   run-heavy-tests:
     name: Run heavy tests for ${{ matrix.crate }}
-    runs-on: ubuntu-22.04
+    runs-on: github-large-runner-x64-8-cpu-32-gb-ram-300-gb-disk
     timeout-minutes: 15
     strategy:
       fail-fast: false
@@ -150,6 +150,17 @@ jobs:
         with:
           solc-version: 0.8.26
 
+      - name: Download shielder-relayer Docker image
+        if: matrix.crate != 'crates/integration-tests'
+        uses: actions/download-artifact@v4
+        with:
+          name: shielder-relayer-docker-image
+          path: .
+
+      - name: Load Docker image
+        if: matrix.crate != 'crates/integration-tests'
+        run: docker load -i shielder-relayer-image.tar
+      
       - name: Run tests
         run: cd ${{ matrix.crate }} && make test
 
@@ -185,8 +196,17 @@ jobs:
           name: shielder-relayer-docker-image
           path: .
 
+      - name: Download shielder-cli Docker image
+        uses: actions/download-artifact@v4
+        with:
+          name: shielder-cli-docker-image
+          path: .
+
       - name: Load Docker image
         run: docker load -i shielder-relayer-image.tar
+
+      - name: Load shielder-cli Docker image
+        run: docker load -i shielder-cli-image.tar
 
       - name: Prepare Solidity environment
         uses: ./.github/actions/prepare-sol-env

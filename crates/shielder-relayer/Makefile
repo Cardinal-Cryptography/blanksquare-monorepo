@@ -27,7 +27,12 @@ lint: ## Run linter
 
 .PHONY: build-image
 build-image:
-	@cd ../.. && DOCKER_BUILDKIT=1 docker build --tag "${RELAYER_DOCKER_IMAGE}" -f "crates/shielder-relayer/docker/Dockerfile" .
+	@if ! docker image inspect ${RELAYER_DOCKER_IMAGE} >/dev/null 2>&1; then \
+		echo "Building ${RELAYER_DOCKER_IMAGE} Docker image..."; \
+		cd ../.. && DOCKER_BUILDKIT=1 docker build --tag "${RELAYER_DOCKER_IMAGE}" -f "crates/shielder-relayer/docker/Dockerfile" .; \
+	else \
+		echo "${RELAYER_DOCKER_IMAGE} Docker image already exists, skipping build"; \
+	fi
 
 .PHONY: run
 run: ## Run the Relayer service in a local detached Docker container

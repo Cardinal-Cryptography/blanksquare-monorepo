@@ -20,6 +20,10 @@ jobs:
     name: Build shielder-relayer Docker image
     uses: ./.github/workflows/_build-shielder-relayer-image.yml
 
+  build-shielder-cli-image:
+    name: Build shielder-cli Docker image
+    uses: ./.github/workflows/_build-shielder-cli-image.yml
+
   build-contracts:
     name: Generate and compile contracts
     needs:
@@ -39,6 +43,7 @@ jobs:
     needs:
       - build-contracts
       - build-shielder-relayer-image
+      - build-shielder-cli-image
     uses: ./.github/workflows/_rust-crates-checks.yml
     secrets: inherit
 
@@ -86,6 +91,7 @@ jobs:
       - build-wasm-package-without-circuits
       - ts-checks
       - build-shielder-relayer-image
+      - build-shielder-cli-image
       - rust-crates-checks
     steps:
       - uses: geekyeggo/delete-artifact@v5
@@ -95,6 +101,7 @@ jobs:
             wasm-pkg-without-circuits
             proving-keys-pkg
             shielder-relayer-docker-image
+            shielder-cli-docker-image
 
   measure-gas-usage-and-verifier-code-size:
     name: Measure gas usage
@@ -114,6 +121,7 @@ jobs:
       - build-wasm-package
       - build-wasm-package-without-circuits
       - build-shielder-relayer-image
+      - build-shielder-cli-image
       - ts-checks
       - clean-wasm-artifact
       - measure-gas-usage-and-verifier-code-size

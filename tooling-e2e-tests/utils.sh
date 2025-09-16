@@ -171,26 +171,64 @@ stop_relayer() {
 #### CLI ###########################################################################################
 ####################################################################################################
 build_cli() {
-  cargo build --release -p shielder-cli &>> output.log
+  cd "${ROOT_DIR}/crates/shielder-cli/"
+  make build-image &>> output.log
+  cd "${ROOT_DIR}"
 
-  log_progress "✅ CLI built"
+  log_progress "✅ CLI Docker image built"
 }
 
 alice() {
-  RUST_LOG=warning target/release/shielder-cli --no-password  --state-file ${ALICE_STATE_FILE} "$@"
+  # Ensure state file directory exists on host
+  mkdir -p "$(dirname "${ALICE_STATE_FILE}")"
+  
+  # Ensure CLI cache directory exists on host
+  mkdir -p "${HOME}/.shielder-cli"
+  
+  docker run --rm \
+    -v "${ROOT_DIR}:/workspace" \
+    -v "$(dirname "${ALICE_STATE_FILE}"):/home/shielder/state-dir" \
+    -v "${HOME}/.shielder-cli:/home/shielder/.shielder-cli" \
+    --network host \
+    -e RUST_LOG=warning \
+    shielder-cli:latest --no-password --state-file "/home/shielder/state-dir/$(basename "${ALICE_STATE_FILE}")" "$@"
 }
 
 bob() {
-  RUST_LOG=warning target/release/shielder-cli --no-password --state-file ${BOB_STATE_FILE} "$@"
+  # Ensure state file directory exists on host
+  mkdir -p "$(dirname "${BOB_STATE_FILE}")"
+  
+  # Ensure CLI cache directory exists on host
+  mkdir -p "${HOME}/.shielder-cli"
+  
+  docker run --rm \
+    -v "${ROOT_DIR}:/workspace" \
+    -v "$(dirname "${BOB_STATE_FILE}"):/home/shielder/state-dir" \
+    -v "${HOME}/.shielder-cli:/home/shielder/.shielder-cli" \
+    --network host \
+    -e RUST_LOG=warning \
+    shielder-cli:latest --no-password --state-file "/home/shielder/state-dir/$(basename "${BOB_STATE_FILE}")" "$@"
 }
 
 charlie() {
-  RUST_LOG=warning target/release/shielder-cli --no-password --state-file ${CHARLIE_STATE_FILE} "$@"
+  # Ensure state file directory exists on host
+  mkdir -p "$(dirname "${CHARLIE_STATE_FILE}")"
+  
+  # Ensure CLI cache directory exists on host
+  mkdir -p "${HOME}/.shielder-cli"
+  
+  docker run --rm \
+    -v "${ROOT_DIR}:/workspace" \
+    -v "$(dirname "${CHARLIE_STATE_FILE}"):/home/shielder/state-dir" \
+    -v "${HOME}/.shielder-cli:/home/shielder/.shielder-cli" \
+    --network host \
+    -e RUST_LOG=warning \
+    shielder-cli:latest --no-password --state-file "/home/shielder/state-dir/$(basename "${CHARLIE_STATE_FILE}")" "$@"
 }
 
 clear_local_cli_state() {
   rm -f ${ALICE_STATE_FILE} ${BOB_STATE_FILE} ${CHARLIE_STATE_FILE}
-  rm -rf ~/shielder-cli/
+  rm -rf ~/.shielder-cli/
 
   log_progress "✅ Local CLI states cleared (state files and proving keys)"
 }

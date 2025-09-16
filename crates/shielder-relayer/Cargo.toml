@@ -2,7 +2,7 @@
 name = "shielder-relayer"
 version = "0.1.0"
 readme = "README.md"
-description = "Trusted service for private withdrawals from the zkOS Shielder contract"
+description = "Trusted service for private withdrawals from the Shielder contract"
 
 edition.workspace = true
 authors.workspace = true

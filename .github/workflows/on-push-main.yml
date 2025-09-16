@@ -39,6 +39,14 @@ jobs:
     with:
       ref: ${{ github.sha }}
 
+  build-and-push-scheduler-server:
+    name: Build and push shielder-scheduler-server
+    needs: [check-vars-and-secrets]
+    secrets: inherit
+    uses: ./.github/workflows/build-and-push-scheduler-server.yml
+    with:
+      ref: ${{ github.sha }}
+
   all-jobs-completion:
     name: All jobs completion
     runs-on: ubuntu-24.04
@@ -46,6 +54,7 @@ jobs:
       - build-enclave-artifacts
       - build-and-push-fee-estimator
       - build-and-push-prover-server
+      - build-and-push-scheduler-server
     if: >
       !cancelled() &&
       github.event_name != 'workflow_dispatch'

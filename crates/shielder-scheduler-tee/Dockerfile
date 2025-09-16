@@ -1,18 +1,13 @@
-FROM ubuntu:22.04 AS builder
+FROM rust:1.88-slim-bookworm as builder
 
 WORKDIR /app
 
-# Install dependencies needed for Rust and building
 RUN apt-get update && apt-get install -y \
     build-essential \
     curl \
     pkg-config \
     libssl-dev \
     && rm -rf /var/lib/apt/lists/*
-
-# Install Rust using rustup
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-ENV PATH="/root/.cargo/bin:${PATH}"
 
 COPY . .
 RUN cargo build --release -p shielder-scheduler-tee

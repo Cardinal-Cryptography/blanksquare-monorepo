@@ -1,4 +1,4 @@
-FROM rust:1.88 AS builder
+FROM rust:1.88-slim-bookworm as builder
 
 WORKDIR /app
 
@@ -12,7 +12,6 @@ WORKDIR /app
 
 COPY --from=builder /app/target/release/shielder-prover-server .
 
-# Expose the default public port
 EXPOSE 3000
 
 ENTRYPOINT ["/app/shielder-prover-server"]

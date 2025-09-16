@@ -1,5 +1,13 @@
 # Builder stage
-FROM rust:1.88 AS builder
+FROM rust:1.88-slim-bookworm as builder
+
+RUN apt-get update && \
+    apt-get install -y \
+      curl \
+      pkg-config \
+      libssl-dev \
+      build-essential && \
+    rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
@@ -10,11 +18,11 @@ COPY . .
 RUN cargo build --release -p fee-estimator
 
 # Runtime stage
-FROM debian:bullseye-slim
+FROM debian:bookworm-slim
 
 RUN apt-get update && \
     apt-get install -y \
-      libssl-dev \
+      libssl3 \
       tini \
       ca-certificates && \
       rm -rf /tmp/* /var/{tmp,cache}/* /var/lib/{apt,dpkg}/

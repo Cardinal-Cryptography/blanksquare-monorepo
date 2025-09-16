@@ -1,6 +1,4 @@
-# syntax=docker/dockerfile:experimental
-
-FROM debian:bookworm-slim AS build
+FROM rust:1.88-slim-bookworm as builder
 
 RUN apt-get update && \
     apt-get install -y \
@@ -12,18 +10,13 @@ RUN apt-get update && \
       openssh-client && \
     rm -rf /tmp/* /var/{tmp,cache}/* /var/lib/{apt,dpkg}/
 
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain none
-ENV PATH="/root/.cargo/bin:${PATH}"
-
-COPY ./crates ./zkos/crates
-COPY ./Cargo.toml ./zkos/Cargo.toml
-COPY ./Cargo.lock ./zkos/Cargo.lock
-COPY ./rust-toolchain.toml ./zkos/rust-toolchain.toml
+WORKDIR /app
+COPY . .
 
 # download public key for github.com
 RUN mkdir -p -m 0600 ~/.ssh && ssh-keyscan github.com >> ~/.ssh/known_hosts
 
-RUN --mount=type=ssh cd zkos && cargo build --release -p shielder-relayer
+RUN --mount=type=ssh cargo build --release -p shielder-relayer
 
 FROM debian:bookworm-slim
 
@@ -34,7 +27,7 @@ RUN apt-get update && \
       ca-certificates && \
       rm -rf /tmp/* /var/{tmp,cache}/* /var/lib/{apt,dpkg}/
 
-COPY --from=build /zkos/target/release/shielder-relayer /usr/local/bin
+COPY --from=builder /app/target/release/shielder-relayer /usr/local/bin
 RUN chmod +x /usr/local/bin/shielder-relayer
 
 RUN useradd server

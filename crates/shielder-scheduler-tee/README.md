@@ -219,6 +219,132 @@ The Docker build includes:
 - AWS KMS Nitro Enclave tools
 - Required shared libraries for NSM operations
 
+## EIF (Enclave Image File) Build Setup
+
+This directory contains scripts and configuration for building EIF files from Docker images using AWS Nitro Enclaves CLI.
+
+### ✅ The Solution
+
+The Dockerfile has been reworked to follow the [official AWS installation guide](https://docs.aws.amazon.com/enclaves/latest/user/nitro-enclave-cli-install.html). We now use the official AWS packages in a Docker container:
+
+```dockerfile
+# Install official AWS Nitro Enclaves CLI packages
+RUN dnf update -y && \
+    dnf install -y \
+    aws-nitro-enclaves-cli \
+    aws-nitro-enclaves-cli-devel \
+    docker \
+    && dnf clean all
+```
+
+This approach is:
+- ✅ **Much faster** (no compilation required - ~45 seconds vs 10+ minutes)
+- ✅ **More reliable** (official AWS packages)
+- ✅ **Properly tested** (AWS-supported versions)
+- ✅ **Automatically updated** (latest stable releases)
+
+### Directory Structure
+
+```
+crates/shielder-scheduler-tee/
+├── eif/                              # EIF build directory
+│   ├── Dockerfile.nitro-cli         # Docker image with nitro-cli
+│   ├── build-entrypoint.sh          # Container entrypoint
+│   └── build-eif.sh                 # Main build script
+├── src/                              # Rust source code
+└── README.md                         # This file
+```
+
+### Build Methods
+
+#### 1. **Automated Docker Build** (Recommended)
+
+The `build-eif.sh` script automatically:
+1. Detects if `nitro-cli` is available locally
+2. Falls back to building a custom Docker image with official AWS packages
+3. Uses the Docker container to build the EIF
+
+```bash
+cd eif/
+chmod +x build-eif.sh
+./build-eif.sh
+```
+
+#### 2. **Local Installation** (Advanced)
+
+If you have `nitro-cli` installed locally:
+
+```bash
+# Install on Amazon Linux 2023
+sudo dnf install aws-nitro-enclaves-cli aws-nitro-enclaves-cli-devel -y
+
+# Run the build
+cd eif/
+./build-eif.sh
+```
+
+#### 3. **CI/CD Integration**
+
+The project includes reusable GitHub Actions workflows:
+
+- **`_build-eif-from-docker.yml`**: Reusable workflow for building EIFs
+- **`publish-eif-release.yml`**: Creates GitHub releases with EIF artifacts
+
+**Example workflow usage:**
+```yaml
+jobs:
+  build-eif:
+    uses: ./.github/workflows/_build-eif-from-docker.yml
+    with:
+      public-docker-image-url: "your-registry/image:tag"
+      working-directory: "./crates/shielder-scheduler-tee/eif"
+```
+
+### Configuration
+
+The Docker image to convert is configured via the `ECR_IMAGE` environment variable:
+
+```bash
+# Default image
+export ECR_IMAGE="public.ecr.aws/p5g6f1p8/shielder-scheduler:latest"
+
+# Custom image
+export ECR_IMAGE="your-registry/your-image:tag"
+./build-eif.sh
+```
+
+### Output Files
+
+After a successful build, you'll find:
+
+- **`shielder-scheduler-tee.eif`** - The Enclave Image File ready for deployment
+- **`eif-info.json`** - PCR values and attestation measurements
+
+### GitHub Release Automation
+
+The `publish-eif-release.yml` workflow can be manually triggered to:
+
+1. **Download artifacts** from previous CI runs
+2. **Create timestamped releases** (e.g., `shielder-scheduler-tee-20250916-154700`)
+3. **Attach EIF and measurements** to the release
+4. **Generate checksums** for integrity verification
+
+**To create a release:**
+1. Go to **Actions** → **Publish EIF Release**
+2. Click **Run workflow**
+3. Select artifact type: `shielder-prover-tee` or `shielder-scheduler-tee`
+4. Click **Run workflow**
+
+### Docker Socket Security
+
+⚠️ **Security Note**: The build process uses Docker-in-Docker via socket mounting (`-v /var/run/docker.sock:/var/run/docker.sock`). This is required because `nitro-cli build-enclave` needs to:
+
+- Pull and inspect your source Docker image
+- Extract the filesystem for EIF conversion
+- Communicate with the Docker daemon
+
+This is the standard approach for tools like `nitro-cli` that process Docker images, as documented in AWS's own examples.
+
 ## Configuration
 
 The TEE server is configured via command-line arguments and environment variables:

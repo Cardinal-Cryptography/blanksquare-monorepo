@@ -47,6 +47,22 @@ jobs:
     with:
       ref: ${{ github.sha }}
 
+  build-and-push-scheduler-tee:
+    name: Build and push shielder-scheduler-tee
+    needs: [check-vars-and-secrets]
+    secrets: inherit
+    uses: ./.github/workflows/build-and-push-scheduler-tee.yml
+    with:
+      ref: ${{ github.sha }}
+
+  build-scheduler-tee-eif:
+    name: Build shielder-scheduler-tee EIF
+    needs: [build-and-push-scheduler-tee]
+    uses: ./.github/workflows/_build-eif-from-docker.yml
+    with:
+      public-docker-image-url: "${{ vars.ECR_CC_RES_PUBLIC_REGISTRY }}shielder-scheduler:tee-latest"
+      working-directory: "./crates/shielder-scheduler-tee/eif"
+
   all-jobs-completion:
     name: All jobs completion
     runs-on: ubuntu-24.04
@@ -55,6 +71,8 @@ jobs:
       - build-and-push-fee-estimator
       - build-and-push-prover-server
       - build-and-push-scheduler-server
+      - build-and-push-scheduler-tee
+      - build-scheduler-tee-eif
     if: >
       !cancelled() &&
       github.event_name != 'workflow_dispatch'

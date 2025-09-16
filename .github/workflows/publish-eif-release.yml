@@ -83,14 +83,15 @@ jobs:
           name: ${{ steps.release-info.outputs.release-name }}
           body: |
             # ${{ inputs.artifact }} Release
-            
-            This release contains the Enclave Image File (EIF) and measurements for **${{ inputs.artifact }}**.
-            
+
+            This release contains the EIF and measurements for
+            **${{ inputs.artifact }}**.
+
             ## Contents
             - **EIF File**: The enclave image file ready for deployment
-            - **Measurements**: PCR values and attestation data in JSON format
+            - **Measurements**: PCR values and attestation data
             - **Checksums**: SHA256 checksums for integrity verification
-            
+
             ## Built from
             - **Commit**: ${{ steps.get-ref-properties.outputs.full-sha }}
             - **Branch**: ${{ github.ref_name }}

@@ -8,6 +8,9 @@ on:
         description: 'git ref: hash, branch, tag to build shielder-scheduler-server files from'
         type: string
         required: true
+  push:
+    branches:
+      - BAC-289
 
 jobs:
   main:
@@ -34,8 +37,6 @@ jobs:
           username: ${{ secrets.AWS_MAINNET_ECR_CC_ACCESS_KEY_ID }}
           password: ${{ secrets.AWS_MAINNET_ECR_CC_ACCESS_KEY }}
 
-      - name: Build and push docker image
-        id: build-image
       - name: Build and push docker image
         id: build-image
         uses: docker/build-push-action@v6

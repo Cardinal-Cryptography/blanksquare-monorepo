@@ -16,6 +16,10 @@ jobs:
     uses: ./.github/workflows/_check-vars-and-secrets.yml
     secrets: inherit
 
+  build-shielder-relayer-image:
+    name: Build shielder-relayer Docker image
+    uses: ./.github/workflows/_build-shielder-relayer-image.yml
+
   build-contracts:
     name: Generate and compile contracts
     needs:
@@ -28,13 +32,6 @@ jobs:
     needs:
       - build-contracts
     uses: ./.github/workflows/_deploy-contracts.yml
-    secrets: inherit
-
-  build-shielder-relayer-image:
-    name: Build shielder-relayer Docker image
-    needs:
-      - build-contracts
-    uses: ./.github/workflows/_build-shielder-relayer-image.yml
     secrets: inherit
 
   rust-crates-checks:

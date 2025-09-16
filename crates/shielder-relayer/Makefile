@@ -2,7 +2,6 @@ SHELL := /bin/bash
 
 CARGO_FILES = ../../Cargo.toml ../../Cargo.lock Cargo.toml
 
-BUILD ?= client
 DOCKER_USER = "$(id -u):$(id -g)"
 DETACHED ?= true
 
@@ -27,15 +26,7 @@ lint: ## Run linter
 	@cargo +nightly fmt --all
 
 .PHONY: build-image
-build-image:  ## Builds a Docker image with the Relayer service binary. Use BUILD=client to use a binary built on the client.
-ifeq ($(BUILD),client)
-	@cargo build --release
-	@cd ../.. && docker build --tag "${RELAYER_DOCKER_IMAGE}" -f "crates/shielder-relayer/docker/Dockerfile.client" .
-else ifeq ($(BUILD),docker)
-	@cd ../.. && DOCKER_BUILDKIT=1 docker build --tag "${RELAYER_DOCKER_IMAGE}" -f "crates/shielder-relayer/docker/Dockerfile.docker" .
-else
-	echo "Don't know what to do with ${BUILD}"; exit -1;
-endif
+	@cd ../.. && DOCKER_BUILDKIT=1 docker build --tag "${RELAYER_DOCKER_IMAGE}" -f "crates/shielder-relayer/docker/Dockerfile" .
 
 .PHONY: run
 run: ## Run the Relayer service in a local detached Docker container

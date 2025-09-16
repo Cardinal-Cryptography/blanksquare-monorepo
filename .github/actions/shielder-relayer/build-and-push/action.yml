@@ -47,7 +47,7 @@ runs:
       with:
         context: .
         builder: ${{ steps.buildx.outputs.name }}
-        file: ./crates/shielder-relayer/docker/Dockerfile.client
+        file: ./crates/shielder-relayer/docker/Dockerfile
         push: true
         tags: "${{ inputs.ecr-registry }}shielder-relayer:\
           ${{ steps.get-ref-properties.outputs.sha }}"

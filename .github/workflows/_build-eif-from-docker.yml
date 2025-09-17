@@ -8,11 +8,6 @@ on:
         description: 'Public Docker image URL to build EIF from'
         type: string
         required: true
-      working-directory:
-        description: 'Working directory containing the EIF build scripts'
-        type: string
-        required: true
-        default: "./crates/shielder-scheduler-tee/eif"
     outputs:
       artifact-name-eif:
         description: 'Name of artifact: enclave file'
@@ -24,9 +19,6 @@ on:
 jobs:
   build-eif:
     runs-on: ubuntu-22.04
-    defaults:
-      run:
-        working-directory: ${{ inputs.working-directory }}
     outputs:
       artifact-name-eif: ${{ steps.get-artifact-names.outputs.eif }}
       artifact-name-measurements: >-
@@ -40,29 +32,32 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Build EIF file
+        id: build-eif
         env:
           ECR_IMAGE: ${{ inputs.public-docker-image-url }}
         run: |
-          chmod +x build-eif.sh
-          ./build-eif.sh
+          chmod +x .github/scripts/nitro-cli-docker/build-enclave-image.sh
+          ./.github/scripts/nitro-cli-docker/build-enclave-image.sh
 
       - name: Get artifact names
         id: get-artifact-names
         run: |
-          # Extract TEE component name from working directory
-          # e.g., "./crates/shielder-scheduler-tee/eif" -> "scheduler-tee"
-          COMPONENT_NAME=$(echo "${{ inputs.working-directory }}" | \
-            sed 's/.*\/\([^\/]*\)-tee\/.*/\1-tee/')
+          # Use fixed component name since we now have a centralized script
+          COMPONENT_NAME="shielder-scheduler-tee"
           echo "eif=${COMPONENT_NAME}-eif" >> $GITHUB_OUTPUT
           echo "measurements=${COMPONENT_NAME}-measurements" >> $GITHUB_OUTPUT
           echo "component-name=${COMPONENT_NAME}" >> $GITHUB_OUTPUT
+          
+          # Set outputs for generated files
+          echo "eif-file=shielder-scheduler-tee.eif" >> $GITHUB_OUTPUT
+          echo "measurements-file=eif-info.json" >> $GITHUB_OUTPUT
 
       - name: Upload EIF to GH Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.get-artifact-names.outputs.eif }}
           path: |
-            ${{ inputs.working-directory }}/shielder-scheduler-tee.eif
+            ${{ steps.get-artifact-names.outputs.eif-file }}
           if-no-files-found: error
           retention-days: 7
 
@@ -70,20 +65,20 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.get-artifact-names.outputs.measurements }}
-          path: ${{ inputs.working-directory }}/eif-info.json
+          path: ${{ steps.get-artifact-names.outputs.measurements-file }}
           if-no-files-found: error
           retention-days: 7
 
       - name: Display EIF info
         run: |
-          if [ -f "eif-info.json" ]; then
+          if [ -f "${{ steps.get-artifact-names.outputs.measurements-file }}" ]; then
             echo "=== EIF Build Information ==="
-            cat eif-info.json
+            cat "${{ steps.get-artifact-names.outputs.measurements-file }}"
           fi
 
-          if [ -f "shielder-scheduler-tee.eif" ]; then
+          if [ -f "${{ steps.get-artifact-names.outputs.eif-file }}" ]; then
             echo "=== EIF File Information ==="
-            echo "File size: $(du -h shielder-scheduler-tee.eif | cut -f1)"
-            CHECKSUM=$(sha256sum shielder-scheduler-tee.eif | cut -d' ' -f1)
+            echo "File size: $(du -h "${{ steps.get-artifact-names.outputs.eif-file }}" | cut -f1)"
+            CHECKSUM=$(sha256sum "${{ steps.get-artifact-names.outputs.eif-file }}" | cut -d' ' -f1)
             echo "SHA256: $CHECKSUM"
           fi

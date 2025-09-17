@@ -12,9 +12,6 @@ on:
           - shielder-prover-tee
           - shielder-scheduler-tee
         default: shielder-prover-tee
-  push:
-    branches:
-      - BAC-289-part-2
 
 concurrency:
   group: ${{ github.ref }}-${{ github.workflow }}
@@ -35,18 +32,6 @@ jobs:
       - name: Checkout source code
         uses: actions/checkout@v4
 
-      - name: Set artifact type
-        id: set-artifact
-        run: |
-          # Default to scheduler-tee for push events, use input for manual dispatch
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            ARTIFACT_TYPE="${{ inputs.artifact }}"
-          else
-            ARTIFACT_TYPE="shielder-scheduler-tee"  # Default for push events
-          fi
-          echo "artifact-type=${ARTIFACT_TYPE}" >> $GITHUB_OUTPUT
-          echo "Using artifact type: ${ARTIFACT_TYPE}"
-
       - name: Call action get-ref-properties
         id: get-ref-properties
         uses: Cardinal-Cryptography/github-actions/get-ref-properties@v7
@@ -56,13 +41,13 @@ jobs:
         uses: ./.github/actions/get-workflow-run-id
         with:
           workflow-name: on-push-main.yml
-          full-sha: c1839b6bfbbb4b2341dbcbf8bbac25f799d52ded
+          full-sha: ${{ steps.get-ref-properties.outputs.full-sha }}
           github_token: ${{ secrets.CI_GH_TOKEN }}
 
       - name: Download enclave artifacts - EIF
         uses: actions/download-artifact@v5
         with:
-          name: ${{ steps.set-artifact.outputs.artifact-type }}-eif
+          name: ${{ inputs.artifact }}-eif
           path: artifacts
           run-id: ${{ steps.get-workflow-run-id.outputs.workflow-run-id }}
           github-token: ${{ secrets.CI_GH_TOKEN }}
@@ -70,7 +55,7 @@ jobs:
       - name: Download enclave artifacts - Measurements
         uses: actions/download-artifact@v5
         with:
-          name: ${{ steps.set-artifact.outputs.artifact-type }}-measurements
+          name: ${{ inputs.artifact }}-measurements
           path: artifacts
           run-id: ${{ steps.get-workflow-run-id.outputs.workflow-run-id }}
           github-token: ${{ secrets.CI_GH_TOKEN }}
@@ -86,8 +71,8 @@ jobs:
         id: release-info
         run: |
           TIMESTAMP=$(date +"%Y%m%d-%H%M%S")
-          TAG_NAME="${{ steps.set-artifact.outputs.artifact-type }}-${TIMESTAMP}"
-          RELEASE_NAME="${{ steps.set-artifact.outputs.artifact-type }} EIF Release - ${TIMESTAMP}"
+          TAG_NAME="${{ inputs.artifact }}-${TIMESTAMP}"
+          RELEASE_NAME="${{ inputs.artifact }} EIF Release - ${TIMESTAMP}"
           echo "tag-name=${TAG_NAME}" >> $GITHUB_OUTPUT
           echo "release-name=${RELEASE_NAME}" >> $GITHUB_OUTPUT
 
@@ -97,10 +82,10 @@ jobs:
           tag_name: ${{ steps.release-info.outputs.tag-name }}
           name: ${{ steps.release-info.outputs.release-name }}
           body: |
-            # !!!TESTING ${{ steps.set-artifact.outputs.artifact-type }} Release
+            # ${{ inputs.artifact }} Release
 
             This release contains the EIF and measurements for
-            **${{ steps.set-artifact.outputs.artifact-type }}**.
+            **${{ inputs.artifact }}**.
 
             ## Contents
             - **EIF File**: The enclave image file ready for deployment
@@ -110,7 +95,7 @@ jobs:
             ## Built from
             - **Commit**: ${{ steps.get-ref-properties.outputs.full-sha }}
             - **Branch**: ${{ github.ref_name }}
-            - **Artifact Type**: ${{ steps.set-artifact.outputs.artifact-type }}
+            - **Artifact Type**: ${{ inputs.artifact }}
             ```
           files: |
             checksums.txt

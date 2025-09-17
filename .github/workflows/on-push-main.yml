@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - main
+      - BAC-289-part-2
 
 concurrency:
   group: "${{ github.ref }}-${{ github.workflow }}"

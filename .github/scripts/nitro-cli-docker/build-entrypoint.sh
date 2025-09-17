@@ -1,5 +1,6 @@
 #!/bin/bash
-set -e
+set -Eeuo pipefail
+IFS=$'\n\t'
 
 # Entry point script for the nitro-cli Docker container
 
@@ -13,6 +14,12 @@ EIF_OUTPUT="${2:-shielder-scheduler-tee.eif}"
 
 echo "Building EIF from Docker image: $DOCKER_IMAGE"
 echo "Output file: $EIF_OUTPUT"
+
+# Create log directory if it doesn't exist and we have permissions
+if [ -w /var/log ] 2>/dev/null; then
+    mkdir -p /var/log/nitro_enclaves
+    chmod 755 /var/log/nitro_enclaves
+fi
 
 # Build the EIF
 nitro-cli build-enclave \

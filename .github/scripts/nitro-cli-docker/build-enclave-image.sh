@@ -23,7 +23,6 @@ docker run --rm \
   -v /var/run/docker.sock:/var/run/docker.sock \
   -v "$REPO_ROOT:/workspace" \
   -w /workspace \
-  --user "$(id -u):$(id -g)" \
   "$NITRO_CLI_IMAGE" \
   "$DOCKER_IMAGE" "$EIF_OUTPUT"
 

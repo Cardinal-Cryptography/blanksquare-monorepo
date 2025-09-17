@@ -219,6 +219,40 @@ The Docker build includes:
 - AWS KMS Nitro Enclave tools
 - Required shared libraries for NSM operations
 
+### EIF (Enclave Image File) Build
+
+**Automated via CI/CD:**
+
+The `on-push-main.yml` workflow automatically:
+1. Builds the Docker image with the correct tag (e.g., `tee-a1b2c3d`)
+2. Uses the centralized EIF build script to generate the enclave image
+3. Uploads both the EIF file and measurements as artifacts
+
+**Manual EIF Build:**
+
+You can also build EIF files locally using the centralized scripts:
+
+```bash
+# From repository root
+chmod +x .github/scripts/nitro-cli-docker/build-enclave-image.sh
+
+# Set the Docker image to convert
+export ECR_IMAGE="your-registry/shielder-scheduler:tee-your-tag"
+
+# Build the EIF
+./.github/scripts/nitro-cli-docker/build-enclave-image.sh
+```
+
+This uses a dockerized `nitro-cli` approach that:
+- Builds a custom Nitro CLI container if needed
+- Converts your Docker image to an EIF file
+- Generates `eif-info.json` with PCR measurements
+- Validates the build succeeded
+
+**Build Outputs:**
+- `shielder-scheduler-tee.eif` - The enclave image file
+- `eif-info.json` - PCR values and attestation measurements
+
 ### GitHub Release Automation
 
 The `publish-eif-release.yml` workflow can be manually triggered to:
@@ -234,15 +268,72 @@ The `publish-eif-release.yml` workflow can be manually triggered to:
 3. Select artifact type: `shielder-prover-tee` or `shielder-scheduler-tee`
 4. Click **Run workflow**
 
+**For push-triggered testing:**
+The workflow also triggers automatically on pushes to development branches, using `shielder-scheduler-tee` as the default artifact type.
+
 ### Docker Socket Security
 
-⚠️ **Security Note**: The build process uses Docker-in-Docker via socket mounting (`-v /var/run/docker.sock:/var/run/docker.sock`). This is required because `nitro-cli build-enclave` needs to:
+⚠️ **Security Note**: The EIF build process uses Docker-in-Docker via socket mounting (`-v /var/run/docker.sock:/var/run/docker.sock`). This is required because `nitro-cli build-enclave` needs to:
 
 - Pull and inspect your source Docker image
 - Extract the filesystem for EIF conversion
 - Communicate with the Docker daemon
 
+**Security Mitigations:**
+- Input validation restricts Docker images to your trusted ECR registry only
+- The build runs in isolated GitHub Actions runners
+- Root access is required for `nitro-cli` log file operations
+
 This is the standard approach for tools like `nitro-cli` that process Docker images, as documented in AWS's own examples.
+
+## Technical Details
+
+### Enclave Environment
+
+The TEE runs as an AWS Nitro Enclave with:
+- **No network access** (isolated from parent instance)  
+- **Dedicated CPU/memory** (cannot be accessed by parent instance or root)
+- **Cryptographic attestation** (NSM device provides remote attestation)
+- **Secure boot process** (measured boot with PCR verification)
+
+### Build Process
+
+**CI/CD Pipeline:**
+1. **Docker Image Build** - Tagged with short SHA (e.g., `tee-a1b2c3d`)
+2. **EIF Generation** - Uses centralized `nitro-cli-docker` scripts at `.github/scripts/nitro-cli-docker/`  
+3. **Artifact Upload** - EIF file and JSON measurements stored as artifacts
+4. **Release Creation** - Manual or automated via `publish-eif-release.yml`
+
+**PCR Measurements:**
+- `PCR0` - Image hash (Docker content digest)
+- `PCR1` - Kernel hash (Amazon Linux)  
+- `PCR2` - Application hash (EIF specific content)
+
+The build process validates these measurements to ensure:
+- Image integrity and authenticity
+- Reproducible builds across environments
+- Attestation document correctness
+
+### KMS Integration
+
+```rust
+// Decrypt user secrets using KMS Decrypt
+let kms_client = KmsClient::new(&config).await?;
+let decrypted = kms_client
+    .decrypt()
+    .ciphertext_blob(Blob::new(encrypted_secret))
+    .encryption_context("enclave-pcr0", &pcr0_value)
+    .send()
+    .await?;
+```
+
+### NSM (Nitro Security Module)
+
+The NSM provides:
+- **Hardware attestation documents**
+- **Cryptographic verification** of enclave identity
+- **PCR (Platform Configuration Register)** measurements  
+- **Entropy source** for secure random number generation
 
 ## Configuration
 

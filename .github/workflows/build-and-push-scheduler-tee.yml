@@ -51,4 +51,4 @@ jobs:
           # yamllint disable rule:line-length
           tags: |
             ${{ vars.ECR_CC_RES_PUBLIC_REGISTRY }}shielder-scheduler:tee-${{ steps.get-ref-properties.outputs.sha }}
-            ${{ vars.ECR_CC_RES_PUBLIC_REGISTRY }}shielder-scheduler:tee-latest
+            ${{ github.ref == 'refs/heads/main' && format('{0}shielder-scheduler:tee-latest', vars.ECR_CC_RES_PUBLIC_REGISTRY) || '' }}

@@ -96,7 +96,6 @@ jobs:
             - **Commit**: ${{ steps.get-ref-properties.outputs.full-sha }}
             - **Branch**: ${{ github.ref_name }}
             - **Artifact Type**: ${{ inputs.artifact }}
-            ```
           files: |
             checksums.txt
             artifacts/*

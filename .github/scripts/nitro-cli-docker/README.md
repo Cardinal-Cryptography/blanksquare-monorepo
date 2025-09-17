@@ -18,12 +18,12 @@ RUN dnf update -y && \
 
 ### Directory Structure
 
-```
-├── eif/                              # EIF build directory
-│   ├── Dockerfile.nitro-cli         # Docker image with nitro-cli
-│   ├── build-entrypoint.sh          # Container entrypoint
-│   └── build-nitro-enclave-image.sh                 # Main build script
-└── README.md                         # This file
+```text
+├── .github/scripts/nitro-cli-docker/    # EIF build utilities
+│   ├── Dockerfile.nitro-cli             # Docker image with nitro-cli
+│   ├── build-entrypoint.sh              # Container entrypoint
+│   └── build-enclave-image.sh           # Main build script
+└── README.md                            # This file
 ```
 
 ## Build Methods
@@ -32,8 +32,8 @@ RUN dnf update -y && \
 
 ```bash
 cd eif/
-chmod +x build-nitro-enclave-image.sh
-./build-nitro-enclave-image.sh
+chmod +x build-enclave-image.sh
+./build-enclave-image.sh
 ```
 
 ### 2 **CI/CD Integration**

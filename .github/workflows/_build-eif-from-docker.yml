@@ -28,6 +28,15 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Validate Docker image URL
+        run: |
+          if [[ ! "${{ inputs.public-docker-image-url }}" =~ ^${{ vars.ECR_CC_RES_PUBLIC_REGISTRY }}.* ]]; then
+            echo "Error: Docker image URL must start with ${{ vars.ECR_CC_RES_PUBLIC_REGISTRY }}"
+            echo "Provided URL: ${{ inputs.public-docker-image-url }}"
+            exit 1
+          fi
+          echo "✅ Docker image URL validation passed"
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 

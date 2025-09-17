@@ -12,6 +12,9 @@ on:
           - shielder-prover-tee
           - shielder-scheduler-tee
         default: shielder-prover-tee
+  push:
+    branches:
+      - BAC-289-part-2
 
 concurrency:
   group: ${{ github.ref }}-${{ github.workflow }}
@@ -41,7 +44,7 @@ jobs:
         uses: ./.github/actions/get-workflow-run-id
         with:
           workflow-name: on-push-main.yml
-          full-sha: ${{ steps.get-ref-properties.outputs.full-sha }}
+          full-sha: c1839b6bfbbb4b2341dbcbf8bbac25f799d52ded
           github_token: ${{ secrets.CI_GH_TOKEN }}
 
       - name: Download enclave artifacts - EIF
@@ -82,7 +85,7 @@ jobs:
           tag_name: ${{ steps.release-info.outputs.tag-name }}
           name: ${{ steps.release-info.outputs.release-name }}
           body: |
-            # ${{ inputs.artifact }} Release
+            # !!!TESTING ${{ inputs.artifact }} Release
 
             This release contains the EIF and measurements for
             **${{ inputs.artifact }}**.

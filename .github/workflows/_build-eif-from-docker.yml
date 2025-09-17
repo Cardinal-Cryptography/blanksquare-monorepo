@@ -47,7 +47,7 @@ jobs:
           echo "eif=${COMPONENT_NAME}-eif" >> $GITHUB_OUTPUT
           echo "measurements=${COMPONENT_NAME}-measurements" >> $GITHUB_OUTPUT
           echo "component-name=${COMPONENT_NAME}" >> $GITHUB_OUTPUT
-          
+
           # Set outputs for generated files
           echo "eif-file=shielder-scheduler-tee.eif" >> $GITHUB_OUTPUT
           echo "measurements-file=eif-info.json" >> $GITHUB_OUTPUT

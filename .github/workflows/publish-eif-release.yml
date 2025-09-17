@@ -35,6 +35,18 @@ jobs:
       - name: Checkout source code
         uses: actions/checkout@v4
 
+      - name: Set artifact type
+        id: set-artifact
+        run: |
+          # Default to scheduler-tee for push events, use input for manual dispatch
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            ARTIFACT_TYPE="${{ inputs.artifact }}"
+          else
+            ARTIFACT_TYPE="shielder-scheduler-tee"  # Default for push events
+          fi
+          echo "artifact-type=${ARTIFACT_TYPE}" >> $GITHUB_OUTPUT
+          echo "Using artifact type: ${ARTIFACT_TYPE}"
+
       - name: Call action get-ref-properties
         id: get-ref-properties
         uses: Cardinal-Cryptography/github-actions/get-ref-properties@v7
@@ -50,7 +62,7 @@ jobs:
       - name: Download enclave artifacts - EIF
         uses: actions/download-artifact@v5
         with:
-          name: ${{ inputs.artifact }}-eif
+          name: ${{ steps.set-artifact.outputs.artifact-type }}-eif
           path: artifacts
           run-id: ${{ steps.get-workflow-run-id.outputs.workflow-run-id }}
           github-token: ${{ secrets.CI_GH_TOKEN }}
@@ -58,7 +70,7 @@ jobs:
       - name: Download enclave artifacts - Measurements
         uses: actions/download-artifact@v5
         with:
-          name: ${{ inputs.artifact }}-measurements
+          name: ${{ steps.set-artifact.outputs.artifact-type }}-measurements
           path: artifacts
           run-id: ${{ steps.get-workflow-run-id.outputs.workflow-run-id }}
           github-token: ${{ secrets.CI_GH_TOKEN }}
@@ -74,8 +86,8 @@ jobs:
         id: release-info
         run: |
           TIMESTAMP=$(date +"%Y%m%d-%H%M%S")
-          TAG_NAME="${{ inputs.artifact }}-${TIMESTAMP}"
-          RELEASE_NAME="${{ inputs.artifact }} EIF Release - ${TIMESTAMP}"
+          TAG_NAME="${{ steps.set-artifact.outputs.artifact-type }}-${TIMESTAMP}"
+          RELEASE_NAME="${{ steps.set-artifact.outputs.artifact-type }} EIF Release - ${TIMESTAMP}"
           echo "tag-name=${TAG_NAME}" >> $GITHUB_OUTPUT
           echo "release-name=${RELEASE_NAME}" >> $GITHUB_OUTPUT
 
@@ -85,10 +97,10 @@ jobs:
           tag_name: ${{ steps.release-info.outputs.tag-name }}
           name: ${{ steps.release-info.outputs.release-name }}
           body: |
-            # !!!TESTING ${{ inputs.artifact }} Release
+            # !!!TESTING ${{ steps.set-artifact.outputs.artifact-type }} Release
 
             This release contains the EIF and measurements for
-            **${{ inputs.artifact }}**.
+            **${{ steps.set-artifact.outputs.artifact-type }}**.
 
             ## Contents
             - **EIF File**: The enclave image file ready for deployment
@@ -98,7 +110,7 @@ jobs:
             ## Built from
             - **Commit**: ${{ steps.get-ref-properties.outputs.full-sha }}
             - **Branch**: ${{ github.ref_name }}
-            - **Artifact Type**: ${{ inputs.artifact }}
+            - **Artifact Type**: ${{ steps.set-artifact.outputs.artifact-type }}
             ```
           files: |
             checksums.txt

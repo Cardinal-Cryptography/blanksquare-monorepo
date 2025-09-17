@@ -71,9 +71,8 @@ jobs:
     needs: [build-and-push-scheduler-tee, get-short-sha]
     uses: ./.github/workflows/_build-eif-from-docker.yml
     with:
-      public-docker-image-url: >-
-        # yamllint disable-line rule:line-length
-        ${{ vars.ECR_CC_RES_PUBLIC_REGISTRY }}shielder-scheduler:tee-${{ needs.get-short-sha.outputs.short-sha }}
+      # yamllint disable-line rule:line-length
+      public-docker-image-url: ${{ vars.ECR_CC_RES_PUBLIC_REGISTRY }}shielder-scheduler:tee-${{ needs.get-short-sha.outputs.short-sha }}
   all-jobs-completion:
     name: All jobs completion
     runs-on: ubuntu-24.04

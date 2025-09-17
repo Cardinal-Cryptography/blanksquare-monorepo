@@ -115,10 +115,10 @@ async fn main() -> Result<(), Error> {
 
     // Perform initial TEE public key verification to ensure the server is correctly configured
     info!("Performing initial TEE public key verification...");
-    // let _verification_result =
-    //     server_handlers::tee_public_key::tee_public_key(axum::extract::State(app_state.clone()))
-    //         .await
-    //         .map_err(|e| Error::ParseError(format!("TEE public key verification failed: {}", e)))?;
+    let _verification_result =
+        server_handlers::tee_public_key::tee_public_key(axum::extract::State(app_state.clone()))
+            .await
+            .map_err(|e| Error::ParseError(format!("TEE public key verification failed: {}", e)))?;
 
     info!("TEE public key verification successful");
 

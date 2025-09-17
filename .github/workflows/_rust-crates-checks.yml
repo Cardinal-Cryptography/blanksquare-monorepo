@@ -104,7 +104,7 @@ jobs:
 
   run-heavy-tests:
     name: Run heavy tests for ${{ matrix.crate }}
-    runs-on: github-large-runner-x64-8-cpu-32-gb-ram-300-gb-disk
+    runs-on: github-large-runner-x64-4-cpu-16-gb-ram-150-gb-disk
     timeout-minutes: 15
     strategy:
       fail-fast: false

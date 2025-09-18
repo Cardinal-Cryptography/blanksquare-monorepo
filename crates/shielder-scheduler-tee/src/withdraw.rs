@@ -107,6 +107,7 @@ impl WithdrawCircuit {
         to: Address,
         merkle_path: [[U256; ARITY]; TREE_HEIGHT],
         chain_id: U256,
+        token: Token,
         total_cost_fee_token: U256,
         pocket_money: U256,
         relayer_fee_address: Address,

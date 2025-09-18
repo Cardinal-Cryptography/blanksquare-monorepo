@@ -163,6 +163,7 @@ impl Server {
             payload.withdraw_address,
             *relay_params.merkle_path,
             payload.chain_id,
+            token,
             relay_params.relayer_fee,
             payload.pocket_money,
             relay_params.relayer_address,

@@ -180,10 +180,9 @@ Request::PrepareRelayCalldata {
     aws_config,
     encryption_envelope,
     relayer_address,
-    max_relayer_fee,
+    relayer_fee,
     merkle_path,
     merkle_root,
-    pocket_money,
 }
 ```
 

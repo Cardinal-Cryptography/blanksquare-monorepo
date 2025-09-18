@@ -29,9 +29,13 @@ pub struct Payload {
     pub token_address: Address,
     /// Total amount to be withdrawn. This amount includes fees (protocol and relayer fees).
     pub withdrawal_value: U256,
+    pub pocket_money: U256,
     pub withdraw_address: Address,
     pub protocol_fee: U256,
     pub memo: Bytes,
+
+    /// Maximum fee that the relayer can charge for this transaction.
+    pub max_relayer_fee: U256,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -99,18 +103,18 @@ pub enum Request {
 
     /// Request to prepare calldata for a relay transaction.
     PrepareRelayCalldata {
+        /// AWS configuration for decrypting the payload
         aws_config: Box<AwsConfig>,
+        /// Encryption envelope containing the encrypted payload
         encryption_envelope: Box<EncryptionEnvelope>,
-        /// Relayer fee
-        max_relayer_fee: U256,
+        /// Quoted relayer fee
+        relayer_fee: U256,
         /// Address of the relayer which will receive the relayer fee
         relayer_address: Address,
         /// Current merkle path
         merkle_path: MerklePath,
         /// Current merkle root
         merkle_root: U256,
-        /// Pocket money to be sent to the withdraw address to cover gas fees
-        pocket_money: U256,
     },
 }
 

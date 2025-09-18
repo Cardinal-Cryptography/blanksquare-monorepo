@@ -31,7 +31,6 @@ type Result<T> = std::result::Result<T, SchedulerServerError>;
 #[derive(Debug)]
 struct ParsedRequestParams {
     last_note_index: U256,
-    max_relayer_fee: U256,
     pocket_money: U256,
     token_address: Address,
 }
@@ -172,16 +171,8 @@ Please check the SHIELDER_ADDRESS environment variable or --shielder-address arg
             .get_quoted_fee(parsed_params.token_address, parsed_params.pocket_money)
             .await?;
 
-        self.validate_fee_within_limit(&quoted_fee, parsed_params.max_relayer_fee)?;
-
         let tee_response = self
-            .call_tee_prepare_relay_calldata(
-                &request,
-                &quoted_fee,
-                merkle_root,
-                merkle_path,
-                parsed_params.pocket_money,
-            )
+            .call_tee_prepare_relay_calldata(&request, &quoted_fee, merkle_root, merkle_path)
             .await?;
 
         self.process_tee_response(tee_response, quoted_fee, request.id)
@@ -192,9 +183,6 @@ Please check the SHIELDER_ADDRESS environment variable or --shielder-address arg
         let last_note_index = request.last_note_index_as_u256().map_err(|e| {
             SchedulerServerError::ValueParseError(format!("Failed to parse last_note_index: {}", e))
         })?;
-        let max_relayer_fee = request.max_relayer_fee_as_u256().map_err(|e| {
-            SchedulerServerError::ValueParseError(format!("Failed to parse max_relayer_fee: {}", e))
-        })?;
         let pocket_money = request.pocket_money_as_u256().map_err(|e| {
             SchedulerServerError::ValueParseError(format!("Failed to parse pocket_money: {}", e))
         })?;
@@ -204,7 +192,6 @@ Please check the SHIELDER_ADDRESS environment variable or --shielder-address arg
 
         Ok(ParsedRequestParams {
             last_note_index,
-            max_relayer_fee,
             pocket_money,
             token_address,
         })
@@ -222,25 +209,9 @@ Please check the SHIELDER_ADDRESS environment variable or --shielder-address arg
         };
 
         self.app_state
-            .relayer_rpc_controller
+            .relayer_controller
             .get_relayer_total_fee(token, pocket_money)
             .await
-    }
-
-    fn validate_fee_within_limit(
-        &self,
-        quoted_fee: &QuoteFeeResponse,
-        max_relayer_fee: U256,
-    ) -> Result<()> {
-        if quoted_fee.fee_details.total_cost_fee_token > max_relayer_fee {
-            return Err(SchedulerServerError::ProvingServerError(
-                VsockError::Protocol(format!(
-                    "Relayer fee {} exceeds maximum allowed {}",
-                    quoted_fee.fee_details.total_cost_fee_token, max_relayer_fee
-                )),
-            ));
-        }
-        Ok(())
     }
 
     async fn call_tee_prepare_relay_calldata(
@@ -249,18 +220,17 @@ Please check the SHIELDER_ADDRESS environment variable or --shielder-address arg
         quoted_fee: &QuoteFeeResponse,
         merkle_root: U256,
         merkle_path: [[U256; ARITY]; NOTE_TREE_HEIGHT],
-        pocket_money: U256,
     ) -> Result<Response> {
         let tee_task_pool = self.app_state.tee_task_pool.clone();
         let app_state = self.app_state.clone();
         let encryption_envelope = request.encryption_envelope.clone();
         let relayer_address = self
             .app_state
-            .relayer_rpc_controller
+            .relayer_controller
             .get_relayer_fee_address()
             .await?;
 
-        let max_relayer_fee = quoted_fee.fee_details.total_cost_fee_token;
+        let relayer_fee = quoted_fee.fee_details.total_cost_fee_token;
 
         // Get current AWS credentials
         let aws_credentials = self.app_state.aws_credentials.lock().await.clone();
@@ -285,11 +255,10 @@ Please check the SHIELDER_ADDRESS environment variable or --shielder-address arg
                         kms_encryption_algorithm: "RSAES_OAEP_SHA_256".to_string(),
                     }),
                     encryption_envelope: Box::new(encryption_envelope),
-                    max_relayer_fee,
                     relayer_address,
                     merkle_path: Box::new(merkle_path),
                     merkle_root,
-                    pocket_money,
+                    relayer_fee,
                 };
 
                 tee_request(app_state, request).await
@@ -320,7 +289,7 @@ Please check the SHIELDER_ADDRESS environment variable or --shielder-address arg
                     quote: quoted_fee.into(),
                 };
                 self.app_state
-                    .relayer_rpc_controller
+                    .relayer_controller
                     .send_relay_query(relay_query)
                     .await?;
                 Ok(ProcessingResult { request_id })

@@ -4,14 +4,13 @@ use serde::{Deserialize, Serialize};
 use shielder_scheduler_common::protocol::EncryptionEnvelope;
 use sqlx::{PgPool, Row};
 
-use crate::error::SchedulerServerError as Error;
+use crate::{error::SchedulerServerError as Error, handlers::get_status::GetStatusResponse};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ScheduledRequest {
     pub id: i64,
     pub encryption_envelope: EncryptionEnvelope,
     pub last_note_index: String, // U256 as string for PostgreSQL
-    pub max_relayer_fee: String, // U256 as string for PostgreSQL
     pub pocket_money: String,    // U256 as string for PostgreSQL
     pub token_address: String,   // Address as string for PostgreSQL
     pub relay_after: DateTime<Utc>,
@@ -34,10 +33,6 @@ pub enum RequestStatus {
 impl ScheduledRequest {
     pub fn last_note_index_as_u256(&self) -> Result<U256, alloy_primitives::ruint::ParseError> {
         U256::from_str_radix(&self.last_note_index, 10)
-    }
-
-    pub fn max_relayer_fee_as_u256(&self) -> Result<U256, alloy_primitives::ruint::ParseError> {
-        U256::from_str_radix(&self.max_relayer_fee, 10)
     }
 
     pub fn pocket_money_as_u256(&self) -> Result<U256, alloy_primitives::ruint::ParseError> {
@@ -79,19 +74,17 @@ pub async fn create_tables(pool: &PgPool) -> Result<(), Error> {
             iv BYTEA NOT NULL,
             auth_tag BYTEA NOT NULL,
             last_note_index TEXT NOT NULL,
-            max_relayer_fee TEXT NOT NULL,
             pocket_money TEXT NOT NULL,
             token_address TEXT NOT NULL,
             relay_after TIMESTAMPTZ NOT NULL,
             status request_status NOT NULL DEFAULT 'pending',
-            created_at TIMESTAMPTZ NOT NULL DEFAULT &1,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
             processed_at TIMESTAMPTZ,
             retry_count INTEGER NOT NULL DEFAULT 0,
             error_message TEXT
         )
         "#,
     )
-    .bind(Utc::now())
     .execute(pool)
     .await?;
 
@@ -102,15 +95,14 @@ pub async fn insert_scheduled_request(
     pool: &PgPool,
     encryption_envelope: EncryptionEnvelope,
     last_note_index: U256,
-    max_relayer_fee: U256,
     pocket_money: U256,
     token_address: Address,
     relay_after: DateTime<Utc>,
 ) -> Result<i64, Error> {
     let row = sqlx::query(
         r#"
-        INSERT INTO scheduled_requests (encrypted_payload, encrypted_dek, iv, auth_tag, last_note_index, max_relayer_fee, pocket_money, token_address, relay_after)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        INSERT INTO scheduled_requests (encrypted_payload, encrypted_dek, iv, auth_tag, last_note_index, pocket_money, token_address, relay_after)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
         RETURNING id
         "#,
     )
@@ -119,7 +111,6 @@ pub async fn insert_scheduled_request(
     .bind(encryption_envelope.iv)
     .bind(encryption_envelope.auth_tag)
     .bind(last_note_index.to_string())
-    .bind(max_relayer_fee.to_string())
     .bind(pocket_money.to_string())
     .bind(token_address.to_string())
     .bind(relay_after)
@@ -135,7 +126,7 @@ pub async fn get_pending_requests(
 ) -> Result<Vec<ScheduledRequest>, Error> {
     let rows = sqlx::query(
         r#"
-        SELECT id, encrypted_payload, encrypted_dek, iv, auth_tag, last_note_index, max_relayer_fee, pocket_money, token_address, relay_after, 
+        SELECT id, encrypted_payload, encrypted_dek, iv, auth_tag, last_note_index, pocket_money, token_address, relay_after, 
                status, created_at, processed_at, retry_count, error_message
         FROM scheduled_requests
         WHERE status IN ('pending', 'processing') 
@@ -160,7 +151,6 @@ pub async fn get_pending_requests(
                 auth_tag: row.get("auth_tag"),
             },
             last_note_index: row.get("last_note_index"),
-            max_relayer_fee: row.get("max_relayer_fee"),
             pocket_money: row.get("pocket_money"),
             token_address: row.get("token_address"),
             relay_after: row.get("relay_after"),
@@ -227,4 +217,31 @@ pub async fn update_retry_attempt(
     .await?;
 
     Ok(())
+}
+
+pub async fn get_request_by_last_note_index(
+    pool: &PgPool,
+    last_note_index: &str,
+) -> Result<Option<GetStatusResponse>, Error> {
+    let row = sqlx::query(
+        r#"
+        SELECT last_note_index, status, created_at, processed_at
+        FROM scheduled_requests
+        WHERE last_note_index = $1
+        "#,
+    )
+    .bind(last_note_index)
+    .fetch_optional(pool)
+    .await?;
+
+    if let Some(row) = row {
+        Ok(Some(GetStatusResponse {
+            last_note_index: row.get("last_note_index"),
+            status: row.get("status"),
+            created_at: row.get("created_at"),
+            processed_at: row.get("processed_at"),
+        }))
+    } else {
+        Ok(None)
+    }
 }

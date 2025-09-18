@@ -185,7 +185,7 @@ impl WithdrawCircuit {
             nullifier_hash: withdraw_call.old_nullifier_hash,
             new_note: withdraw_call.new_note,
             proof: withdraw_call.proof,
-            fee_token: Token::Native,
+            fee_token: token,
             fee_amount: withdraw_call.relayer_fee,
             mac_salt: withdraw_call.mac_salt,
             mac_commitment: withdraw_call.mac_commitment,

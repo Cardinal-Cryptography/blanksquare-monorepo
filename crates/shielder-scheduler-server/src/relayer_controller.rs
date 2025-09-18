@@ -9,15 +9,15 @@ use tracing::debug;
 
 use crate::error::SchedulerServerError;
 
-/// Controller for interacting with the relayer service via its RPC API.
+/// Controller for interacting with the relayer service via its API.
 #[derive(Clone, Eq, PartialEq, Debug, Default, Deserialize, Serialize)]
 
-pub struct RelayerRpcController {
+pub struct RelayerController {
     base_url: String,
 }
 
-impl RelayerRpcController {
-    /// Create a new RelayerRpcController with the given base URL.
+impl RelayerController {
+    /// Create a new RelayerController with the given base URL.
     /// Example: "https://base-testnet-shielder-relayer-v3.test.blanksquare.dev"
     pub fn new(base_url: String) -> Self {
         Self { base_url }

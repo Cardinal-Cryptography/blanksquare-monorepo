@@ -14,11 +14,13 @@ use shielder_scheduler_common::{
 };
 use shielder_setup::consts::{ARITY, TREE_HEIGHT};
 use tokio_vsock::{VsockAddr, VsockListener, VsockStream};
+use tracing_subscriber::field::debug;
 
 use crate::{
     command_line_args::CommandLineArgs, kms::KmsDecryptionController, withdraw::WithdrawCircuit,
 };
 
+#[derive(Debug)]
 struct RelayParams {
     relayer_address: Address,
     relayer_fee: U256,
@@ -139,6 +141,10 @@ impl Server {
         let payload: Payload = serde_json::from_slice(&decrypted_payload).map_err(|e| {
             VsockError::Protocol(format!("Failed to deserialize decrypted payload: {e:?}"))
         })?;
+
+        info!("Deserialized payload.");
+        debug!("Deserialized payload: {:?}", payload);
+        debug!("Relay params: {:?}", relay_params);
 
         if relay_params.relayer_fee > payload.max_relayer_fee {
             return Err(VsockError::Protocol(format!(

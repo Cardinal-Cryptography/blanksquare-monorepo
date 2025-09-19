@@ -19,6 +19,7 @@ use crate::{
     command_line_args::CommandLineArgs, kms::KmsDecryptionController, withdraw::WithdrawCircuit,
 };
 
+#[derive(Debug)]
 struct RelayParams {
     relayer_address: Address,
     relayer_fee: U256,
@@ -140,6 +141,10 @@ impl Server {
             VsockError::Protocol(format!("Failed to deserialize decrypted payload: {e:?}"))
         })?;
 
+        info!("Deserialized payload.");
+        debug!("Deserialized payload: {:?}", payload);
+        debug!("Relay params: {:?}", relay_params);
+
         if relay_params.relayer_fee > payload.max_relayer_fee {
             return Err(VsockError::Protocol(format!(
                 "Relayer fee {} exceeds max relayer fee {}",
@@ -157,6 +162,7 @@ impl Server {
             payload.withdraw_address,
             *relay_params.merkle_path,
             payload.chain_id,
+            token,
             relay_params.relayer_fee,
             payload.pocket_money,
             relay_params.relayer_address,

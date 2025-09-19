@@ -48,3 +48,4 @@ jobs:
           # yamllint disable rule:line-length
           tags: |
              ${{ vars.ECR_CC_RES_PUBLIC_REGISTRY }}shielder-fee-estimator:${{ steps.get-ref-properties.outputs.sha }}
+             ${{ github.ref == 'refs/heads/main' && format('{0}shielder-fee-estimator:latest', vars.ECR_CC_RES_PUBLIC_REGISTRY) || '' }}

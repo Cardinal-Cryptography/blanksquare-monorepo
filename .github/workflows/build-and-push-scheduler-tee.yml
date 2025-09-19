@@ -1,18 +1,18 @@
 ---
-name: Build and push Shielder-Scheduler-Server docker image
+name: Build and push Shielder-Scheduler-TEE docker image
 
 on:
   workflow_call:
     inputs:
       ref:
-        description: 'git ref: hash, branch, tag to build shielder-scheduler-server files from'
+        description: 'git ref: hash, branch, tag to build shielder-scheduler-tee files from'
         type: string
         required: true
 
 jobs:
   main:
-    name: Build Shielder Scheduler Server
-    runs-on: ubuntu-24.04
+    name: Build Shielder Scheduler TEE
+    runs-on: github-large-runner-x64-8-cpu-32-gb-ram-300-gb-disk
     steps:
       - name: Checkout source code
         uses: actions/checkout@v4
@@ -34,14 +34,21 @@ jobs:
           username: ${{ secrets.AWS_MAINNET_ECR_CC_ACCESS_KEY_ID }}
           password: ${{ secrets.AWS_MAINNET_ECR_CC_ACCESS_KEY }}
 
+      - name: Build kmstool enclave CLI
+        run: |
+          cd crates/shielder-scheduler-tee
+          chmod +x ./scripts/build_kmstool_enclave_cli.sh
+          ./scripts/build_kmstool_enclave_cli.sh
+          cd ../..
+
       - name: Build and push docker image
         id: build-image
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: ./crates/shielder-scheduler-server/Dockerfile
+          file: ./crates/shielder-scheduler-tee/Dockerfile
           push: true
           # yamllint disable rule:line-length
           tags: |
-            ${{ vars.ECR_CC_RES_PUBLIC_REGISTRY }}shielder-scheduler:${{ steps.get-ref-properties.outputs.sha }}
-            ${{ github.ref == 'refs/heads/main' && format('{0}shielder-scheduler:latest', vars.ECR_CC_RES_PUBLIC_REGISTRY) || '' }}
+            ${{ vars.ECR_CC_RES_PUBLIC_REGISTRY }}shielder-scheduler:tee-${{ steps.get-ref-properties.outputs.sha }}
+            ${{ github.ref == 'refs/heads/main' && format('{0}shielder-scheduler:tee-latest', vars.ECR_CC_RES_PUBLIC_REGISTRY) || '' }}

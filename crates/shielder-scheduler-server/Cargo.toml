@@ -9,6 +9,7 @@ categories = { workspace = true }
 repository = { workspace = true }
 
 [dependencies]
+aws-config = { workspace = true }
 alloy-primitives = { workspace = true, features = ["serde"] }
 alloy-signer-local = { workspace = true }
 axum = { workspace = true, features = ["tokio", "macros"] }

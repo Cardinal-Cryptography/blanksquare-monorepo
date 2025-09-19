@@ -8,8 +8,8 @@ on:
 jobs:
   main:
     name: Measure gas and verifier code size
-    runs-on: github-large-runner-x64-8-cpu-32-gb-ram-300-gb-disk
-    timeout-minutes: 10
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
     steps:
       - name: Checkout code (from the current branch)
         uses: actions/checkout@v4

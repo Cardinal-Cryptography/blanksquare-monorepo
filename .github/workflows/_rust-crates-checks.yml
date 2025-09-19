@@ -51,7 +51,7 @@ jobs:
   test-rust-crates:
     name: Run tests for ${{ matrix.crate }}
     runs-on: ubuntu-22.04
-    timeout-minutes: 6
+    timeout-minutes: 10
     strategy:
       fail-fast: false
       matrix:
@@ -102,7 +102,7 @@ jobs:
       - name: Run tests
         run: cd ${{ matrix.crate }} && make test
 
-  run-heavy-tests:
+  run-heavy-tests-shielder-relayer:
     name: Run heavy tests for ${{ matrix.crate }}
     runs-on: github-large-runner-x64-8-cpu-32-gb-ram-300-gb-disk
     timeout-minutes: 15
@@ -110,8 +110,8 @@ jobs:
       fail-fast: false
       matrix:
         crate:
-          - crates/integration-tests
           - crates/shielder-relayer
+          - crates/integration-tests
     steps:
       - name: Checkout source code
         uses: actions/checkout@v4
@@ -141,25 +141,23 @@ jobs:
         uses: ./.github/actions/prepare-sol-env
 
       - name: Install dependencies
-        if: matrix.crate == 'crates/integration-tests'
         run: make deps
 
       - name: Install solc compiler
-        if: matrix.crate == 'crates/integration-tests'
         uses: ./.github/actions/install-solc
         with:
           solc-version: 0.8.26
 
       # test binary actually calls docker run, somewhere in the test code...
       - name: Download shielder-relayer Docker image
-        if: matrix.crate != 'crates/integration-tests'
+        if: matrix.crate == 'crates/shielder-relayer'
         uses: actions/download-artifact@v4
         with:
           name: shielder-relayer-docker-image
           path: .
 
       - name: Load Docker image
-        if: matrix.crate != 'crates/integration-tests'
+        if: matrix.crate == 'crates/shielder-relayer'
         run: docker load -i shielder-relayer-image.tar
 
       - name: Run tests
@@ -222,7 +220,7 @@ jobs:
     name: All jobs completed
     runs-on: ubuntu-22.04
     if: ${{ always() }}
-    needs: [lint-and-format-rust, test-rust-crates, run-heavy-tests, e2e-tests]
+    needs: [lint-and-format-rust, test-rust-crates, run-heavy-tests-shielder-relayer, e2e-tests]
     steps:
       - name: Check job status
         run: |
@@ -235,8 +233,8 @@ jobs:
             echo "Required job failed: test-rust-crates (${{ needs.test-rust-crates.result }})"
             exit 1
           fi
-          if [[ "${{ needs.run-heavy-tests.result }}" != "success" ]]; then
-            echo "Required job failed: run-heavy-tests (${{ needs.run-heavy-tests.result }})"
+          if [[ "${{ needs.run-heavy-tests-shielder-relayer.result }}" != "success" ]]; then
+            echo "Required job failed: run-heavy-tests-shielder-relayer (${{ needs.run-heavy-tests-shielder-relayer.result }})"
             exit 1
           fi
           if [[ "${{ needs.e2e-tests.result }}" != "success" ]]; then

@@ -16,7 +16,8 @@ on:
 jobs:
   build-and-push:
     name: Build and push shielder-relayer
-    runs-on: github-large-runner-x64-8-cpu-32-gb-ram-300-gb-disk
+    timeout-minutes: 10
+    runs-on: github-large-runner-x64-4-cpu-16-gb-ram-150-gb-disk
     steps:
       - name: GIT | Checkout
         uses: actions/checkout@v4
@@ -36,7 +37,7 @@ jobs:
     if: github.event.inputs.environment != 'none'
     name: Deploy shielder-relayer
     needs: [build-and-push]
-    runs-on: github-large-runner-x64-8-cpu-32-gb-ram-300-gb-disk
+    runs-on: ubuntu-22.04
     steps:
       - name: GIT | Checkout
         uses: actions/checkout@v4

@@ -30,9 +30,10 @@ pub async fn get_session_token(
     refresh_period_seconds: i32,
     iam_role_name: &str,
 ) -> Result<AwsCredentials, SchedulerServerError> {
-    use aws_config::imds::client::Client;
     use std::time::Duration;
-    
+
+    use aws_config::imds::client::Client;
+
     info!("Retrieving AWS credentials from EC2 instance metadata");
 
     // Calculate token TTL as twice the refresh period for safety margin
@@ -49,11 +50,10 @@ pub async fn get_session_token(
         "/latest/meta-data/iam/security-credentials/{}",
         iam_role_name
     );
-    
-    let credentials_response = client
-        .get(credentials_path)
-        .await
-        .map_err(|e| SchedulerServerError::AwsError(format!("Failed to get credentials from IMDS: {}", e)))?;
+
+    let credentials_response = client.get(credentials_path).await.map_err(|e| {
+        SchedulerServerError::AwsError(format!("Failed to get credentials from IMDS: {}", e))
+    })?;
 
     // Convert SensitiveString to String for parsing
     let credentials_text: String = credentials_response.into();

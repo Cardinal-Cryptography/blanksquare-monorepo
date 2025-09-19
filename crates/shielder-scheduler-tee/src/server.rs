@@ -14,7 +14,6 @@ use shielder_scheduler_common::{
 };
 use shielder_setup::consts::{ARITY, TREE_HEIGHT};
 use tokio_vsock::{VsockAddr, VsockListener, VsockStream};
-use tracing_subscriber::field::debug;
 
 use crate::{
     command_line_args::CommandLineArgs, kms::KmsDecryptionController, withdraw::WithdrawCircuit,

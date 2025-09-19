@@ -1,4 +1,3 @@
-use reqwest::Client;
 use serde::Deserialize;
 use tracing::{info, instrument};
 
@@ -31,77 +30,41 @@ pub async fn get_session_token(
     refresh_period_seconds: i32,
     iam_role_name: &str,
 ) -> Result<AwsCredentials, SchedulerServerError> {
+    use aws_config::imds::client::Client;
+    use std::time::Duration;
+    
     info!("Retrieving AWS credentials from EC2 instance metadata");
 
-    // Step 1: Get the metadata token
-    let token_url = "http://169.254.169.254/latest/api/token";
-    use std::time::Duration;
+    // Calculate token TTL as twice the refresh period for safety margin
+    let token_ttl = Duration::from_secs((refresh_period_seconds * 2).max(60) as u64);
+
+    // Create IMDS client with appropriate configuration
     let client = Client::builder()
-        // IMDS is link-local; keep these aggressive
-        .connect_timeout(Duration::from_millis(250))
-        .timeout(Duration::from_secs(2))
-        // Do not use proxies for metadata calls
-        .no_proxy()
-        .build()
-        .map_err(|e| SchedulerServerError::AwsError(format!("Failed to build HTTP client: {e}")))?;
+        .max_attempts(3)
+        .token_ttl(token_ttl)
+        .build();
 
-    // Calculate TTL as twice the refresh period
-    let token_ttl = refresh_period_seconds * 2;
-
-    let token_response = client
-        .put(token_url)
-        .header(
-            "X-aws-ec2-metadata-token-ttl-seconds",
-            token_ttl.to_string(),
-        )
-        .send()
-        .await
-        .map_err(|e| {
-            SchedulerServerError::AwsError(format!("Failed to get metadata token: {}", e))
-        })?;
-
-    if !token_response.status().is_success() {
-        return Err(SchedulerServerError::AwsError(format!(
-            "Failed to get metadata token, status: {}",
-            token_response.status()
-        )));
-    }
-
-    let token = token_response.text().await.map_err(|e| {
-        SchedulerServerError::AwsError(format!("Failed to read metadata token: {}", e))
-    })?;
-
-    // Step 2: Get the credentials using the token
-    let credentials_url = format!(
-        "http://169.254.169.254/latest/meta-data/iam/security-credentials/{}",
+    // Get the credentials using the AWS IMDS client
+    let credentials_path = format!(
+        "/latest/meta-data/iam/security-credentials/{}",
         iam_role_name
     );
-
+    
     let credentials_response = client
-        .get(credentials_url)
-        .header("X-aws-ec2-metadata-token", &token)
-        .send()
+        .get(credentials_path)
         .await
-        .map_err(|e| SchedulerServerError::AwsError(format!("Failed to get credentials: {}", e)))?;
+        .map_err(|e| SchedulerServerError::AwsError(format!("Failed to get credentials from IMDS: {}", e)))?;
 
-    if !credentials_response.status().is_success() {
-        return Err(SchedulerServerError::AwsError(format!(
-            "Failed to get credentials, status: {}",
-            credentials_response.status()
-        )));
-    }
+    // Convert SensitiveString to String for parsing
+    let credentials_text: String = credentials_response.into();
 
-    let credentials_text = credentials_response.text().await.map_err(|e| {
-        SchedulerServerError::AwsError(format!("Failed to read credentials response: {}", e))
-    })?;
-
-    // Step 3: Parse the JSON response
+    // Parse the JSON response
     let metadata_response: Ec2MetadataResponse =
         serde_json::from_str(&credentials_text).map_err(|e| {
             SchedulerServerError::AwsError(format!("Failed to parse credentials JSON: {}", e))
         })?;
 
-    // Step 4: Validate the response
+    // Validate the response
     if metadata_response.code != "Success" {
         return Err(SchedulerServerError::AwsError(format!(
             "Metadata service returned error code: {}",
@@ -109,7 +72,7 @@ pub async fn get_session_token(
         )));
     }
 
-    // Step 5: Validate credentials are not empty
+    // Validate credentials are not empty
     if metadata_response.access_key_id.is_empty() {
         return Err(SchedulerServerError::AwsError(
             "Access key ID is empty".to_string(),

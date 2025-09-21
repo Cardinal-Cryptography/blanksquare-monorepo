@@ -7,6 +7,8 @@ use shielder_scheduler_common::vsock::VsockError;
 use tokio::task::JoinError;
 use tracing::error;
 
+use crate::storage::StorageError;
+
 #[derive(thiserror::Error, Debug)]
 pub enum SchedulerServerError {
     #[error("Internal I/O error: {0}")]
@@ -27,11 +29,8 @@ pub enum SchedulerServerError {
     #[error("Failed to parse commandline arguments: {0}")]
     ParseError(String),
 
-    #[error("Failed to parse value: {0}")]
-    ValueParseError(String),
-
-    #[error("Database error: {0}")]
-    DatabaseError(#[from] sqlx::Error),
+    #[error("Storage error: {0}")]
+    StorageError(#[from] StorageError),
 
     #[error("Contract error: {0}")]
     ContractError(#[from] ShielderContractError),

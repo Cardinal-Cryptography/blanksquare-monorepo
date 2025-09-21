@@ -10,6 +10,7 @@ repository = { workspace = true }
 
 [dependencies]
 aws-config = { workspace = true }
+aws-sdk-dynamodb = { workspace = true }
 alloy-primitives = { workspace = true, features = ["serde"] }
 alloy-signer-local = { workspace = true }
 axum = { workspace = true, features = ["tokio", "macros"] }
@@ -32,6 +33,7 @@ tokio-task-pool = { workspace = true, features = ["log"] }
 tower-http = { workspace = true, features = ["cors"] }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
+uuid = { workspace = true, features = ["v4"] }
 vsock = { workspace = true }
 sqlx = { workspace = true, features = [
     "runtime-tokio",
@@ -39,3 +41,6 @@ sqlx = { workspace = true, features = [
     "chrono",
     "runtime-tokio-native-tls",
 ] }
+
+[features]
+local-run = []

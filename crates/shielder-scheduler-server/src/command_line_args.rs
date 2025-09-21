@@ -68,38 +68,6 @@ pub struct CommandLineArgs {
     #[clap(long, default_value_t = 60, env = "SCHEDULER_RETRY_DELAY_SECS")]
     pub scheduler_retry_delay_secs: u64,
 
-    // Database connection parameters
-    /// Database host
-    #[clap(long, default_value = "localhost", env = "DB_HOST")]
-    pub db_host: String,
-    /// Database port
-    #[clap(long, default_value = "5432", env = "DB_PORT")]
-    pub db_port: u16,
-    /// Database name
-    #[clap(long, default_value = "scheduler-db", env = "DB_NAME")]
-    pub db_name: String,
-    /// Database user
-    #[clap(long, default_value = "postgres", env = "DB_USER")]
-    pub db_user: String,
-    /// Database password
-    #[clap(long, default_value = "postgres", env = "DB_PASS")]
-    pub db_pass: String,
-    /// Use SSL for database connection
-    /// If set to true, the server will use SSL to connect to the database
-    #[clap(long, default_value_t = false, env = "DB_USE_SSL")]
-    pub db_ssl: bool,
-
-    // KMS configuration
-    /// Disable KMS integration (development only).
-    /// Note: The scheduler server never handles private keys; when this flag is set,
-    /// the TEE server must run in local-run mode and use its local private key.
-    #[clap(
-        long,
-        help = "MUST NOT BE USED IN PRODUCTION. Disables KMS integration; TEE must run in local-run mode and will use its local private key. The scheduler server never handles private keys.",
-        env = "DISABLE_KMS"
-    )]
-    pub disable_kms: bool,
-
     #[clap(long, env = "KMS_PUBLIC_KEY")]
     pub kms_public_key: String,
 
@@ -156,13 +124,16 @@ impl CommandLineArgs {
             );
         }
 
-        if !self.disable_kms {
+        #[cfg(not(feature = "local-run"))]
+        {
             if let Some(ref kms_key_id) = self.kms_key_id {
                 if kms_key_id.trim().is_empty() {
                     return Err("KMS_KEY_ID must not be empty".into());
                 }
             } else {
-                return Err("KMS_KEY_ID is required when --disable-kms is not set".into());
+                return Err(
+                    "KMS_KEY_ID is required unless built with the 'local-run' feature".into(),
+                );
             }
 
             if let Some(ref aws_region) = self.aws_region {
@@ -170,7 +141,9 @@ impl CommandLineArgs {
                     return Err("AWS_REGION must not be empty".into());
                 }
             } else {
-                return Err("AWS_REGION is required when --disable-kms is not set".into());
+                return Err(
+                    "AWS_REGION is required unless built with the 'local-run' feature".into(),
+                );
             }
 
             if let Some(ref aws_iam_kms_role) = self.aws_iam_kms_role {
@@ -178,7 +151,9 @@ impl CommandLineArgs {
                     return Err("AWS_IAM_KMS_ROLE must not be empty".into());
                 }
             } else {
-                return Err("AWS_IAM_KMS_ROLE is required when --disable-kms is not set".into());
+                return Err(
+                    "AWS_IAM_KMS_ROLE is required unless built with the 'local-run' feature".into(),
+                );
             }
         }
         Ok(())

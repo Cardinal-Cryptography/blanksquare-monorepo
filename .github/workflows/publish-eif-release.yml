@@ -1,0 +1,103 @@
+---
+name: Publish EIF Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      artifact:
+        description: 'Enclave artifact type to release'
+        type: choice
+        required: true
+        options:
+          - shielder-prover-tee
+          - shielder-scheduler-tee
+        default: shielder-prover-tee
+
+concurrency:
+  group: ${{ github.ref }}-${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  check-vars-and-secrets:
+    name: Check vars and secrets
+    uses: ./.github/workflows/_check-vars-and-secrets.yml
+    secrets: inherit
+
+  publish-eif-release:
+    name: Publish EIF Release
+    needs:
+      - check-vars-and-secrets
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      - name: Call action get-ref-properties
+        id: get-ref-properties
+        uses: Cardinal-Cryptography/github-actions/get-ref-properties@v7
+
+      - name: Get workflow run ID
+        id: get-workflow-run-id
+        uses: ./.github/actions/get-workflow-run-id
+        with:
+          workflow-name: on-push-main.yml
+          full-sha: ${{ steps.get-ref-properties.outputs.full-sha }}
+          github_token: ${{ secrets.CI_GH_TOKEN }}
+
+      - name: Download enclave artifacts - EIF
+        uses: actions/download-artifact@v5
+        with:
+          name: ${{ inputs.artifact }}-eif
+          path: artifacts
+          run-id: ${{ steps.get-workflow-run-id.outputs.workflow-run-id }}
+          github-token: ${{ secrets.CI_GH_TOKEN }}
+
+      - name: Download enclave artifacts - Measurements
+        uses: actions/download-artifact@v5
+        with:
+          name: ${{ inputs.artifact }}-measurements
+          path: artifacts
+          run-id: ${{ steps.get-workflow-run-id.outputs.workflow-run-id }}
+          github-token: ${{ secrets.CI_GH_TOKEN }}
+
+      - name: Generate release artifacts checksum (SHA256)
+        uses: jmgilman/actions-generate-checksum@v1
+        with:
+          output: checksums.txt
+          patterns: |
+            artifacts/*
+
+      - name: Generate release tag and name
+        id: release-info
+        run: |
+          TIMESTAMP=$(date +"%Y%m%d-%H%M%S")
+          TAG_NAME="${{ inputs.artifact }}-${TIMESTAMP}"
+          RELEASE_NAME="${{ inputs.artifact }} EIF Release - ${TIMESTAMP}"
+          echo "tag-name=${TAG_NAME}" >> $GITHUB_OUTPUT
+          echo "release-name=${RELEASE_NAME}" >> $GITHUB_OUTPUT
+
+      - name: Create and publish EIF release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.release-info.outputs.tag-name }}
+          name: ${{ steps.release-info.outputs.release-name }}
+          body: |
+            # ${{ inputs.artifact }} Release
+
+            This release contains the EIF and measurements for
+            **${{ inputs.artifact }}**.
+
+            ## Contents
+            - **EIF File**: The enclave image file ready for deployment
+            - **Measurements**: PCR values and attestation data
+            - **Checksums**: SHA256 checksums for integrity verification
+
+            ## Built from
+            - **Commit**: ${{ steps.get-ref-properties.outputs.full-sha }}
+            - **Branch**: ${{ github.ref_name }}
+            - **Artifact Type**: ${{ inputs.artifact }}
+          files: |
+            checksums.txt
+            artifacts/*
+          draft: false
+          prerelease: false

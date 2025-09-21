@@ -17,7 +17,7 @@ jobs:
     secrets: inherit
 
   build-enclave-artifacts:
-    name: Build enclave artifacts
+    name: Build enclave artifacts (using nix)
     needs: [check-vars-and-secrets]
     uses: ./.github/workflows/_build-enclave-artifacts.yml
     with:
@@ -39,6 +39,39 @@ jobs:
     with:
       ref: ${{ github.sha }}
 
+  build-and-push-scheduler-server:
+    name: Build and push shielder-scheduler-server
+    needs: [check-vars-and-secrets]
+    secrets: inherit
+    uses: ./.github/workflows/build-and-push-scheduler-server.yml
+    with:
+      ref: ${{ github.sha }}
+
+  build-and-push-scheduler-tee:
+    name: Build and push shielder-scheduler-tee
+    needs: [check-vars-and-secrets]
+    secrets: inherit
+    uses: ./.github/workflows/build-and-push-scheduler-tee.yml
+    with:
+      ref: ${{ github.sha }}
+
+  get-short-sha:
+    name: Get short SHA
+    runs-on: ubuntu-22.04
+    outputs:
+      short-sha: ${{ steps.short-sha.outputs.sha }}
+    steps:
+      - name: Calculate short SHA
+        id: short-sha
+        run: echo "sha=${GITHUB_SHA:0:7}" >> $GITHUB_OUTPUT
+
+  build-scheduler-tee-eif:
+    name: Build shielder-scheduler-tee EIF (using dockerized nitro-cli)
+    needs: [build-and-push-scheduler-tee, get-short-sha]
+    uses: ./.github/workflows/_build-eif-from-docker.yml
+    with:
+      # yamllint disable-line rule:line-length
+      public-docker-image-url: ${{ vars.ECR_CC_RES_PUBLIC_REGISTRY }}shielder-scheduler:tee-${{ needs.get-short-sha.outputs.short-sha }}
   all-jobs-completion:
     name: All jobs completion
     runs-on: ubuntu-24.04
@@ -46,6 +79,10 @@ jobs:
       - build-enclave-artifacts
       - build-and-push-fee-estimator
       - build-and-push-prover-server
+      - build-and-push-scheduler-server
+      - build-and-push-scheduler-tee
+      - get-short-sha
+      - build-scheduler-tee-eif
     if: >
       !cancelled() &&
       github.event_name != 'workflow_dispatch'

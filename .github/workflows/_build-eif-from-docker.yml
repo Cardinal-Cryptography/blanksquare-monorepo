@@ -1,0 +1,93 @@
+---
+name: Build EIF from Docker Image
+
+on:
+  workflow_call:
+    inputs:
+      public-docker-image-url:
+        description: 'Public Docker image URL to build EIF from'
+        type: string
+        required: true
+    outputs:
+      artifact-name-eif:
+        description: 'Name of artifact: enclave file'
+        value: ${{ jobs.build-eif.outputs.artifact-name-eif }}
+      artifact-name-measurements:
+        description: 'Name of artifact: enclave measurements'
+        value: ${{ jobs.build-eif.outputs.artifact-name-measurements }}
+
+jobs:
+  build-eif:
+    runs-on: ubuntu-22.04
+    outputs:
+      artifact-name-eif: ${{ steps.get-artifact-names.outputs.eif }}
+      artifact-name-measurements: >-
+        ${{ steps.get-artifact-names.outputs.measurements }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Validate Docker image URL
+        run: |
+          if [[ ! "${{ inputs.public-docker-image-url }}" =~ ^${{ vars.ECR_CC_RES_PUBLIC_REGISTRY }}.* ]]; then
+            echo "Error: Docker image URL must start with ${{ vars.ECR_CC_RES_PUBLIC_REGISTRY }}"
+            echo "Provided URL: ${{ inputs.public-docker-image-url }}"
+            exit 1
+          fi
+          echo "✅ Docker image URL validation passed"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build EIF file
+        id: build-eif
+        env:
+          ECR_IMAGE: ${{ inputs.public-docker-image-url }}
+        run: |
+          chmod +x .github/scripts/nitro-cli-docker/build-enclave-image.sh
+          ./.github/scripts/nitro-cli-docker/build-enclave-image.sh
+
+      - name: Get artifact names
+        id: get-artifact-names
+        run: |
+          # Use fixed component name since we now have a centralized script
+          COMPONENT_NAME="shielder-scheduler-tee"
+          echo "eif=${COMPONENT_NAME}-eif" >> $GITHUB_OUTPUT
+          echo "measurements=${COMPONENT_NAME}-measurements" >> $GITHUB_OUTPUT
+          echo "component-name=${COMPONENT_NAME}" >> $GITHUB_OUTPUT
+
+          # Set outputs for generated files
+          echo "eif-file=shielder-scheduler-tee.eif" >> $GITHUB_OUTPUT
+          echo "measurements-file=eif-info.json" >> $GITHUB_OUTPUT
+
+      - name: Upload EIF to GH Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.get-artifact-names.outputs.eif }}
+          path: |
+            ${{ steps.get-artifact-names.outputs.eif-file }}
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Upload measurements to GH Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.get-artifact-names.outputs.measurements }}
+          path: ${{ steps.get-artifact-names.outputs.measurements-file }}
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Display EIF info
+        run: |
+          if [ -f "${{ steps.get-artifact-names.outputs.measurements-file }}" ]; then
+            echo "=== EIF Build Information ==="
+            cat "${{ steps.get-artifact-names.outputs.measurements-file }}"
+          fi
+
+          if [ -f "${{ steps.get-artifact-names.outputs.eif-file }}" ]; then
+            echo "=== EIF File Information ==="
+            echo "File size: $(du -h "${{ steps.get-artifact-names.outputs.eif-file }}" | cut -f1)"
+            CHECKSUM=$(sha256sum "${{ steps.get-artifact-names.outputs.eif-file }}" | cut -d' ' -f1)
+            echo "SHA256: $CHECKSUM"
+          fi

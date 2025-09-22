@@ -116,10 +116,15 @@ Please check the SHIELDER_ADDRESS environment variable or --shielder-address arg
                 if request_retry_count < self.app_state.options.scheduler_max_retry_count as i32 {
                     let new_relay_after = Utc::now()
                         + Duration::from_secs(self.app_state.options.scheduler_retry_delay_secs);
-
+                    let new_retry_count = request_retry_count + 1;
                     self.app_state
                         .storage
-                        .update_retry_attempt(request.id, new_relay_after, Some(&e.to_string()))
+                        .update_retry_attempt(
+                            request.id,
+                            new_relay_after,
+                            new_retry_count,
+                            Some(&e.to_string()),
+                        )
                         .await?;
                 } else {
                     warn!(

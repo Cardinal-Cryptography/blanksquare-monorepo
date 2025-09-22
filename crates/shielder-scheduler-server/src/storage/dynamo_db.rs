@@ -316,14 +316,15 @@ impl StorageInterface for DynamoDb {
         &self,
         id: u128,
         new_relay_after: DateTime<Utc>,
+        new_retry_count: i32,
         new_error_message: Option<&str>,
     ) -> Result<(), StorageError> {
         let Some(mut existing) = self.get_item_by_id(id).await? else {
             return Err(StorageError::NotFound(id.to_string()));
         };
         existing.relay_after = new_relay_after;
+        existing.retry_count = new_retry_count;
         existing.error_message = new_error_message.map(|s| s.to_string());
-        // In-memory impl does not increment retry_count, mirror that behavior.
         self.put_full_request(&existing).await
     }
 

@@ -47,6 +47,7 @@ pub trait StorageInterface: Send + Sync {
         &self,
         id: u128,
         new_relay_after: DateTime<Utc>,
+        new_retry_count: i32,
         new_error_message: Option<&str>,
     ) -> Result<(), StorageError>;
 

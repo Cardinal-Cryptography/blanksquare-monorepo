@@ -38,9 +38,7 @@ impl DynamoDb {
             Ok(_) => return Ok(()),
             Err(e) => {
                 if !is_resource_not_found(&e) {
-                    return Err(StorageError::Internal(format!(
-                        "Failed to describe DynamoDB table: {e}"
-                    )));
+                    return Err(map_internal("describe_table", e));
                 }
             }
         }
@@ -199,9 +197,7 @@ impl StorageInterface for DynamoDb {
                 if is_conditional_check_failed(&e) {
                     Err(StorageError::DuplicateEntry(request.id))
                 } else {
-                    Err(StorageError::Internal(format!(
-                        "Failed to insert scheduled request: {e}"
-                    )))
+                    Err(map_internal("put_item", e))
                 }
             }
         }
@@ -304,9 +300,7 @@ impl StorageInterface for DynamoDb {
                 if is_conditional_check_failed(&e) {
                     Err(StorageError::NotFound(id.to_string()))
                 } else {
-                    Err(StorageError::Internal(format!(
-                        "Failed to update request status: {e}"
-                    )))
+                    Err(map_internal("put_item", e))
                 }
             }
         }
@@ -377,5 +371,11 @@ fn is_conditional_check_failed(e: &SdkError<PutItemError>) -> bool {
 }
 
 fn map_internal<E: std::fmt::Display>(op: &str, e: SdkError<E>) -> StorageError {
-    StorageError::Internal(format!("AWS SDK {op} error: {e}"))
+    StorageError::Internal(format!(
+        "AWS SDK {} error: {}",
+        op,
+        e.as_service_error()
+            .map(|se| se.to_string())
+            .unwrap_or_else(|| e.to_string())
+    ))
 }

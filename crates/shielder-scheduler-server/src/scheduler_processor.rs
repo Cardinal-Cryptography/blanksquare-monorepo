@@ -1,4 +1,4 @@
-use std::{sync::Arc, time::Duration};
+use std::sync::Arc;
 
 use alloy_primitives::{Address, U256};
 use alloy_signer_local::PrivateKeySigner;
@@ -38,7 +38,7 @@ impl<Storage: StorageInterface> SchedulerProcessor<Storage> {
 
     pub async fn start(self) {
         info!("Starting background task processor");
-        let mut interval = interval(Duration::from_secs(
+        let mut interval = interval(std::time::Duration::from_secs(
             self.app_state.options.scheduler_interval_secs,
         ));
 
@@ -115,7 +115,9 @@ Please check the SHIELDER_ADDRESS environment variable or --shielder-address arg
 
                 if request_retry_count < self.app_state.options.scheduler_max_retry_count as i32 {
                     let new_relay_after = Utc::now()
-                        + Duration::from_secs(self.app_state.options.scheduler_retry_delay_secs);
+                        + chrono::Duration::seconds(
+                            self.app_state.options.scheduler_retry_delay_secs as i64,
+                        );
                     let new_retry_count = request_retry_count + 1;
                     self.app_state
                         .storage

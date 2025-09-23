@@ -73,7 +73,12 @@ Schedule a withdrawal request to be processed at a future time.
 
 ```json
 {
-  "payload": "base64-encoded-encrypted-payload",
+   "encryption_envelope": {
+      "encrypted_payload": "<base64-encoded>",
+      "encrypted_dek": "<base64-encoded>",
+      "iv": "<base64-encoded>",
+      "auth_tag": "<base64-encoded>="
+   },
   "last_note_index": "12345",
   "pocket_money": "500000000000000000",
   "token_address": "0x1234567890123456789012345678901234567890",
@@ -91,7 +96,7 @@ Schedule a withdrawal request to be processed at a future time.
 
 ```json
 {
-  "request_id": 123,
+  "request_id": "123",
   "message": "Withdraw request scheduled successfully. Request ID: 123"
 }
 ```

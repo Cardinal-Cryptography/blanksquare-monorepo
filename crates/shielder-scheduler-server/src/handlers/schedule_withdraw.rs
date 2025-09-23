@@ -29,7 +29,7 @@ pub struct ScheduleWithdrawRequest {
 
 #[derive(Debug, Serialize)]
 pub struct ScheduleWithdrawResponse {
-    pub request_id: u128,
+    pub request_id: String,
     pub message: String,
 }
 
@@ -92,7 +92,7 @@ pub async fn schedule_withdraw<Storage: StorageInterface>(
             (
                 axum::http::StatusCode::CREATED,
                 Json(ScheduleWithdrawResponse {
-                    request_id,
+                    request_id: request_id.to_string(),
                     message: format!(
                         "Withdraw request scheduled successfully. Request ID: {}",
                         request_id

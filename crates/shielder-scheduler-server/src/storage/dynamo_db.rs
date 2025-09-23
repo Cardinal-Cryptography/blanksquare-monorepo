@@ -2,8 +2,8 @@ use aws_sdk_dynamodb::{
     error::SdkError,
     operation::{describe_table::DescribeTableError, put_item::PutItemError},
     types::{
-        AttributeDefinition, AttributeValue, KeySchemaElement, KeyType, ProvisionedThroughput,
-        ScalarAttributeType,
+        AttributeDefinition, AttributeValue, GlobalSecondaryIndex, KeySchemaElement, KeyType,
+        Projection, ProjectionType, ProvisionedThroughput, ScalarAttributeType,
     },
     Client,
 };
@@ -12,6 +12,7 @@ use chrono::{DateTime, Utc};
 use crate::storage::{RequestStatus, ScheduledRequest, StorageError, StorageInterface};
 
 const TABLE_NAME: &str = "ScheduledRequests";
+const STATUS_RELAY_INDEX: &str = "StatusRelayAfterIndex";
 
 pub struct DynamoDb {
     client: Client,
@@ -43,28 +44,77 @@ impl DynamoDb {
             }
         }
 
-        let attr_def = AttributeDefinition::builder()
+        let attr_def_id = AttributeDefinition::builder()
             .attribute_name("id")
             .attribute_type(ScalarAttributeType::S)
             .build()
             .map_err(|e| StorageError::Internal(format!("AttrDef build error: {e}")))?;
+
+        let attr_def_status = AttributeDefinition::builder()
+            .attribute_name("status")
+            .attribute_type(ScalarAttributeType::S)
+            .build()
+            .map_err(|e| StorageError::Internal(format!("AttrDef build error: {e}")))?;
+
+        let attr_def_relay_after = AttributeDefinition::builder()
+            .attribute_name("relay_after")
+            .attribute_type(ScalarAttributeType::N)
+            .build()
+            .map_err(|e| StorageError::Internal(format!("AttrDef build error: {e}")))?;
+
         let key_schema = KeySchemaElement::builder()
             .attribute_name("id")
             .key_type(KeyType::Hash)
             .build()
             .map_err(|e| StorageError::Internal(format!("KeySchema build error: {e}")))?;
+
+        // GSI key schema
+        let gsi_hash_key = KeySchemaElement::builder()
+            .attribute_name("status")
+            .key_type(KeyType::Hash)
+            .build()
+            .map_err(|e| StorageError::Internal(format!("GSI KeySchema build error: {e}")))?;
+
+        let gsi_range_key = KeySchemaElement::builder()
+            .attribute_name("relay_after")
+            .key_type(KeyType::Range)
+            .build()
+            .map_err(|e| StorageError::Internal(format!("GSI KeySchema build error: {e}")))?;
+
         let throughput = ProvisionedThroughput::builder()
             .read_capacity_units(5)
             .write_capacity_units(5)
             .build()
             .map_err(|e| StorageError::Internal(format!("Throughput build error: {e}")))?;
 
+        let gsi_throughput = ProvisionedThroughput::builder()
+            .read_capacity_units(5)
+            .write_capacity_units(5)
+            .build()
+            .map_err(|e| StorageError::Internal(format!("GSI Throughput build error: {e}")))?;
+
+        let projection = Projection::builder()
+            .projection_type(ProjectionType::All)
+            .build();
+
+        let gsi = GlobalSecondaryIndex::builder()
+            .index_name(STATUS_RELAY_INDEX)
+            .key_schema(gsi_hash_key)
+            .key_schema(gsi_range_key)
+            .projection(projection)
+            .provisioned_throughput(gsi_throughput)
+            .build()
+            .map_err(|e| StorageError::Internal(format!("GSI build error: {e}")))?;
+
         if let Err(e) = self
             .client
             .create_table()
             .table_name(TABLE_NAME)
-            .attribute_definitions(attr_def)
+            .attribute_definitions(attr_def_id)
+            .attribute_definitions(attr_def_status)
+            .attribute_definitions(attr_def_relay_after)
             .key_schema(key_schema)
+            .global_secondary_indexes(gsi)
             .provisioned_throughput(throughput)
             .send()
             .await
@@ -75,6 +125,65 @@ impl DynamoDb {
         }
 
         Ok(())
+    }
+
+    async fn query_requests_by_status_and_time(
+        &self,
+        status: RequestStatus,
+        max_timestamp: &str,
+        limit: usize,
+    ) -> Result<Vec<ScheduledRequest>, StorageError> {
+        let mut requests = Vec::new();
+        let mut last_evaluated_key = None;
+
+        loop {
+            let mut query_builder = self
+                .client
+                .query()
+                .index_name(STATUS_RELAY_INDEX)
+                .key_condition_expression("#status = :status AND relay_after <= :max_time")
+                .expression_attribute_names("#status", "status")
+                .expression_attribute_values(
+                    ":status",
+                    AttributeValue::S(status_to_str(&status).to_string()),
+                )
+                .expression_attribute_values(
+                    ":max_time",
+                    AttributeValue::N(max_timestamp.to_string()),
+                )
+                .limit((limit - requests.len()) as i32);
+
+            if let Some(key) = last_evaluated_key {
+                for (attr_name, attr_value) in key {
+                    query_builder = query_builder.exclusive_start_key(attr_name, attr_value);
+                }
+            }
+
+            let result = query_builder
+                .send()
+                .await
+                .map_err(|e| map_internal("query", e))?;
+
+            // Process items from this page
+            for item in result.items() {
+                if let Some(AttributeValue::S(payload_str)) = item.get("payload") {
+                    if let Ok(req) = serde_json::from_str::<ScheduledRequest>(payload_str) {
+                        requests.push(req);
+                        if requests.len() >= limit {
+                            return Ok(requests);
+                        }
+                    }
+                }
+            }
+
+            // Check if there are more pages
+            last_evaluated_key = result.last_evaluated_key().cloned();
+            if last_evaluated_key.is_none() {
+                break; // No more pages
+            }
+        }
+
+        Ok(requests)
     }
 
     async fn get_item_by_id(&self, id: u128) -> Result<Option<ScheduledRequest>, StorageError> {
@@ -207,42 +316,27 @@ impl StorageInterface for DynamoDb {
         &self,
         limit: usize,
     ) -> Result<Vec<ScheduledRequest>, StorageError> {
-        // Scan for pending or processing requests whose relay_after is <= now
         let now = Utc::now().timestamp().to_string();
-        let out_res = self
-            .client
-            .scan()
-            .table_name(TABLE_NAME)
-            .filter_expression("#status IN (:pending, :processing) AND relay_after <= :now")
-            .expression_attribute_names("#status", "status")
-            .expression_attribute_values(
-                ":pending",
-                AttributeValue::S(status_to_str(&RequestStatus::Pending).to_string()),
-            )
-            .expression_attribute_values(
-                ":processing",
-                AttributeValue::S(status_to_str(&RequestStatus::Processing).to_string()),
-            )
-            .expression_attribute_values(":now", AttributeValue::N(now))
-            .send()
-            .await;
-        let out = match out_res {
-            Ok(o) => o,
-            Err(e) => return Err(map_internal("scan", e)),
-        };
+        let mut all_requests = Vec::new();
 
-        let mut requests: Vec<ScheduledRequest> = Vec::new();
-        for item in out.items() {
-            if let Some(AttributeValue::S(payload_str)) = item.get("payload") {
-                match serde_json::from_str::<ScheduledRequest>(payload_str.as_str()) {
-                    Ok(req) => requests.push(req),
-                    Err(_e) => { /* skip malformed */ }
-                }
-            }
+        // Query pending requests
+        let pending_requests = self
+            .query_requests_by_status_and_time(RequestStatus::Pending, &now, limit)
+            .await?;
+        all_requests.extend(pending_requests);
+
+        // Query processing requests if we need more
+        if all_requests.len() < limit {
+            let remaining_limit = limit - all_requests.len();
+            let processing_requests = self
+                .query_requests_by_status_and_time(RequestStatus::Processing, &now, remaining_limit)
+                .await?;
+            all_requests.extend(processing_requests);
         }
-        // Sort by relay_after then take limit
-        requests.sort_by(|a, b| a.relay_after.cmp(&b.relay_after));
-        Ok(requests.into_iter().take(limit).collect())
+
+        // Sort by relay_after and take limit
+        all_requests.sort_by(|a, b| a.relay_after.cmp(&b.relay_after));
+        Ok(all_requests.into_iter().take(limit).collect())
     }
 
     async fn update_request_status(

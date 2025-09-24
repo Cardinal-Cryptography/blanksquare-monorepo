@@ -225,7 +225,7 @@ pub async fn get_request_by_last_note_index(
 ) -> Result<Option<GetStatusResponse>, Error> {
     let row = sqlx::query(
         r#"
-        SELECT last_note_index, status, created_at, processed_at
+        SELECT last_note_index, status, created_at, processed_at, relay_after
         FROM scheduled_requests
         WHERE last_note_index = $1
         "#,
@@ -240,6 +240,7 @@ pub async fn get_request_by_last_note_index(
             status: row.get("status"),
             created_at: row.get("created_at"),
             processed_at: row.get("processed_at"),
+            relay_after: row.get("relay_after"),
         }))
     } else {
         Ok(None)

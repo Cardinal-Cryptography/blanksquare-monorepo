@@ -20,6 +20,7 @@ pub struct GetStatusResponse {
     pub status: RequestStatus,
     pub created_at: DateTime<Utc>,
     pub processed_at: Option<DateTime<Utc>>,
+    pub relay_after: DateTime<Utc>,
 }
 
 #[instrument(level = "info", skip_all)]

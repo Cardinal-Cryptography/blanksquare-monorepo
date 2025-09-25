@@ -1,8 +1,8 @@
 use aws_sdk_dynamodb::{
     error::SdkError,
-    operation::{describe_table::DescribeTableError, put_item::PutItemError},
+    operation::describe_table::DescribeTableError,
     types::{
-        AttributeDefinition, AttributeValue, BillingMode, GlobalSecondaryIndex, KeySchemaElement, 
+        AttributeDefinition, AttributeValue, BillingMode, GlobalSecondaryIndex, KeySchemaElement,
         KeyType, Projection, ProjectionType, ScalarAttributeType,
     },
     Client,
@@ -48,13 +48,17 @@ impl DynamoDb {
             .attribute_name("last_note_index")
             .attribute_type(ScalarAttributeType::S)
             .build()
-            .map_err(|e| StorageError::Internal(format!("LastNoteIndex AttrDef build error: {e}")))?;
+            .map_err(|e| {
+                StorageError::Internal(format!("LastNoteIndex AttrDef build error: {e}"))
+            })?;
 
         let primary_key_schema = KeySchemaElement::builder()
             .attribute_name("last_note_index")
             .key_type(KeyType::Hash)
             .build()
-            .map_err(|e| StorageError::Internal(format!("PrimaryKey KeySchema build error: {e}")))?;
+            .map_err(|e| {
+                StorageError::Internal(format!("PrimaryKey KeySchema build error: {e}"))
+            })?;
 
         // GSI attributes
         let status_attr = AttributeDefinition::builder()
@@ -77,19 +81,23 @@ impl DynamoDb {
                     .attribute_name("status")
                     .key_type(KeyType::Hash)
                     .build()
-                    .map_err(|e| StorageError::Internal(format!("GSI Hash KeySchema build error: {e}")))?
+                    .map_err(|e| {
+                        StorageError::Internal(format!("GSI Hash KeySchema build error: {e}"))
+                    })?,
             )
             .key_schema(
                 KeySchemaElement::builder()
                     .attribute_name("relay_after")
                     .key_type(KeyType::Range)
                     .build()
-                    .map_err(|e| StorageError::Internal(format!("GSI Range KeySchema build error: {e}")))?
+                    .map_err(|e| {
+                        StorageError::Internal(format!("GSI Range KeySchema build error: {e}"))
+                    })?,
             )
             .projection(
                 Projection::builder()
                     .projection_type(ProjectionType::All)
-                    .build()
+                    .build(),
             )
             .build()
             .map_err(|e| StorageError::Internal(format!("GSI build error: {e}")))?;
@@ -115,12 +123,18 @@ impl DynamoDb {
         Ok(())
     }
 
-    async fn get_item_by_last_note_index(&self, last_note_index: &str) -> Result<Option<ScheduledRequest>, StorageError> {
+    async fn get_item_by_last_note_index(
+        &self,
+        last_note_index: &str,
+    ) -> Result<Option<ScheduledRequest>, StorageError> {
         let out = self
             .client
             .get_item()
             .table_name(TABLE_NAME)
-            .key("last_note_index", AttributeValue::S(last_note_index.to_string()))
+            .key(
+                "last_note_index",
+                AttributeValue::S(last_note_index.to_string()),
+            )
             .send()
             .await
             .map_err(|e| map_internal("get_item", e))?;
@@ -138,9 +152,11 @@ impl DynamoDb {
         Ok(None)
     }
 
-
-
-    async fn put_request(&self, request: &ScheduledRequest, condition_expression: Option<&str>) -> Result<(), StorageError> {
+    async fn put_request(
+        &self,
+        request: &ScheduledRequest,
+        condition_expression: Option<&str>,
+    ) -> Result<(), StorageError> {
         let payload = serde_json::to_string(&request.encryption_envelope).map_err(|e| {
             StorageError::Internal(format!("Failed to serialize request payload: {e}"))
         })?;
@@ -148,7 +164,10 @@ impl DynamoDb {
         let mut builder = self.client.put_item();
         builder = builder
             .table_name(TABLE_NAME)
-            .item("last_note_index", AttributeValue::S(request.last_note_index.to_string()))
+            .item(
+                "last_note_index",
+                AttributeValue::S(request.last_note_index.to_string()),
+            )
             .item(
                 "status",
                 AttributeValue::S(status_to_str(&request.status).to_string()),
@@ -190,10 +209,15 @@ impl StorageInterface for DynamoDb {
         &self,
         request: ScheduledRequest,
     ) -> Result<(), StorageError> {
-        match self.put_request(&request, Some("attribute_not_exists(last_note_index)")).await {
+        match self
+            .put_request(&request, Some("attribute_not_exists(last_note_index)"))
+            .await
+        {
             Ok(()) => Ok(()),
             Err(StorageError::Internal(msg)) if msg.contains("ConditionalCheckFailedException") => {
-                Err(StorageError::DuplicateEntry(request.last_note_index.to_string()))
+                Err(StorageError::DuplicateEntry(
+                    request.last_note_index.to_string(),
+                ))
             }
             Err(e) => Err(e),
         }
@@ -204,7 +228,7 @@ impl StorageInterface for DynamoDb {
         limit: usize,
     ) -> Result<Vec<ScheduledRequest>, StorageError> {
         let now = Utc::now().timestamp_millis().to_string();
-        
+
         let result = self
             .client
             .query()
@@ -212,7 +236,10 @@ impl StorageInterface for DynamoDb {
             .index_name("StatusRelayAfterIndex")
             .key_condition_expression("#status = :status AND relay_after <= :max_time")
             .expression_attribute_names("#status", "status")
-            .expression_attribute_values(":status", AttributeValue::S("pending".to_string()))
+            .expression_attribute_values(
+                ":status",
+                AttributeValue::S(status_to_str(&RequestStatus::Pending).to_string()),
+            )
             .expression_attribute_values(":max_time", AttributeValue::N(now))
             .limit(limit as i32)
             .send()
@@ -222,11 +249,12 @@ impl StorageInterface for DynamoDb {
         let mut requests = Vec::new();
         for item in result.items() {
             if let Some(AttributeValue::S(payload_attr)) = item.get("payload") {
-                let req: ScheduledRequest = serde_json::from_str(payload_attr.as_str()).map_err(|e| {
-                    StorageError::Internal(format!(
-                        "Failed to deserialize scheduled request payload: {e}"
-                    ))
-                })?;
+                let req: ScheduledRequest =
+                    serde_json::from_str(payload_attr.as_str()).map_err(|e| {
+                        StorageError::Internal(format!(
+                            "Failed to deserialize scheduled request payload: {e}"
+                        ))
+                    })?;
                 requests.push(req);
             }
         }
@@ -264,7 +292,7 @@ impl StorageInterface for DynamoDb {
         existing.relay_after = new_relay_after;
         existing.retry_count = new_retry_count;
         existing.error_message = new_error_message.map(|s| s.to_string());
-        
+
         // Simple put since last_note_index (primary key) doesn't change
         self.put_request(&existing, None).await
     }
@@ -281,7 +309,6 @@ impl StorageInterface for DynamoDb {
 fn status_to_str(status: &RequestStatus) -> &'static str {
     match status {
         RequestStatus::Pending => "pending",
-        RequestStatus::Processing => "processing",
         RequestStatus::Completed => "completed",
         RequestStatus::Failed => "failed",
     }
@@ -290,8 +317,6 @@ fn status_to_str(status: &RequestStatus) -> &'static str {
 fn is_resource_not_found(e: &SdkError<DescribeTableError>) -> bool {
     matches!(e, SdkError::ServiceError(inner) if inner.err().is_resource_not_found_exception())
 }
-
-
 
 fn map_internal<E: std::fmt::Display>(op: &str, e: SdkError<E>) -> StorageError {
     StorageError::Internal(format!(

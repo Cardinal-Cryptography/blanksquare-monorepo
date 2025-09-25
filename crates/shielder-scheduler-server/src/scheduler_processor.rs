@@ -96,15 +96,25 @@ Please check the SHIELDER_ADDRESS environment variable or --shielder-address arg
 
     #[instrument(level = "info", skip_all)]
     async fn process_single_request(&self, request: ScheduledRequest) -> Result<()> {
-        info!("Processing request last_note_index: {}", request.last_note_index);
+        info!(
+            "Processing request last_note_index: {}",
+            request.last_note_index
+        );
         let request_retry_count = request.retry_count;
 
         match self.process_request_logic(&request).await {
             Ok(_) => {
-                info!("Successfully processed request last_note_index: {}", request.last_note_index);
+                info!(
+                    "Successfully processed request last_note_index: {}",
+                    request.last_note_index
+                );
                 self.app_state
                     .storage
-                    .update_request_status(&request.last_note_index.to_string(), RequestStatus::Completed, None)
+                    .update_request_status(
+                        &request.last_note_index.to_string(),
+                        RequestStatus::Completed,
+                        None,
+                    )
                     .await?;
             }
             Err(e) => {

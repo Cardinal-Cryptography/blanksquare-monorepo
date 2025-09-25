@@ -26,8 +26,7 @@ impl StorageInterface for InMemoryStorage {
         let mut pending_requests: Vec<ScheduledRequest> = requests
             .iter()
             .filter(|(_, req)| {
-                (req.status == RequestStatus::Pending || req.status == RequestStatus::Processing)
-                    && req.relay_after <= Utc::now()
+                (req.status == RequestStatus::Pending) && req.relay_after <= Utc::now()
             })
             .map(|(_, req)| req.clone())
             .collect();

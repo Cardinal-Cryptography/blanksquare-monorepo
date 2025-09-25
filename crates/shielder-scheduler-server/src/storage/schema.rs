@@ -44,7 +44,6 @@ impl ScheduledRequest {
 #[serde(rename_all = "lowercase")]
 pub enum RequestStatus {
     Pending,
-    Processing,
     Completed,
     Failed,
 }

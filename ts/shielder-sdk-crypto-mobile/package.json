@@ -1,6 +1,6 @@
 {
   "name": "@cardinal-cryptography/shielder-sdk-crypto-mobile",
-  "version": "0.3.0-rc.1",
+  "version": "0.3.0-rc.2",
   "description": "shielder-sdk cryptography bindings for react native",
   "main": "./lib/commonjs/index.js",
   "module": "./lib/module/index.js",
@@ -168,6 +168,6 @@
   },
   "dependencies": {
     "@cardinal-cryptography/shielder-sdk-crypto": "0.3.0-rc.1",
-    "uniffi-bindgen-react-native": "0.28.3-5"
+    "uniffi-bindgen-react-native": "0.29.3-1"
   }
 }

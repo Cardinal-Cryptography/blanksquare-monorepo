@@ -7,6 +7,7 @@ bindings:
 
 turboModule:
   ts: src/gen
+  entrypoint: src/gen/index.tsx
 
 ios:
   cargoExtras:
@@ -15,6 +16,7 @@ ios:
   frameworkName: build/RustFramework
 
 android:
+  useSharedLibrary: true
   cargoExtras:
     - --features
     - build-uniffi

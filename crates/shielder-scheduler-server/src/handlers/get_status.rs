@@ -20,6 +20,7 @@ pub struct GetStatusResponse {
     pub status: RequestStatus,
     pub created_at: DateTime<Utc>,
     pub processed_at: Option<DateTime<Utc>>,
+    pub relay_after: DateTime<Utc>,
 }
 
 #[instrument(level = "info", skip_all)]
@@ -49,6 +50,7 @@ pub async fn get_status<Storage: StorageInterface>(
                     status: res.status.clone(),
                     created_at: res.created_at,
                     processed_at: res.processed_at,
+                    relay_after: res.relay_after,
                 }),
             )
                 .into_response()

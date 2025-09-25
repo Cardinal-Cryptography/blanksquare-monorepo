@@ -141,7 +141,7 @@ impl DynamoDb {
 
 
     async fn put_request(&self, request: &ScheduledRequest, condition_expression: Option<&str>) -> Result<(), StorageError> {
-        let payload = serde_json::to_string(request).map_err(|e| {
+        let payload = serde_json::to_string(&request.encryption_envelope).map_err(|e| {
             StorageError::Internal(format!("Failed to serialize request payload: {e}"))
         })?;
 

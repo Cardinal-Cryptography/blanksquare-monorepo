@@ -81,21 +81,21 @@ pub async fn schedule_withdraw<Storage: StorageInterface>(
         relay_after,
     );
 
-    let request_id = request.id;
+    let request_last_note_index = request.last_note_index;
 
     match state.storage.insert_scheduled_request(request).await {
         Ok(_) => {
             info!(
-                "Successfully scheduled withdraw request with ID: {}",
-                request_id
+                "Successfully scheduled withdraw request with last_note_index: {}",
+                request_last_note_index
             );
             (
                 axum::http::StatusCode::CREATED,
                 Json(ScheduleWithdrawResponse {
-                    request_id: request_id.to_string(),
+                    request_id: request_last_note_index.to_string(),
                     message: format!(
-                        "Withdraw request scheduled successfully. Request ID: {}",
-                        request_id
+                        "Withdraw request scheduled successfully. Last note index: {}",
+                        request_last_note_index
                     ),
                 }),
             )

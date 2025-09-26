@@ -15,13 +15,13 @@ sequenceDiagram
     App->>App: Parse CLI arguments
     App->>App: Validate configuration
     
-    alt Production Mode (--disable-kms=false)
+    alt Production Mode (no 'local-run' feature)
         App->>IMDS: PUT /latest/api/token (TTL header)
         IMDS-->>App: Metadata token
         App->>IMDS: GET /latest/meta-data/iam/security-credentials/{role}
         IMDS-->>App: AWS credentials (AccessKeyId, SecretAccessKey, Token)
         App->>App: Store credentials in Arc<Mutex<AwsCredentials>>
-    else Local Development Mode (--disable-kms=true)
+    else Local Development Mode ('local-run' feature enabled)
         App->>App: Use dummy AWS credentials
     end
 

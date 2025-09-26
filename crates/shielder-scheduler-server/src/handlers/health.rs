@@ -4,11 +4,13 @@ use axum::{extract::State, Json};
 use shielder_scheduler_common::protocol::{Request, Response};
 use tracing::instrument;
 
-use crate::{error::SchedulerServerError, handlers::tee_request, AppState};
+use crate::{
+    error::SchedulerServerError, handlers::tee_request, storage::StorageInterface, AppState,
+};
 
 #[instrument(level = "info", skip_all)]
-pub async fn health(
-    State(state): State<Arc<AppState>>,
+pub async fn health<Storage: StorageInterface + 'static>(
+    State(state): State<Arc<AppState<Storage>>>,
 ) -> Result<Json<Response>, SchedulerServerError> {
     let tee_task_pool = state.tee_task_pool.clone();
     let relayer_controller = state.relayer_controller.clone();

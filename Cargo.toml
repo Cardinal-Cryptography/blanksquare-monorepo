@@ -2,7 +2,6 @@
 resolver = "2"
 
 members = ["crates/*"]
-exclude = ["tee"]
 
 [workspace.package]
 edition = "2021"
@@ -41,8 +40,8 @@ clap = { version = "4.5.8" }
 criterion = { version = "0.5.1" }
 darling = { version = "0.20.11" }
 ecies-encryption-cli = { git = "https://github.com/Cardinal-Cryptography/ecies-encryption-lib", tag = "v0.2.0" }
-# below dependency is also used in tee/Cargo.toml workspace
 ecies-encryption-lib = { git = "https://github.com/Cardinal-Cryptography/ecies-encryption-lib", tag = "v0.2.0" }
+enum-map = { version = "2.7.3" }
 futures = { version = "0.3.31" }
 getrandom = { version = "0.2" }
 halo2_poseidon = { git = "https://github.com/Cardinal-Cryptography/poseidon-gadget", rev = "ce317a6" }
@@ -133,3 +132,6 @@ shielder-setup = { path = "crates/shielder-setup" }
 type-conversions = { path = "crates/type-conversions" }
 transcript = { path = "crates/transcript" }
 shielder-scheduler-common = { path = "crates/shielder-scheduler-common" }
+shielder-prover-common = { path = "crates/shielder-prover-common" }
+shielder-prover-server = { path = "crates/shielder-prover-server" }
+shielder-prover-tee = { path = "crates/shielder-prover-tee" }

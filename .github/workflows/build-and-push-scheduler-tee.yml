@@ -12,7 +12,7 @@ on:
 jobs:
   main:
     name: Build Shielder Scheduler TEE
-    runs-on: github-large-runner-x64-8-cpu-32-gb-ram-300-gb-disk
+    runs-on: github-large-runner-x64-4-cpu-16-gb-ram-150-gb-disk
     steps:
       - name: Checkout source code
         uses: actions/checkout@v4
@@ -36,10 +36,8 @@ jobs:
 
       - name: Build kmstool enclave CLI
         run: |
-          cd crates/shielder-scheduler-tee
           chmod +x ./scripts/build_kmstool_enclave_cli.sh
           ./scripts/build_kmstool_enclave_cli.sh
-          cd ../..
 
       - name: Build and push docker image
         id: build-image

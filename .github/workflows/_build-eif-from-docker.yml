@@ -8,6 +8,11 @@ on:
         description: 'Public Docker image URL to build EIF from'
         type: string
         required: true
+      component-name:
+        description: 'Component name (e.g., shielder-scheduler-tee, shielder-prover-tee)'
+        type: string
+        required: false
+        default: 'shielder-scheduler-tee'
     outputs:
       artifact-name-eif:
         description: 'Name of artifact: enclave file'
@@ -44,6 +49,7 @@ jobs:
         id: build-eif
         env:
           ECR_IMAGE: ${{ inputs.public-docker-image-url }}
+          COMPONENT_NAME: ${{ inputs.component-name }}
         run: |
           chmod +x .github/scripts/nitro-cli-docker/build-enclave-image.sh
           ./.github/scripts/nitro-cli-docker/build-enclave-image.sh
@@ -51,14 +57,13 @@ jobs:
       - name: Get artifact names
         id: get-artifact-names
         run: |
-          # Use fixed component name since we now have a centralized script
-          COMPONENT_NAME="shielder-scheduler-tee"
+          COMPONENT_NAME="${{ inputs.component-name }}"
           echo "eif=${COMPONENT_NAME}-eif" >> $GITHUB_OUTPUT
           echo "measurements=${COMPONENT_NAME}-measurements" >> $GITHUB_OUTPUT
           echo "component-name=${COMPONENT_NAME}" >> $GITHUB_OUTPUT
 
           # Set outputs for generated files
-          echo "eif-file=shielder-scheduler-tee.eif" >> $GITHUB_OUTPUT
+          echo "eif-file=${COMPONENT_NAME}.eif" >> $GITHUB_OUTPUT
           echo "measurements-file=eif-info.json" >> $GITHUB_OUTPUT
 
       - name: Upload EIF to GH Artifacts

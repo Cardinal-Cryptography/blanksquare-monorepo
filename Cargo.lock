@@ -2555,6 +2555,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "enum-map"
+version = "2.7.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6866f3bfdf8207509a033af1a75a7b08abda06bbaaeae6669323fd5a097df2e9"
+dependencies = [
+ "enum-map-derive",
+]
+
+[[package]]
+name = "enum-map-derive"
+version = "0.17.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f282cfdfe92516eb26c2af8589c274c7c17681f5ecc03c18255fe741c6aa64eb"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.104",
+]
+
+[[package]]
 name = "enumn"
 version = "0.1.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6289,6 +6309,62 @@ dependencies = [
 ]
 
 [[package]]
+name = "shielder-prover-common"
+version = "0.2.0"
+dependencies = [
+ "base64 0.22.1",
+ "ecies-encryption-lib",
+ "futures",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.12",
+ "tokio",
+ "tokio-util",
+ "tokio-vsock",
+]
+
+[[package]]
+name = "shielder-prover-server"
+version = "0.2.0"
+dependencies = [
+ "axum",
+ "clap",
+ "enum-map",
+ "lazy_static",
+ "metrics",
+ "metrics-exporter-prometheus",
+ "serde",
+ "shielder-prover-common",
+ "strum 0.27.2",
+ "thiserror 2.0.12",
+ "tokio",
+ "tokio-task-pool",
+ "tower-http",
+ "tracing",
+ "tracing-subscriber",
+ "vsock",
+]
+
+[[package]]
+name = "shielder-prover-tee"
+version = "0.2.0"
+dependencies = [
+ "aws-nitro-enclaves-nsm-api",
+ "ecies-encryption-lib",
+ "log",
+ "powers-of-tau",
+ "rand 0.8.5",
+ "serde",
+ "serde_json",
+ "shielder-circuits",
+ "shielder-prover-common",
+ "tokio",
+ "tokio-vsock",
+ "tracing-subscriber",
+ "type-conversions",
+]
+
+[[package]]
 name = "shielder-relayer"
 version = "0.1.0"
 dependencies = [
@@ -6657,6 +6733,9 @@ name = "strum"
 version = "0.27.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "af23d6f6c1a224baef9d3f61e287d2761385a5b88fdab4eb4c6f11aeb54c4bcf"
+dependencies = [
+ "strum_macros 0.27.2",
+]
 
 [[package]]
 name = "strum_macros"

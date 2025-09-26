@@ -16,13 +16,6 @@ jobs:
     uses: ./.github/workflows/_check-vars-and-secrets.yml
     secrets: inherit
 
-  build-enclave-artifacts:
-    name: Build enclave artifacts (using nix)
-    needs: [check-vars-and-secrets]
-    uses: ./.github/workflows/_build-enclave-artifacts.yml
-    with:
-      ref: ${{ github.sha }}
-
   build-and-push-fee-estimator:
     name: Build and push fee-estimator
     needs: [check-vars-and-secrets]
@@ -55,6 +48,14 @@ jobs:
     with:
       ref: ${{ github.sha }}
 
+  build-and-push-prover-tee:
+    name: Build and push shielder-prover-tee
+    needs: [check-vars-and-secrets]
+    secrets: inherit
+    uses: ./.github/workflows/build-and-push-prover-server.yml
+    with:
+      ref: ${{ github.sha }}
+
   get-short-sha:
     name: Get short SHA
     runs-on: ubuntu-22.04
@@ -72,17 +73,28 @@ jobs:
     with:
       # yamllint disable-line rule:line-length
       public-docker-image-url: ${{ vars.ECR_CC_RES_PUBLIC_REGISTRY }}shielder-scheduler:tee-${{ needs.get-short-sha.outputs.short-sha }}
+      component-name: shielder-scheduler-tee
+
+  build-prover-tee-eif:
+    name: Build shielder-prover-tee EIF (using dockerized nitro-cli)
+    needs: [build-and-push-prover-tee, get-short-sha]
+    uses: ./.github/workflows/_build-eif-from-docker.yml
+    with:
+      # yamllint disable-line rule:line-length
+      public-docker-image-url: ${{ vars.ECR_CC_RES_PUBLIC_REGISTRY }}shielder-prover:${{ needs.get-short-sha.outputs.short-sha }}
+      component-name: shielder-prover-tee
   all-jobs-completion:
     name: All jobs completion
     runs-on: ubuntu-24.04
     needs:
-      - build-enclave-artifacts
       - build-and-push-fee-estimator
       - build-and-push-prover-server
       - build-and-push-scheduler-server
       - build-and-push-scheduler-tee
+      - build-and-push-prover-tee
       - get-short-sha
       - build-scheduler-tee-eif
+      - build-prover-tee-eif
     if: >
       !cancelled() &&
       github.event_name != 'workflow_dispatch'

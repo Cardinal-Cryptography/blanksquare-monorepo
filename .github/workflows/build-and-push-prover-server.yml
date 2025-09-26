@@ -41,9 +41,9 @@ jobs:
         id: build-image
         uses: docker/build-push-action@v3
         with:
-          context: tee
+          context: crates/shielder-prover-server
           builder: ${{ steps.buildx.outputs.name }}
-          file: ./tee/docker/Dockerfile
+          file: ./crates/shielder-prover-server/docker/Dockerfile
           push: true
           # yamllint disable rule:line-length
           tags: |

@@ -1,50 +1,41 @@
 use aws_sdk_dynamodb::{
     error::SdkError,
     operation::describe_table::DescribeTableError,
-    types::{AttributeDefinition, AttributeValue, KeySchemaElement, KeyType, ScalarAttributeType},
+    types::{
+        AttributeDefinition, AttributeValue, BillingMode, GlobalSecondaryIndex, KeySchemaElement,
+        KeyType, Projection, ProjectionType, ScalarAttributeType,
+    },
     Client,
 };
 use chrono::{DateTime, Utc};
 
 use crate::storage::{RequestStatus, ScheduledRequest, StorageError, StorageInterface};
 
+const TABLE_NAME: &str = "ScheduledRequests";
+
 pub struct DynamoDb {
     client: Client,
-    pending_requests_table_name: String,
-    completed_requests_table_name: String,
 }
 
 impl DynamoDb {
     pub async fn new() -> Result<Self, StorageError> {
         let config = aws_config::load_defaults(aws_config::BehaviorVersion::latest()).await;
         let client = Client::new(&config);
-        // TODO: Replace <chain-id> with actual chain ID from config
-        let pending_requests_table_name = "pending-requests-<chain-id>";
-        let completed_requests_table_name = "completed-requests-<chain-id>";
-        let db = Self {
-            client,
-            pending_requests_table_name: pending_requests_table_name.to_string(),
-            completed_requests_table_name: completed_requests_table_name.to_string(),
-        };
-        db.create_table_if_not_exists(&pending_requests_table_name)
-            .await?;
-        db.create_table_if_not_exists(&completed_requests_table_name)
-            .await?;
+        let db = Self { client };
+        db.create_table_if_not_exists().await?;
         Ok(db)
     }
 
-    async fn create_table_if_not_exists(&self, table_name: &str) -> Result<(), StorageError> {
+    async fn create_table_if_not_exists(&self) -> Result<(), StorageError> {
         // Describe the table. If it exists return Ok
         match self
             .client
             .describe_table()
-            .table_name(table_name)
+            .table_name(TABLE_NAME)
             .send()
             .await
         {
-            // If the table exists, return Ok
             Ok(_) => return Ok(()),
-            // If the error is not ResourceNotFoundException, return the error
             Err(e) => {
                 if !is_resource_not_found(&e) {
                     return Err(map_internal("describe_table", e));
@@ -61,13 +52,7 @@ impl DynamoDb {
                 StorageError::Internal(format!("LastNoteIndex AttrDef build error: {e}"))
             })?;
 
-        let relay_after_attr = AttributeDefinition::builder()
-            .attribute_name("relay_after")
-            .attribute_type(ScalarAttributeType::N)
-            .build()
-            .map_err(|e| StorageError::Internal(format!("RelayAfter AttrDef build error: {e}")))?;
-
-        let partition_key_schema = KeySchemaElement::builder()
+        let primary_key_schema = KeySchemaElement::builder()
             .attribute_name("last_note_index")
             .key_type(KeyType::Hash)
             .build()
@@ -75,22 +60,58 @@ impl DynamoDb {
                 StorageError::Internal(format!("PrimaryKey KeySchema build error: {e}"))
             })?;
 
-        let relay_after_schema = KeySchemaElement::builder()
-            .attribute_name("relay_after")
-            .key_type(KeyType::Range)
+        // GSI attributes
+        let status_attr = AttributeDefinition::builder()
+            .attribute_name("status")
+            .attribute_type(ScalarAttributeType::S)
             .build()
-            .map_err(|e| {
-                StorageError::Internal(format!("RelayAfter KeySchema build error: {e}"))
-            })?;
+            .map_err(|e| StorageError::Internal(format!("Status AttrDef build error: {e}")))?;
+
+        let relay_after_attr = AttributeDefinition::builder()
+            .attribute_name("relay_after")
+            .attribute_type(ScalarAttributeType::N)
+            .build()
+            .map_err(|e| StorageError::Internal(format!("RelayAfter AttrDef build error: {e}")))?;
+
+        // GSI definition
+        let gsi = GlobalSecondaryIndex::builder()
+            .index_name("StatusRelayAfterIndex")
+            .key_schema(
+                KeySchemaElement::builder()
+                    .attribute_name("status")
+                    .key_type(KeyType::Hash)
+                    .build()
+                    .map_err(|e| {
+                        StorageError::Internal(format!("GSI Hash KeySchema build error: {e}"))
+                    })?,
+            )
+            .key_schema(
+                KeySchemaElement::builder()
+                    .attribute_name("relay_after")
+                    .key_type(KeyType::Range)
+                    .build()
+                    .map_err(|e| {
+                        StorageError::Internal(format!("GSI Range KeySchema build error: {e}"))
+                    })?,
+            )
+            .projection(
+                Projection::builder()
+                    .projection_type(ProjectionType::All)
+                    .build(),
+            )
+            .build()
+            .map_err(|e| StorageError::Internal(format!("GSI build error: {e}")))?;
 
         if let Err(e) = self
             .client
             .create_table()
-            .table_name(table_name)
+            .table_name(TABLE_NAME)
             .attribute_definitions(last_note_index_attr)
+            .attribute_definitions(status_attr)
             .attribute_definitions(relay_after_attr)
-            .key_schema(partition_key_schema)
-            .key_schema(relay_after_schema)
+            .key_schema(primary_key_schema)
+            .global_secondary_indexes(gsi)
+            .billing_mode(BillingMode::PayPerRequest)
             .send()
             .await
         {
@@ -102,15 +123,14 @@ impl DynamoDb {
         Ok(())
     }
 
-    async fn get_item(
+    async fn get_item_by_last_note_index(
         &self,
-        table_name: &str,
         last_note_index: &str,
     ) -> Result<Option<ScheduledRequest>, StorageError> {
         let out = self
             .client
             .get_item()
-            .table_name(table_name)
+            .table_name(TABLE_NAME)
             .key(
                 "last_note_index",
                 AttributeValue::S(last_note_index.to_string()),
@@ -120,9 +140,11 @@ impl DynamoDb {
             .map_err(|e| map_internal("get_item", e))?;
 
         if let Some(item) = out.item() {
-            if let Some(AttributeValue::S(request_attr)) = item.get("request") {
-                let req: ScheduledRequest = serde_json::from_str(request_attr).map_err(|e| {
-                    StorageError::Internal(format!("Failed to deserialize scheduled request: {e}"))
+            if let Some(AttributeValue::S(payload_attr)) = item.get("payload") {
+                let req: ScheduledRequest = serde_json::from_str(payload_attr).map_err(|e| {
+                    StorageError::Internal(format!(
+                        "Failed to deserialize scheduled request payload: {e}"
+                    ))
                 })?;
                 return Ok(Some(req));
             }
@@ -130,49 +152,49 @@ impl DynamoDb {
         Ok(None)
     }
 
-    async fn delete_item(
-        &self,
-        table_name: &str,
-        last_note_index: &str,
-    ) -> Result<(), StorageError> {
-        self.client
-            .delete_item()
-            .table_name(table_name)
-            .key(
-                "last_note_index",
-                AttributeValue::S(last_note_index.to_string()),
-            )
-            .send()
-            .await
-            .map_err(|e| map_internal("delete_item", e))?;
-        Ok(())
-    }
-
     async fn put_request(
         &self,
-        table_name: &str,
         request: &ScheduledRequest,
         condition_expression: Option<&str>,
     ) -> Result<(), StorageError> {
-        let request_string = serde_json::to_string(&request).map_err(|e| {
-            StorageError::Internal(format!("Failed to serialize request request: {e}"))
+        let payload = serde_json::to_string(&request.encryption_envelope).map_err(|e| {
+            StorageError::Internal(format!("Failed to serialize request payload: {e}"))
         })?;
 
         let mut builder = self.client.put_item();
-        if let Some(condition) = condition_expression {
-            builder = builder.condition_expression(condition);
-        }
         builder = builder
-            .table_name(table_name)
+            .table_name(TABLE_NAME)
             .item(
                 "last_note_index",
                 AttributeValue::S(request.last_note_index.to_string()),
             )
             .item(
+                "status",
+                AttributeValue::S(status_to_str(&request.status).to_string()),
+            )
+            .item(
                 "relay_after",
                 AttributeValue::N(request.relay_after.timestamp_millis().to_string()),
             )
-            .item("request", AttributeValue::S(request_string));
+            .item(
+                "created_at",
+                AttributeValue::N(request.created_at.timestamp().to_string()),
+            )
+            .item("payload", AttributeValue::S(payload));
+
+        if let Some(condition) = condition_expression {
+            builder = builder.condition_expression(condition);
+        }
+
+        if let Some(error_msg) = &request.error_message {
+            builder = builder.item("error_message", AttributeValue::S(error_msg.clone()));
+        }
+        if let Some(processed_at) = request.processed_at {
+            builder = builder.item(
+                "processed_at",
+                AttributeValue::N(processed_at.timestamp().to_string()),
+            );
+        }
 
         builder
             .send()
@@ -188,11 +210,7 @@ impl StorageInterface for DynamoDb {
         request: ScheduledRequest,
     ) -> Result<(), StorageError> {
         match self
-            .put_request(
-                &self.pending_requests_table_name,
-                &request,
-                Some("attribute_not_exists(last_note_index)"),
-            )
+            .put_request(&request, Some("attribute_not_exists(last_note_index)"))
             .await
         {
             Ok(()) => Ok(()),
@@ -214,9 +232,14 @@ impl StorageInterface for DynamoDb {
         let result = self
             .client
             .query()
-            .table_name(&self.pending_requests_table_name)
+            .table_name(TABLE_NAME)
             .index_name("StatusRelayAfterIndex")
-            .key_condition_expression("relay_after <= :max_time")
+            .key_condition_expression("#status = :status AND relay_after <= :max_time")
+            .expression_attribute_names("#status", "status")
+            .expression_attribute_values(
+                ":status",
+                AttributeValue::S(status_to_str(&RequestStatus::Pending).to_string()),
+            )
             .expression_attribute_values(":max_time", AttributeValue::N(now))
             .limit(limit as i32)
             .send()
@@ -225,11 +248,11 @@ impl StorageInterface for DynamoDb {
 
         let mut requests = Vec::new();
         for item in result.items() {
-            if let Some(AttributeValue::S(request_attr)) = item.get("request") {
+            if let Some(AttributeValue::S(payload_attr)) = item.get("payload") {
                 let req: ScheduledRequest =
-                    serde_json::from_str(request_attr.as_str()).map_err(|e| {
+                    serde_json::from_str(payload_attr.as_str()).map_err(|e| {
                         StorageError::Internal(format!(
-                            "Failed to deserialize scheduled request: {e}"
+                            "Failed to deserialize scheduled request payload: {e}"
                         ))
                     })?;
                 requests.push(req);
@@ -245,27 +268,15 @@ impl StorageInterface for DynamoDb {
         status: RequestStatus,
         error_message: Option<&str>,
     ) -> Result<(), StorageError> {
-        let (from_table_name, to_table_name) = match status {
-            RequestStatus::Completed | RequestStatus::Failed => (
-                &self.pending_requests_table_name,
-                &self.completed_requests_table_name,
-            ),
-            RequestStatus::Pending => (
-                &self.completed_requests_table_name,
-                &self.pending_requests_table_name,
-            ),
-        };
-
-        let Some(mut existing) = self.get_item(from_table_name, last_note_index).await? else {
+        let Some(mut existing) = self.get_item_by_last_note_index(last_note_index).await? else {
             return Err(StorageError::NotFound(last_note_index.to_string()));
         };
-
         existing.status = status;
         existing.error_message = error_message.map(|s| s.to_string());
         existing.processed_at = Some(Utc::now());
 
-        self.put_request(to_table_name, &existing, None).await?;
-        self.delete_item(from_table_name, last_note_index).await
+        // Simple put since last_note_index (primary key) doesn't change
+        self.put_request(&existing, None).await
     }
 
     async fn update_retry_attempt(
@@ -275,34 +286,31 @@ impl StorageInterface for DynamoDb {
         new_retry_count: i32,
         new_error_message: Option<&str>,
     ) -> Result<(), StorageError> {
-        let Some(mut existing) = self
-            .get_item(&self.pending_requests_table_name, last_note_index)
-            .await?
-        else {
+        let Some(mut existing) = self.get_item_by_last_note_index(last_note_index).await? else {
             return Err(StorageError::NotFound(last_note_index.to_string()));
         };
         existing.relay_after = new_relay_after;
         existing.retry_count = new_retry_count;
         existing.error_message = new_error_message.map(|s| s.to_string());
 
-        self.put_request(&self.pending_requests_table_name, &existing, None)
-            .await
+        // Simple put since last_note_index (primary key) doesn't change
+        self.put_request(&existing, None).await
     }
 
     async fn get_request_by_last_note_index(
         &self,
         last_note_index: &str,
     ) -> Result<Option<ScheduledRequest>, StorageError> {
-        match self
-            .get_item(&self.pending_requests_table_name, last_note_index)
-            .await?
-        {
-            Some(req) => Ok(Some(req)),
-            None => {
-                self.get_item(&self.completed_requests_table_name, last_note_index)
-                    .await
-            }
-        }
+        // Direct lookup by primary key
+        self.get_item_by_last_note_index(last_note_index).await
+    }
+}
+
+fn status_to_str(status: &RequestStatus) -> &'static str {
+    match status {
+        RequestStatus::Pending => "pending",
+        RequestStatus::Completed => "completed",
+        RequestStatus::Failed => "failed",
     }
 }
 

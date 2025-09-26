@@ -140,11 +140,9 @@ impl DynamoDb {
             .map_err(|e| map_internal("get_item", e))?;
 
         if let Some(item) = out.item() {
-            if let Some(AttributeValue::S(payload_attr)) = item.get("payload") {
-                let req: ScheduledRequest = serde_json::from_str(payload_attr).map_err(|e| {
-                    StorageError::Internal(format!(
-                        "Failed to deserialize scheduled request payload: {e}"
-                    ))
+            if let Some(AttributeValue::S(request_attr)) = item.get("request") {
+                let req: ScheduledRequest = serde_json::from_str(request_attr).map_err(|e| {
+                    StorageError::Internal(format!("Failed to deserialize scheduled request: {e}"))
                 })?;
                 return Ok(Some(req));
             }
@@ -157,9 +155,8 @@ impl DynamoDb {
         request: &ScheduledRequest,
         condition_expression: Option<&str>,
     ) -> Result<(), StorageError> {
-        let payload = serde_json::to_string(&request.encryption_envelope).map_err(|e| {
-            StorageError::Internal(format!("Failed to serialize request payload: {e}"))
-        })?;
+        let request_serialized = serde_json::to_string(&request)
+            .map_err(|e| StorageError::Internal(format!("Failed to serialize request: {e}")))?;
 
         let mut builder = self.client.put_item();
         builder = builder
@@ -180,7 +177,7 @@ impl DynamoDb {
                 "created_at",
                 AttributeValue::N(request.created_at.timestamp().to_string()),
             )
-            .item("payload", AttributeValue::S(payload));
+            .item("request", AttributeValue::S(request_serialized));
 
         if let Some(condition) = condition_expression {
             builder = builder.condition_expression(condition);
@@ -248,11 +245,11 @@ impl StorageInterface for DynamoDb {
 
         let mut requests = Vec::new();
         for item in result.items() {
-            if let Some(AttributeValue::S(payload_attr)) = item.get("payload") {
+            if let Some(AttributeValue::S(request_attr)) = item.get("request") {
                 let req: ScheduledRequest =
-                    serde_json::from_str(payload_attr.as_str()).map_err(|e| {
+                    serde_json::from_str(request_attr.as_str()).map_err(|e| {
                         StorageError::Internal(format!(
-                            "Failed to deserialize scheduled request payload: {e}"
+                            "Failed to deserialize scheduled request: {e}"
                         ))
                     })?;
                 requests.push(req);

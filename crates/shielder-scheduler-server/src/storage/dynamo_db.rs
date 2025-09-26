@@ -8,20 +8,22 @@ use aws_sdk_dynamodb::{
     Client,
 };
 use chrono::{DateTime, Utc};
+use serde::Deserialize;
 
 use crate::storage::{RequestStatus, ScheduledRequest, StorageError, StorageInterface};
 
-const TABLE_NAME: &str = "ScheduledRequests";
-
 pub struct DynamoDb {
     client: Client,
+    table_name: String,
 }
 
 impl DynamoDb {
-    pub async fn new() -> Result<Self, StorageError> {
+    pub async fn new(rpc_url: &str) -> Result<Self, StorageError> {
         let config = aws_config::load_defaults(aws_config::BehaviorVersion::latest()).await;
         let client = Client::new(&config);
-        let db = Self { client };
+        let chain_id = get_chain_id(rpc_url).await?;
+        let table_name = format!("scheduled-requests-{}", chain_id);
+        let db = Self { client, table_name };
         db.create_table_if_not_exists().await?;
         Ok(db)
     }
@@ -31,7 +33,7 @@ impl DynamoDb {
         match self
             .client
             .describe_table()
-            .table_name(TABLE_NAME)
+            .table_name(&self.table_name)
             .send()
             .await
         {
@@ -105,7 +107,7 @@ impl DynamoDb {
         if let Err(e) = self
             .client
             .create_table()
-            .table_name(TABLE_NAME)
+            .table_name(&self.table_name)
             .attribute_definitions(last_note_index_attr)
             .attribute_definitions(status_attr)
             .attribute_definitions(relay_after_attr)
@@ -130,7 +132,7 @@ impl DynamoDb {
         let out = self
             .client
             .get_item()
-            .table_name(TABLE_NAME)
+            .table_name(&self.table_name)
             .key(
                 "last_note_index",
                 AttributeValue::S(last_note_index.to_string()),
@@ -160,7 +162,7 @@ impl DynamoDb {
 
         let mut builder = self.client.put_item();
         builder = builder
-            .table_name(TABLE_NAME)
+            .table_name(&self.table_name)
             .item(
                 "last_note_index",
                 AttributeValue::S(request.last_note_index.to_string()),
@@ -229,7 +231,7 @@ impl StorageInterface for DynamoDb {
         let result = self
             .client
             .query()
-            .table_name(TABLE_NAME)
+            .table_name(&self.table_name)
             .index_name("StatusRelayAfterIndex")
             .key_condition_expression("#status = :status AND relay_after <= :max_time")
             .expression_attribute_names("#status", "status")
@@ -323,4 +325,38 @@ fn map_internal<E: std::fmt::Display>(op: &str, e: SdkError<E>) -> StorageError 
             .map(|se| se.to_string())
             .unwrap_or_else(|| e.to_string())
     ))
+}
+
+#[derive(Deserialize, Debug)]
+struct ChainIdResponse {
+    result: String, // This will be a hex string like "0x1"
+}
+
+async fn get_chain_id(rpc_url: &str) -> Result<u64, StorageError> {
+    let client = reqwest::Client::new();
+
+    let request_body = serde_json::json!({
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "eth_chainId",
+        "params": []
+    });
+
+    let response: ChainIdResponse = client
+        .post(rpc_url)
+        .json(&request_body)
+        .send()
+        .await
+        .map_err(|e| StorageError::Internal(format!("Failed to send RPC request: {e}")))?
+        .json()
+        .await
+        .map_err(|e| StorageError::Internal(format!("Failed to parse RPC response: {e}")))?;
+
+    // Parse hex string (e.g., "0x1") to u64
+    let chain_id = u64::from_str_radix(response.result.trim_start_matches("0x"), 16)
+        .expect("Failed to parse chain ID");
+
+    println!("Chain ID: {}", chain_id);
+
+    Ok(chain_id)
 }

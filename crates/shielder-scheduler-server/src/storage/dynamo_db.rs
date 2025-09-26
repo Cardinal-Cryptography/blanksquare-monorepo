@@ -18,9 +18,9 @@ impl DynamoDb {
     pub async fn new() -> Result<Self, StorageError> {
         let config = aws_config::load_defaults(aws_config::BehaviorVersion::latest()).await;
         let client = Client::new(&config);
-        // TODO: Replace chain_id with actual chain ID from config
-        let pending_requests_table_name = "pending-requests-chain_id";
-        let completed_requests_table_name = "completed-requests-chain_id";
+        // TODO: Replace <chain-id> with actual chain ID from config
+        let pending_requests_table_name = "pending-requests-<chain-id>";
+        let completed_requests_table_name = "completed-requests-<chain-id>";
         let db = Self {
             client,
             pending_requests_table_name: pending_requests_table_name.to_string(),

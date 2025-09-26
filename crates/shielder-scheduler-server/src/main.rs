@@ -71,7 +71,7 @@ async fn main() -> Result<(), Error> {
         .install()?;
 
     #[cfg(not(feature = "local-run"))]
-    let storage = storage::dynamo_db::DynamoDb::new().await?;
+    let storage = storage::dynamo_db::DynamoDb::new(&options.node_rpc_url).await?;
     #[cfg(feature = "local-run")]
     let storage = storage::in_memory::InMemoryStorage::new();
 

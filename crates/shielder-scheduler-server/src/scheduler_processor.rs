@@ -96,21 +96,31 @@ Please check the SHIELDER_ADDRESS environment variable or --shielder-address arg
 
     #[instrument(level = "info", skip_all)]
     async fn process_single_request(&self, request: ScheduledRequest) -> Result<()> {
-        info!("Processing request ID: {}", request.id);
+        info!(
+            "Processing request last_note_index: {}",
+            request.last_note_index
+        );
         let request_retry_count = request.retry_count;
 
         match self.process_request_logic(&request).await {
             Ok(_) => {
-                info!("Successfully processed request ID: {}", request.id);
+                info!(
+                    "Successfully processed request last_note_index: {}",
+                    request.last_note_index
+                );
                 self.app_state
                     .storage
-                    .update_request_status(request.id, RequestStatus::Completed, None)
+                    .update_request_status(
+                        &request.last_note_index.to_string(),
+                        RequestStatus::Completed,
+                        None,
+                    )
                     .await?;
             }
             Err(e) => {
                 warn!(
-                    "Request processing failed for ID: {}, error: {:?}",
-                    request.id, e
+                    "Request processing failed for last_note_index: {}, error: {:?}",
+                    request.last_note_index, e
                 );
 
                 if request_retry_count < self.app_state.options.scheduler_max_retry_count as i32 {
@@ -122,7 +132,7 @@ Please check the SHIELDER_ADDRESS environment variable or --shielder-address arg
                     self.app_state
                         .storage
                         .update_retry_attempt(
-                            request.id,
+                            &request.last_note_index.to_string(),
                             new_relay_after,
                             new_retry_count,
                             Some(&e.to_string()),
@@ -130,13 +140,13 @@ Please check the SHIELDER_ADDRESS environment variable or --shielder-address arg
                         .await?;
                 } else {
                     warn!(
-                        "Request ID {} has reached maximum retry count, marking as Failed",
-                        request.id
+                        "Request last_note_index {} has reached maximum retry count, marking as Failed",
+                        request.last_note_index
                     );
                     self.app_state
                         .storage
                         .update_request_status(
-                            request.id,
+                            &request.last_note_index.to_string(),
                             RequestStatus::Failed,
                             Some(&e.to_string()),
                         )
@@ -161,8 +171,8 @@ Please check the SHIELDER_ADDRESS environment variable or --shielder-address arg
         match tee_response {
             Response::PrepareRelayCalldata { calldata } => {
                 info!(
-                    "Successfully prepared relay calldata for request ID: {}",
-                    request.id,
+                    "Successfully prepared relay calldata for request last_note_index: {}",
+                    request.last_note_index,
                 );
                 let relay_query = RelayQuery {
                     calldata,

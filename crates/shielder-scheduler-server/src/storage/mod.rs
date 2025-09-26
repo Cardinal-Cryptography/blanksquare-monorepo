@@ -9,8 +9,8 @@ pub mod in_memory;
 pub enum StorageError {
     #[error("Not found: {0}")]
     NotFound(String),
-    #[error("Duplicate entry. ID: {0}")]
-    DuplicateEntry(u128),
+    #[error("Duplicate entry. Last note index: {0}")]
+    DuplicateEntry(String),
     #[error("Internal error: {0}")]
     Internal(String),
 }
@@ -35,7 +35,7 @@ pub trait StorageInterface: Send + Sync {
     /// Optionally, an error message can be provided.
     async fn update_request_status(
         &self,
-        id: u128,
+        last_note_index: &str,
         status: RequestStatus,
         error_message: Option<&str>,
     ) -> Result<(), StorageError>;
@@ -45,7 +45,7 @@ pub trait StorageInterface: Send + Sync {
     /// If the request does not exist, returns a `NotFound` error.
     async fn update_retry_attempt(
         &self,
-        id: u128,
+        last_note_index: &str,
         new_relay_after: DateTime<Utc>,
         new_retry_count: i32,
         new_error_message: Option<&str>,

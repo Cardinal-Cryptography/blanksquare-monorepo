@@ -33,7 +33,6 @@ tokio-task-pool = { workspace = true, features = ["log"] }
 tower-http = { workspace = true, features = ["cors"] }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
-uuid = { workspace = true, features = ["v4"] }
 vsock = { workspace = true }
 
 [features]

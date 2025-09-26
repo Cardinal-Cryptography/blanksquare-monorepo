@@ -122,26 +122,6 @@ The service runs a background scheduler processor that:
 
 The scheduler processor can handle multiple requests in batches (configurable via `SCHEDULER_BATCH_SIZE`) and provides error handling with automatic retries.
 
-## Database Schema
-
-The service uses PostgreSQL with the following main table:
-
-```sql
-CREATE TABLE scheduled_requests (
-    id BIGSERIAL PRIMARY KEY,
-    payload BYTEA NOT NULL,
-    last_note_index TEXT NOT NULL,
-    pocket_money TEXT NOT NULL,
-    token_address TEXT NOT NULL,
-    relay_after TIMESTAMPTZ NOT NULL,
-    status request_status NOT NULL DEFAULT 'pending',
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    processed_at TIMESTAMPTZ,
-    retry_count INTEGER NOT NULL DEFAULT 0,
-    error_message TEXT
-);
-```
-
 ## Configuration
 
 The service can be configured using environment variables or command-line arguments:
@@ -298,34 +278,6 @@ Local development mode (in-memory storage, no AWS integration):
 
 ```bash
 cargo run --features local-run -- --kms-public-key <base64-key> --node-rpc-url <rpc-url> --shielder-address <contract-addr> --relayer-url <relayer-url>
-```
-
-### API Testing
-
-Schedule a withdrawal request:
-
-```bash
-curl -X POST http://localhost:3000/schedule_withdraw \
-  -H "Content-Type: application/json" \
-  -d '{
-    "payload": "SGVsbG8gV29ybGQ=",
-    "last_note_index": "12345",
-    "pocket_money": "500000000000000000",
-    "token_address": "0x1234567890123456789012345678901234567890",
-    "relay_after": 1693564800
-  }'
-```
-
-Check service health:
-
-```bash
-curl http://localhost:3000/health
-```
-
-Get TEE public key:
-
-```bash
-curl http://localhost:3000/public_key
 ```
 
 ### Generating Test RSA Keys

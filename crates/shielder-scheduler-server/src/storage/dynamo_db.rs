@@ -11,6 +11,7 @@ use aws_sdk_dynamodb::{
 };
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
+use tracing::info;
 
 use crate::storage::{RequestStatus, ScheduledRequest, StorageError, StorageInterface};
 
@@ -128,7 +129,16 @@ impl DynamoDb {
         }
 
         // Wait for table + GSIs to become ACTIVE
-        for _ in 0..CHECK_ACTIVE_MAX_ATTEMPTS {
+        info!(
+            "Waiting for DynamoDB table {} to become ACTIVE",
+            self.table_name
+        );
+        for attempt in 0..CHECK_ACTIVE_MAX_ATTEMPTS {
+            info!(
+                "Check attempt {}/{}",
+                attempt + 1,
+                CHECK_ACTIVE_MAX_ATTEMPTS
+            );
             let desc = self
                 .client
                 .describe_table()
@@ -145,6 +155,7 @@ impl DynamoDb {
                     .all(|g| matches!(g.index_status(), Some(IndexStatus::Active)));
 
                 if table_ready && gsis_ready {
+                    info!("DynamoDB table and GSIs are ACTIVE");
                     return Ok(());
                 }
             }
@@ -386,11 +397,8 @@ async fn get_chain_id(rpc_url: &str) -> Result<u64, StorageError> {
         .await
         .map_err(|e| StorageError::Internal(format!("Failed to parse RPC response: {e}")))?;
 
-    // Parse hex string (e.g., "0x1") to u64
     let chain_id = u64::from_str_radix(response.result.trim_start_matches("0x"), 16)
         .map_err(|e| StorageError::Internal(format!("Failed to parse chain ID: {e}")))?;
-
-    println!("Chain ID: {}", chain_id);
 
     Ok(chain_id)
 }

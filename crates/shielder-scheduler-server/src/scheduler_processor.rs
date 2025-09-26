@@ -113,6 +113,7 @@ Please check the SHIELDER_ADDRESS environment variable or --shielder-address arg
                     .update_request_status(
                         &request.last_note_index.to_string(),
                         RequestStatus::Completed,
+                        Some(Utc::now()),
                         None,
                     )
                     .await?;
@@ -135,6 +136,7 @@ Please check the SHIELDER_ADDRESS environment variable or --shielder-address arg
                             &request.last_note_index.to_string(),
                             new_relay_after,
                             new_retry_count,
+                            Some(Utc::now()),
                             Some(&e.to_string()),
                         )
                         .await?;
@@ -148,6 +150,7 @@ Please check the SHIELDER_ADDRESS environment variable or --shielder-address arg
                         .update_request_status(
                             &request.last_note_index.to_string(),
                             RequestStatus::Failed,
+                            Some(Utc::now()),
                             Some(&e.to_string()),
                         )
                         .await?;

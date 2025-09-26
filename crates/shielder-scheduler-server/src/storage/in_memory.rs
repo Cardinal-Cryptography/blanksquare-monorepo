@@ -51,11 +51,13 @@ impl StorageInterface for InMemoryStorage {
         &self,
         last_note_index: &str,
         status: RequestStatus,
+        processed_at: Option<DateTime<Utc>>,
         error_message: Option<&str>,
     ) -> Result<(), StorageError> {
         let mut requests = self.requests.lock().unwrap();
         if let Some(request) = requests.get_mut(last_note_index) {
             request.status = status;
+            request.processed_at = processed_at;
             request.error_message = error_message.map(|s| s.to_string());
             Ok(())
         } else {
@@ -68,12 +70,14 @@ impl StorageInterface for InMemoryStorage {
         last_note_index: &str,
         new_relay_after: DateTime<Utc>,
         new_retry_count: i32,
+        processed_at: Option<DateTime<Utc>>,
         new_error_message: Option<&str>,
     ) -> Result<(), StorageError> {
         let mut requests = self.requests.lock().unwrap();
         if let Some(request) = requests.get_mut(last_note_index) {
             request.relay_after = new_relay_after;
             request.retry_count = new_retry_count;
+            request.processed_at = processed_at;
             request.error_message = new_error_message.map(|s| s.to_string());
             Ok(())
         } else {

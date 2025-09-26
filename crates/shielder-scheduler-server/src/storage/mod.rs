@@ -37,6 +37,7 @@ pub trait StorageInterface: Send + Sync {
         &self,
         last_note_index: &str,
         status: RequestStatus,
+        processed_at: Option<DateTime<Utc>>,
         error_message: Option<&str>,
     ) -> Result<(), StorageError>;
 
@@ -48,6 +49,7 @@ pub trait StorageInterface: Send + Sync {
         last_note_index: &str,
         new_relay_after: DateTime<Utc>,
         new_retry_count: i32,
+        processed_at: Option<DateTime<Utc>>,
         new_error_message: Option<&str>,
     ) -> Result<(), StorageError>;
 

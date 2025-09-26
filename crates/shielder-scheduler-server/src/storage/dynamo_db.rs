@@ -1,9 +1,11 @@
+use std::time::Duration;
+
 use aws_sdk_dynamodb::{
     error::SdkError,
     operation::describe_table::DescribeTableError,
     types::{
-        AttributeDefinition, AttributeValue, BillingMode, GlobalSecondaryIndex, KeySchemaElement,
-        KeyType, Projection, ProjectionType, ScalarAttributeType,
+        AttributeDefinition, AttributeValue, BillingMode, GlobalSecondaryIndex, IndexStatus,
+        KeySchemaElement, KeyType, Projection, ProjectionType, ScalarAttributeType, TableStatus,
     },
     Client,
 };
@@ -11,6 +13,9 @@ use chrono::{DateTime, Utc};
 use serde::Deserialize;
 
 use crate::storage::{RequestStatus, ScheduledRequest, StorageError, StorageInterface};
+
+const CHECK_ACTIVE_MAX_ATTEMPTS: usize = 10;
+const CHECK_ACTIVE_ATTEMPT_SLEEP_DURATION: Duration = Duration::from_secs(6);
 
 pub struct DynamoDb {
     client: Client,
@@ -122,7 +127,33 @@ impl DynamoDb {
             )));
         }
 
-        Ok(())
+        // Wait for table + GSIs to become ACTIVE
+        for _ in 0..CHECK_ACTIVE_MAX_ATTEMPTS {
+            let desc = self
+                .client
+                .describe_table()
+                .table_name(&self.table_name)
+                .send()
+                .await
+                .map_err(|e| map_internal("describe_table(wait)", e))?;
+
+            if let Some(table) = desc.table() {
+                let table_ready = matches!(table.table_status(), Some(TableStatus::Active));
+                let gsis_ready = table
+                    .global_secondary_indexes()
+                    .iter()
+                    .all(|g| matches!(g.index_status(), Some(IndexStatus::Active)));
+
+                if table_ready && gsis_ready {
+                    return Ok(());
+                }
+            }
+            tokio::time::sleep(CHECK_ACTIVE_ATTEMPT_SLEEP_DURATION).await;
+        }
+
+        Err(StorageError::Internal(
+            "Timed out waiting for DynamoDB table / GSIs to become ACTIVE".into(),
+        ))
     }
 
     async fn get_item_by_last_note_index(
@@ -265,6 +296,7 @@ impl StorageInterface for DynamoDb {
         &self,
         last_note_index: &str,
         status: RequestStatus,
+        processed_at: Option<DateTime<Utc>>,
         error_message: Option<&str>,
     ) -> Result<(), StorageError> {
         let Some(mut existing) = self.get_item_by_last_note_index(last_note_index).await? else {
@@ -272,7 +304,7 @@ impl StorageInterface for DynamoDb {
         };
         existing.status = status;
         existing.error_message = error_message.map(|s| s.to_string());
-        existing.processed_at = Some(Utc::now());
+        existing.processed_at = processed_at;
 
         // Simple put since last_note_index (primary key) doesn't change
         self.put_request(&existing, None).await
@@ -283,6 +315,7 @@ impl StorageInterface for DynamoDb {
         last_note_index: &str,
         new_relay_after: DateTime<Utc>,
         new_retry_count: i32,
+        processed_at: Option<DateTime<Utc>>,
         new_error_message: Option<&str>,
     ) -> Result<(), StorageError> {
         let Some(mut existing) = self.get_item_by_last_note_index(last_note_index).await? else {
@@ -291,6 +324,7 @@ impl StorageInterface for DynamoDb {
         existing.relay_after = new_relay_after;
         existing.retry_count = new_retry_count;
         existing.error_message = new_error_message.map(|s| s.to_string());
+        existing.processed_at = processed_at;
 
         // Simple put since last_note_index (primary key) doesn't change
         self.put_request(&existing, None).await
@@ -354,7 +388,7 @@ async fn get_chain_id(rpc_url: &str) -> Result<u64, StorageError> {
 
     // Parse hex string (e.g., "0x1") to u64
     let chain_id = u64::from_str_radix(response.result.trim_start_matches("0x"), 16)
-        .expect("Failed to parse chain ID");
+        .map_err(|e| StorageError::Internal(format!("Failed to parse chain ID: {e}")))?;
 
     println!("Chain ID: {}", chain_id);
 

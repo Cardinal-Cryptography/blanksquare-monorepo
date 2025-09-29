@@ -33,9 +33,7 @@ jobs:
 
       - name: DOCKER | Docker Buildx
         id: buildx
-        uses: docker/setup-buildx-action@v2
-        with:
-          version: v0.9.1
+        uses: docker/setup-buildx-action@v3
 
       - name: DOCKER | Build and push latest docker image
         id: build-image

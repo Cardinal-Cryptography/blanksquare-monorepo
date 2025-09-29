@@ -52,7 +52,7 @@ impl From<&[&'static str]> for TrackedSpans {
 /// # use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 ///     // Option 2: Track only specific spans
 ///     tracing_subscriber::registry()
-///        .with(FutureHistogramLayer::with_specific_spans([
+///        .with(FutureHistogramLayer::with_specific_spans(&[
 ///            "specific_span_name_1",
 ///            "specific_span_name_2",
 ///        ]))

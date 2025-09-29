@@ -71,7 +71,7 @@ pub struct Config {
     #[clap(long, env = "KMS_PUBLIC_KEY")]
     pub kms_public_key: String,
     #[clap(long, env = "KMS_KEY_ID")]
-    pub kms_key_id: String,
+    pub kms_key_id: Option<String>,
 
     // Chain configuration
     /// RPC URL of the Ethereum node to connect to

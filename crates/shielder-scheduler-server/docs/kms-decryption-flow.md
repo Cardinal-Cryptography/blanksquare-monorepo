@@ -15,14 +15,14 @@ sequenceDiagram
     TEE->>TEE: Extract encrypted_dek, encrypted_payload, iv, auth_tag
 
     Note over TEE: DEK Decryption
-    alt Production Mode (not local-run)
+    alt Production Mode (with shielder-scheduler-server)
         TEE->>KMS_CLI: /usr/local/bin/kmstool_enclave_cli
         Note right of TEE: Args: --region, --key-id,<br/>--ciphertext-blob (base64 DEK)
         KMS_CLI->>KMS: Decrypt API call
         KMS-->>KMS_CLI: Decrypted DEK
         KMS_CLI-->>TEE: PLAINTEXT: <base64_dek>
         TEE->>TEE: Parse and decode DEK from stdout
-    else Local Development Mode (local-run)
+    else Local Development Mode (with shielder-scheduler-server-local)
         TEE->>TEE: Decrypt DEK with local RSA private key
         Note right of TEE: Using RSA OAEP with SHA-256
     end

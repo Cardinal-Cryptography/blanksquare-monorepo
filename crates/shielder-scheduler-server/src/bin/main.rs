@@ -50,6 +50,10 @@ async fn main() -> Result<(), Error> {
         credentials_provider::aws_credentials_provider::AwsCredentialsProvider::new().await;
 
     let app_state = Arc::new(AppState::new(
+        options
+            .kms_key_id
+            .clone()
+            .expect("KMS_KEY_ID must be provided in production mode"),
         options.clone(),
         aws_credentials_provider,
         storage,

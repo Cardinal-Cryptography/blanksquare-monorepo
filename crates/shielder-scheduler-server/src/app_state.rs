@@ -5,8 +5,8 @@ use crate::{
 
 #[derive(Debug)]
 pub struct AppState<Storage: StorageProvider, Credentials: CredentialsProvider> {
-    pub kms_public_key: String,
     pub kms_key_id: String,
+    pub kms_public_key: String,
     pub credentials: Credentials,
     pub storage: Storage,
     pub relayer_controller: RelayerController,
@@ -15,6 +15,7 @@ pub struct AppState<Storage: StorageProvider, Credentials: CredentialsProvider> 
 
 impl<Storage: StorageProvider, Credentials: CredentialsProvider> AppState<Storage, Credentials> {
     pub fn new(
+        kms_key_id: String,
         configuration: crate::config::Config,
         credentials_provider: Credentials,
         storage_provider: Storage,
@@ -29,8 +30,8 @@ impl<Storage: StorageProvider, Credentials: CredentialsProvider> AppState<Storag
         );
 
         AppState {
+            kms_key_id,
             kms_public_key: configuration.kms_public_key.clone(),
-            kms_key_id: configuration.kms_key_id.clone(),
             credentials: credentials_provider,
             storage: storage_provider,
             relayer_controller,

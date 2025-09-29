@@ -34,6 +34,7 @@ async fn main() -> Result<(), Error> {
         credentials_provider::dummy_credentials_provider::DummyCredentialsProvider;
 
     let app_state = Arc::new(AppState::new(
+        "dummy-kms-key-id".to_string(),
         options.clone(),
         credentials_provider,
         storage,

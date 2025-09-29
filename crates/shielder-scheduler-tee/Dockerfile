@@ -19,8 +19,8 @@ RUN apt-get update && apt-get install -y \
     tini \
     && rm -rf /var/lib/apt/lists/*
 
-COPY ./crates/shielder-scheduler-tee/artifacts/kms/kmstool_enclave_cli /usr/local/bin/
-COPY ./crates/shielder-scheduler-tee/artifacts/kms/libnsm.so /usr/lib/x86_64-linux-gnu/
+COPY ./artifacts/kms/kmstool_enclave_cli /usr/local/bin/
+COPY ./artifacts/kms/libnsm.so /usr/lib/x86_64-linux-gnu/
 
 COPY --from=builder /app/target/release/shielder-scheduler-tee /usr/local/bin
 RUN chmod +x /usr/local/bin/shielder-scheduler-tee

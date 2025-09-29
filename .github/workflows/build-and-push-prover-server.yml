@@ -41,7 +41,7 @@ jobs:
         id: build-image
         uses: docker/build-push-action@v3
         with:
-          context: crates/shielder-prover-server
+          context: .
           builder: ${{ steps.buildx.outputs.name }}
           file: ./crates/shielder-prover-server/docker/Dockerfile
           push: true

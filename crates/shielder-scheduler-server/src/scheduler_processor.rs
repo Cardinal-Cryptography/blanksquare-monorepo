@@ -2,7 +2,6 @@ use std::sync::Arc;
 
 use alloy_primitives::{Address, U256};
 use alloy_signer_local::PrivateKeySigner;
-use base64::prelude::*;
 use chrono::Utc;
 use shielder_contract::{merkle_path::get_current_merkle_path, ConnectionPolicy, ShielderUser};
 use shielder_relayer::{QuoteFeeResponse, RelayQuery};
@@ -21,6 +20,7 @@ use crate::{
     credentials_provider::CredentialsProvider,
     error::SchedulerServerError,
     storage::{RequestStatus, ScheduledRequest, StorageProvider},
+    ENCRYPTION_ALGORITHM,
 };
 
 type Result<T> = std::result::Result<T, SchedulerServerError>;
@@ -35,7 +35,7 @@ pub struct SchedulerProcessor<
     scheduler_interval_secs: u64,
     scheduler_batch_size: usize,
     scheduler_max_retry_count: usize,
-    scheduler_retry_delay_secs: u64,
+    scheduler_retry_delay_secs: u32,
     shielder_address: Address,
     node_rpc_url: String,
 }
@@ -48,8 +48,8 @@ impl<Storage: StorageProvider, Credentials: CredentialsProvider>
         scheduler_interval_secs: u64,
         scheduler_batch_size: usize,
         scheduler_max_retry_count: usize,
-        scheduler_retry_delay_secs: u64,
-        shielder_address: String,
+        scheduler_retry_delay_secs: u32,
+        shielder_address: Address,
         node_rpc_url: String,
     ) -> Self {
         Self {
@@ -58,9 +58,7 @@ impl<Storage: StorageProvider, Credentials: CredentialsProvider>
             scheduler_batch_size,
             scheduler_max_retry_count,
             scheduler_retry_delay_secs,
-            shielder_address: shielder_address
-                .parse()
-                .expect("Failed to parse shielder_address as a valid Ethereum address. Please check the SHIELDER_ADDRESS environment variable or --shielder-address argument."),
+            shielder_address,
             node_rpc_url,
         }
     }
@@ -148,7 +146,7 @@ impl<Storage: StorageProvider, Credentials: CredentialsProvider>
                     request.last_note_index, e
                 );
 
-                if request_retry_count < self.scheduler_max_retry_count as i32 {
+                if request_retry_count < self.scheduler_max_retry_count as u8 {
                     let new_relay_after = Utc::now()
                         + chrono::Duration::seconds(self.scheduler_retry_delay_secs as i64);
                     let new_retry_count = request_retry_count + 1;
@@ -249,24 +247,17 @@ impl<Storage: StorageProvider, Credentials: CredentialsProvider>
         let relayer_fee = quoted_fee.fee_details.total_cost_fee_token;
 
         // Get current AWS credentials
-        let aws_credentials = self.app_state.credentials.get_credentials().await;
-        let public_key_bytes = base64::prelude::BASE64_STANDARD
-            .decode(self.app_state.kms_public_key.trim())
-            .map_err(|e| {
-                SchedulerServerError::ParseError(format!(
-                    "Failed to decode base64 KMS_PUBLIC_KEY: {e:?}"
-                ))
-            })?;
+        let aws_credentials = self.app_state.credentials.get_credentials().await?;
 
         let request = Request::PrepareRelayCalldata {
             aws_config: Box::new(shielder_scheduler_common::protocol::AwsConfig {
-                public_key: public_key_bytes,
+                public_key: self.app_state.kms_public_key.clone(),
                 kms_key_id: self.app_state.kms_key_id.clone(),
                 aws_region: aws_credentials.region,
                 aws_access_key_id: aws_credentials.access_key_id,
                 aws_secret_access_key: aws_credentials.secret_access_key,
                 aws_session_token: aws_credentials.session_token.unwrap_or_default(),
-                kms_encryption_algorithm: "RSAES_OAEP_SHA_256".to_string(),
+                kms_encryption_algorithm: ENCRYPTION_ALGORITHM.to_string(),
             }),
             encryption_envelope: Box::new(encryption_envelope),
             relayer_address,

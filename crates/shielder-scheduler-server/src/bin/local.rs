@@ -55,7 +55,7 @@ async fn main() -> Result<(), Error> {
         options.scheduler_batch_size,
         options.scheduler_max_retry_count,
         options.scheduler_retry_delay_secs,
-        options.shielder_address.clone(),
+        options.shielder_address,
         options.node_rpc_url.clone(),
     );
     tokio::spawn(async move {

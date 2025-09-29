@@ -12,7 +12,7 @@ pub struct ScheduledRequest {
     pub relay_after: DateTime<Utc>,
     pub status: RequestStatus,
     pub created_at: DateTime<Utc>,
-    pub retry_count: i32,
+    pub retry_count: u8,
     pub processed_at: Option<DateTime<Utc>>,
     pub error_message: Option<String>,
 }

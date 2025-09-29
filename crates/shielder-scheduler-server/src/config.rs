@@ -1,3 +1,4 @@
+use alloy_primitives::Address;
 use clap::Parser;
 
 #[derive(Parser, Debug, Clone)]
@@ -42,8 +43,8 @@ pub struct Config {
     /// How many tasks can be processed in parallel by the TEE task pool
     /// Do not raise it above 128 as this is the limit of vsock connections, at least
     /// for the rust lib used by this server
-    #[clap(long, default_value_t = 100, env = "TEE_TASK_POOL_CAPACITY")]
-    pub tee_task_pool_capacity: usize,
+    #[clap(long, default_value_t = 100, env = "TEE_TASK_POOL_CAPACITY", value_parser = clap::value_parser!(u16).range(1..=128))]
+    pub tee_task_pool_capacity: u16,
 
     /// How much time this server waits for a task to be processed by the TEE task pool
     #[clap(long, default_value_t = 5, env = "TEE_TASK_POOL_TIMEOUT_SECS")]
@@ -65,11 +66,11 @@ pub struct Config {
     pub scheduler_max_retry_count: usize,
     /// How long to wait before retrying a failed request
     #[clap(long, default_value_t = 60, env = "SCHEDULER_RETRY_DELAY_SECS")]
-    pub scheduler_retry_delay_secs: u64,
+    pub scheduler_retry_delay_secs: u32,
 
     // AWS configuration
-    #[clap(long, env = "KMS_PUBLIC_KEY")]
-    pub kms_public_key: String,
+    #[clap(long, env = "KMS_PUBLIC_KEY", value_parser = |s: &str| base64::decode(s.trim()))]
+    pub kms_public_key: std::vec::Vec<u8>,
     #[clap(long, env = "KMS_KEY_ID")]
     pub kms_key_id: Option<String>,
 
@@ -79,7 +80,7 @@ pub struct Config {
     pub node_rpc_url: String,
     /// Address of the Shielder contract
     #[clap(long, env = "SHIELDER_ADDRESS")]
-    pub shielder_address: String,
+    pub shielder_address: Address,
     /// Relayer URL
     #[clap(long, env = "RELAYER_URL")]
     pub relayer_url: String,

@@ -37,6 +37,9 @@ pub enum SchedulerServerError {
 
     #[error("Relayer error: {0}")]
     RelayerError(String),
+
+    #[error("Credentials error: {0}")]
+    CredentialsError(String),
 }
 
 impl IntoResponse for SchedulerServerError {

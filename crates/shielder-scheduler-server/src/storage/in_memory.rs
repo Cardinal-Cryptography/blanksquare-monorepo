@@ -74,7 +74,7 @@ impl StorageProvider for InMemoryStorage {
         &self,
         last_note_index: &str,
         new_relay_after: DateTime<Utc>,
-        new_retry_count: i32,
+        new_retry_count: u8,
         processed_at: Option<DateTime<Utc>>,
         new_error_message: Option<&str>,
     ) -> Result<(), StorageError> {

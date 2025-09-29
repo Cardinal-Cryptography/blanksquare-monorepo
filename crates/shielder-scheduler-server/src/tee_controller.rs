@@ -18,11 +18,11 @@ impl TeeController {
     pub fn new(
         tee_port: u32,
         tee_cid: u32,
-        tee_task_pool_capacity: usize,
+        tee_task_pool_capacity: u16,
         tee_task_pool_timeout_secs: u64,
         tee_compute_timeout_secs: u64,
     ) -> Self {
-        let tee_task_pool = tokio_task_pool::Pool::bounded(tee_task_pool_capacity)
+        let tee_task_pool = tokio_task_pool::Pool::bounded(tee_task_pool_capacity as usize)
             .with_spawn_timeout(Duration::from_secs(tee_task_pool_timeout_secs))
             .with_run_timeout(Duration::from_secs(tee_compute_timeout_secs))
             .into();

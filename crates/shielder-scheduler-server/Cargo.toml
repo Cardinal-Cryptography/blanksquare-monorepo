@@ -44,6 +44,3 @@ tower-http = { workspace = true, features = ["cors"] }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
 vsock = { workspace = true }
-
-[features]
-local-run = []

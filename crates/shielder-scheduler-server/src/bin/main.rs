@@ -25,6 +25,9 @@ use tracing_subscriber::{fmt, layer::SubscriberExt, util::SubscriberInitExt, Env
 #[tokio::main]
 async fn main() -> Result<(), Error> {
     let options = Config::parse();
+    let kms_key_id = options.kms_key_id.clone().ok_or(Error::ParseError(
+        "KMS_KEY_ID environment variable is required".to_string(),
+    ))?;
 
     tracing_subscriber::registry()
         .with(fmt::layer().with_filter(EnvFilter::from_default_env()))
@@ -44,16 +47,18 @@ async fn main() -> Result<(), Error> {
         .upkeep_timeout(Duration::from_secs(options.metrics_upkeep_timeout_secs))
         .install()?;
 
-    let storage = storage::dynamo_db::DynamoDb::new(&options.node_rpc_url).await?;
+    let aws_sdk_config = aws_config::load_defaults(aws_config::BehaviorVersion::latest()).await;
+
+    let storage = storage::dynamo_db::DynamoDb::new(&aws_sdk_config, &options.node_rpc_url).await?;
 
     let aws_credentials_provider =
-        credentials_provider::aws_credentials_provider::AwsCredentialsProvider::new().await;
+        credentials_provider::aws_credentials_provider::AwsCredentialsProvider::new(
+            &aws_sdk_config,
+        )
+        .await?;
 
     let app_state = Arc::new(AppState::new(
-        options
-            .kms_key_id
-            .clone()
-            .expect("KMS_KEY_ID must be provided in production mode"),
+        kms_key_id,
         options.clone(),
         aws_credentials_provider,
         storage,
@@ -74,7 +79,7 @@ async fn main() -> Result<(), Error> {
         options.scheduler_batch_size,
         options.scheduler_max_retry_count,
         options.scheduler_retry_delay_secs,
-        options.shielder_address.clone(),
+        options.shielder_address,
         options.node_rpc_url.clone(),
     );
     tokio::spawn(async move {

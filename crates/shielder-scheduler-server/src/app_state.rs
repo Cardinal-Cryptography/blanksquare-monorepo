@@ -6,7 +6,7 @@ use crate::{
 #[derive(Debug)]
 pub struct AppState<Storage: StorageProvider, Credentials: CredentialsProvider> {
     pub kms_key_id: String,
-    pub kms_public_key: String,
+    pub kms_public_key: Vec<u8>,
     pub credentials: Credentials,
     pub storage: Storage,
     pub relayer_controller: RelayerController,

@@ -95,6 +95,7 @@ Retrieve the status of a withdrawal request by its last note index.
 **Status Values**: `pending`, `completed`, `failed`
 
 **Error Response** (404 when not found):
+
 ```json
 {
   "error": "Request not found",

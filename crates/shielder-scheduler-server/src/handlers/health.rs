@@ -16,7 +16,9 @@ pub async fn health<
 >(
     State(state): State<Arc<AppState<Storage, Credentials>>>,
 ) -> Result<Json<Response>, SchedulerServerError> {
-    state.relayer_controller.health_check().await?;
-    let tee_response = state.tee_controller.tee_request(Request::Ping).await?;
+    let ((), tee_response) = tokio::try_join!(
+        state.relayer_controller.health_check(),
+        state.tee_controller.tee_request(Request::Ping),
+    )?;
     Ok(Json(tee_response))
 }

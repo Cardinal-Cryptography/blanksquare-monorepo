@@ -52,7 +52,7 @@ jobs:
     name: Build and push shielder-prover-tee
     needs: [check-vars-and-secrets]
     secrets: inherit
-    uses: ./.github/workflows/build-and-push-prover-server.yml
+    uses: ./.github/workflows/build-and-push-prover-tee.yml
     with:
       ref: ${{ github.sha }}
 
@@ -81,8 +81,9 @@ jobs:
     uses: ./.github/workflows/_build-eif-from-docker.yml
     with:
       # yamllint disable-line rule:line-length
-      public-docker-image-url: ${{ vars.ECR_CC_RES_PUBLIC_REGISTRY }}shielder-prover:${{ needs.get-short-sha.outputs.short-sha }}
+      public-docker-image-url: ${{ vars.ECR_CC_RES_PUBLIC_REGISTRY }}shielder-prover:tee-${{ needs.get-short-sha.outputs.short-sha }}
       component-name: shielder-prover-tee
+  
   all-jobs-completion:
     name: All jobs completion
     runs-on: ubuntu-24.04

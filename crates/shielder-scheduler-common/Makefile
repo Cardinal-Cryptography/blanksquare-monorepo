@@ -8,4 +8,4 @@ lint-rust:
 
 .PHONY: test
 test:
-	cargo check
+	cargo test --release

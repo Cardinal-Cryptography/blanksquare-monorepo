@@ -5,25 +5,18 @@ use shielder_scheduler_common::protocol::{Request, Response};
 use tracing::instrument;
 
 use crate::{
-    error::SchedulerServerError, handlers::tee_request, storage::StorageInterface, AppState,
+    app_state::AppState, credentials_provider::CredentialsProvider, error::SchedulerServerError,
+    storage::StorageProvider,
 };
 
 #[instrument(level = "info", skip_all)]
-pub async fn health<Storage: StorageInterface + 'static>(
-    State(state): State<Arc<AppState<Storage>>>,
+pub async fn health<
+    Storage: StorageProvider + 'static,
+    Credentials: CredentialsProvider + 'static,
+>(
+    State(state): State<Arc<AppState<Storage, Credentials>>>,
 ) -> Result<Json<Response>, SchedulerServerError> {
-    let tee_task_pool = state.tee_task_pool.clone();
-    let relayer_controller = state.relayer_controller.clone();
-
-    let tee_result = tee_task_pool
-        .spawn(async move { tee_request(state, Request::Ping).await })
-        .await
-        .map_err(SchedulerServerError::TaskPool)?
-        .await
-        .map_err(SchedulerServerError::JoinHandleError)??
-        .map_err(SchedulerServerError::ProvingServerError);
-
-    relayer_controller.health_check().await?;
-
-    tee_result
+    state.relayer_controller.health_check().await?;
+    let tee_response = state.tee_controller.tee_request(Request::Ping).await?;
+    Ok(Json(tee_response))
 }

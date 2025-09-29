@@ -13,7 +13,7 @@ use chrono::{DateTime, Utc};
 use serde::Deserialize;
 use tracing::info;
 
-use crate::storage::{RequestStatus, ScheduledRequest, StorageError, StorageInterface};
+use crate::storage::{RequestStatus, ScheduledRequest, StorageError, StorageProvider};
 
 const CHECK_ACTIVE_MAX_ATTEMPTS: usize = 10;
 const CHECK_ACTIVE_ATTEMPT_SLEEP_DURATION: Duration = Duration::from_secs(6);
@@ -245,7 +245,7 @@ impl DynamoDb {
     }
 }
 
-impl StorageInterface for DynamoDb {
+impl StorageProvider for DynamoDb {
     async fn insert_scheduled_request(
         &self,
         request: ScheduledRequest,

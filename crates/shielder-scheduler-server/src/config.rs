@@ -1,8 +1,7 @@
-use base64::{engine::general_purpose, Engine as _};
 use clap::Parser;
 
 #[derive(Parser, Debug, Clone)]
-pub struct CommandLineArgs {
+pub struct Config {
     // Server configuration
     /// A port on which this server listens to incoming HTTP connections.
     #[clap(short, long, default_value = "3000", env = "PUBLIC_PORT")]
@@ -23,11 +22,11 @@ pub struct CommandLineArgs {
     // Metrics configuration
     /// How often to perform metric upkeep
     #[clap(long, default_value_t = 60, env = "METRICS_UPKEEP_TIMEOUT_SECS")]
-    pub(crate) metrics_upkeep_timeout_secs: u64,
+    pub metrics_upkeep_timeout_secs: u64,
 
     /// How long are the buckets from which metric histograms are built
     #[clap(long, default_value_t = 60, env = "METRICS_BUCKET_DURATION_SECS")]
-    pub(crate) metrics_bucket_duration_secs: u64,
+    pub metrics_bucket_duration_secs: u64,
 
     // TEE configuration
     /// Internal port on which host and tee applications talks to each other
@@ -68,28 +67,13 @@ pub struct CommandLineArgs {
     #[clap(long, default_value_t = 60, env = "SCHEDULER_RETRY_DELAY_SECS")]
     pub scheduler_retry_delay_secs: u64,
 
+    // AWS configuration
     #[clap(long, env = "KMS_PUBLIC_KEY")]
     pub kms_public_key: String,
-
     #[clap(long, env = "KMS_KEY_ID")]
-    pub kms_key_id: Option<String>,
+    pub kms_key_id: String,
 
-    #[clap(long, env = "AWS_REGION")]
-    pub aws_region: Option<String>,
-
-    /// AWS IAM role name for KMS access
-    #[clap(long, env = "AWS_IAM_KMS_ROLE")]
-    pub aws_iam_kms_role: Option<String>,
-
-    /// How often to refresh AWS STS credentials (in seconds, range: 900-1800)
-    #[clap(
-        long,
-        default_value_t = 900,
-        env = "AWS_STS_REFRESH_CREDENTIALS_PERIOD_SECONDS"
-    )]
-    pub aws_sts_refresh_period_secs: u64,
-
-    /// Chain configuration
+    // Chain configuration
     /// RPC URL of the Ethereum node to connect to
     #[clap(long, env = "NODE_RPC_URL")]
     pub node_rpc_url: String,
@@ -99,63 +83,4 @@ pub struct CommandLineArgs {
     /// Relayer URL
     #[clap(long, env = "RELAYER_URL")]
     pub relayer_url: String,
-}
-
-impl CommandLineArgs {
-    /// Validates the command line arguments
-    pub fn validate(&self) -> Result<(), String> {
-        if self.kms_public_key.trim().is_empty() {
-            return Err("KMS_PUBLIC_KEY must not be empty".into());
-        }
-        let pk_b64 = self.kms_public_key.trim();
-        if general_purpose::STANDARD.decode(pk_b64).is_err() {
-            return Err("KMS_PUBLIC_KEY must be a valid base64 string".into());
-        }
-
-        // Validate TEE task pool capacity range
-        if self.tee_task_pool_capacity < 1 || self.tee_task_pool_capacity > 128 {
-            return Err("TEE_TASK_POOL_CAPACITY must be between 1 and 128".into());
-        }
-
-        // Validate AWS STS refresh period range
-        if self.aws_sts_refresh_period_secs < 900 || self.aws_sts_refresh_period_secs > 1800 {
-            return Err(
-                "AWS_STS_REFRESH_CREDENTIALS_PERIOD_SECONDS must be between 900 and 1800".into(),
-            );
-        }
-
-        #[cfg(not(feature = "local-run"))]
-        {
-            if let Some(ref kms_key_id) = self.kms_key_id {
-                if kms_key_id.trim().is_empty() {
-                    return Err("KMS_KEY_ID must not be empty".into());
-                }
-            } else {
-                return Err(
-                    "KMS_KEY_ID is required unless built with the 'local-run' feature".into(),
-                );
-            }
-
-            if let Some(ref aws_region) = self.aws_region {
-                if aws_region.trim().is_empty() {
-                    return Err("AWS_REGION must not be empty".into());
-                }
-            } else {
-                return Err(
-                    "AWS_REGION is required unless built with the 'local-run' feature".into(),
-                );
-            }
-
-            if let Some(ref aws_iam_kms_role) = self.aws_iam_kms_role {
-                if aws_iam_kms_role.trim().is_empty() {
-                    return Err("AWS_IAM_KMS_ROLE must not be empty".into());
-                }
-            } else {
-                return Err(
-                    "AWS_IAM_KMS_ROLE is required unless built with the 'local-run' feature".into(),
-                );
-            }
-        }
-        Ok(())
-    }
 }

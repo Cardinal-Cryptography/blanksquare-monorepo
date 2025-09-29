@@ -1,9 +1,8 @@
 use std::collections::HashMap;
 
-use alloy_primitives::U256;
 use chrono::{DateTime, Utc};
 
-use crate::storage::{RequestStatus, ScheduledRequest, StorageError, StorageInterface};
+use crate::storage::{RequestStatus, ScheduledRequest, StorageError, StorageProvider};
 
 pub struct InMemoryStorage {
     requests: std::sync::Mutex<HashMap<String, ScheduledRequest>>,
@@ -17,7 +16,13 @@ impl InMemoryStorage {
     }
 }
 
-impl StorageInterface for InMemoryStorage {
+impl Default for InMemoryStorage {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl StorageProvider for InMemoryStorage {
     async fn get_pending_requests(
         &self,
         limit: usize,

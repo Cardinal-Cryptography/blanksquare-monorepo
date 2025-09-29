@@ -10,8 +10,9 @@ use serde::{Deserialize, Serialize};
 use tracing::{error, info, instrument};
 
 use crate::{
-    storage::{RequestStatus, StorageInterface},
-    AppState,
+    app_state::AppState,
+    credentials_provider::CredentialsProvider,
+    storage::{RequestStatus, StorageProvider},
 };
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -24,8 +25,8 @@ pub struct GetStatusResponse {
 }
 
 #[instrument(level = "info", skip_all)]
-pub async fn get_status<Storage: StorageInterface>(
-    State(state): State<Arc<AppState<Storage>>>,
+pub async fn get_status<Storage: StorageProvider, Credentials: CredentialsProvider>(
+    State(state): State<Arc<AppState<Storage, Credentials>>>,
     Path(last_note_index): Path<String>,
 ) -> impl IntoResponse {
     info!(

@@ -8,8 +8,9 @@ use shielder_scheduler_common::protocol::EncryptionEnvelope;
 use tracing::{error, info, instrument};
 
 use crate::{
-    storage::{ScheduledRequest, StorageInterface},
-    AppState,
+    app_state::AppState,
+    credentials_provider::CredentialsProvider,
+    storage::{ScheduledRequest, StorageProvider},
 };
 
 /// When requesting a withdraw schedule, user sends this struct as a JSON
@@ -34,8 +35,8 @@ pub struct ScheduleWithdrawResponse {
 }
 
 #[instrument(level = "info", skip_all)]
-pub async fn schedule_withdraw<Storage: StorageInterface>(
-    State(state): State<Arc<AppState<Storage>>>,
+pub async fn schedule_withdraw<Storage: StorageProvider, Credentials: CredentialsProvider>(
+    State(state): State<Arc<AppState<Storage, Credentials>>>,
     Json(schedule_withdraw_request): Json<ScheduleWithdrawRequest>,
 ) -> impl IntoResponse {
     info!(

@@ -92,7 +92,7 @@ Retrieve the status of a withdrawal request by its last note index.
 }
 ```
 
-**Status Values**: `pending`, `processing`, `completed`, `failed`
+**Status Values**: `pending`, `completed`, `failed`
 
 **Error Response** (404 when not found):
 ```json
@@ -141,7 +141,6 @@ Retrieve the status of a withdrawal request by its last note index.
 ## Request Statuses
 
 - **Pending**: Request is waiting to be processed
-- **Processing**: Request is being retried or is in progress
 - **Completed**: Request has been successfully processed
 - **Failed**: Request processing failed and reached max retry attempts count
 

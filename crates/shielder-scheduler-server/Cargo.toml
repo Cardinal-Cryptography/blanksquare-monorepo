@@ -8,6 +8,16 @@ license = { workspace = true }
 categories = { workspace = true }
 repository = { workspace = true }
 
+default-run = "shielder-scheduler-server"
+
+[[bin]]
+name = "shielder-scheduler-server"
+path = "src/bin/main.rs"
+
+[[bin]]
+name = "shielder-scheduler-server-local"
+path = "src/bin/local.rs"
+
 [dependencies]
 aws-config = { workspace = true }
 aws-sdk-dynamodb = { workspace = true }
@@ -34,6 +44,3 @@ tower-http = { workspace = true, features = ["cors"] }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
 vsock = { workspace = true }
-
-[features]
-local-run = []

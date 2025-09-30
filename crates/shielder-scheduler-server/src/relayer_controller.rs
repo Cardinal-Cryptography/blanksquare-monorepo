@@ -11,7 +11,6 @@ use crate::error::SchedulerServerError;
 
 /// Controller for interacting with the relayer service via its API.
 #[derive(Clone, Eq, PartialEq, Debug, Default, Deserialize, Serialize)]
-
 pub struct RelayerController {
     base_url: String,
 }

@@ -1,5 +1,6 @@
 use std::time::Duration;
 
+use aws_config::SdkConfig;
 use aws_sdk_dynamodb::{
     error::SdkError,
     operation::describe_table::DescribeTableError,
@@ -13,7 +14,7 @@ use chrono::{DateTime, Utc};
 use serde::Deserialize;
 use tracing::info;
 
-use crate::storage::{RequestStatus, ScheduledRequest, StorageError, StorageInterface};
+use crate::storage::{RequestStatus, ScheduledRequest, StorageError, StorageProvider};
 
 const CHECK_ACTIVE_MAX_ATTEMPTS: usize = 10;
 const CHECK_ACTIVE_ATTEMPT_SLEEP_DURATION: Duration = Duration::from_secs(6);
@@ -24,9 +25,8 @@ pub struct DynamoDb {
 }
 
 impl DynamoDb {
-    pub async fn new(rpc_url: &str) -> Result<Self, StorageError> {
-        let config = aws_config::load_defaults(aws_config::BehaviorVersion::latest()).await;
-        let client = Client::new(&config);
+    pub async fn new(aws_sdk_config: &SdkConfig, rpc_url: &str) -> Result<Self, StorageError> {
+        let client = Client::new(aws_sdk_config);
         let chain_id = get_chain_id(rpc_url).await?;
         let table_name = format!("scheduled-requests-{}", chain_id);
         let db = Self { client, table_name };
@@ -245,7 +245,7 @@ impl DynamoDb {
     }
 }
 
-impl StorageInterface for DynamoDb {
+impl StorageProvider for DynamoDb {
     async fn insert_scheduled_request(
         &self,
         request: ScheduledRequest,
@@ -325,7 +325,7 @@ impl StorageInterface for DynamoDb {
         &self,
         last_note_index: &str,
         new_relay_after: DateTime<Utc>,
-        new_retry_count: i32,
+        new_retry_count: u8,
         processed_at: Option<DateTime<Utc>>,
         new_error_message: Option<&str>,
     ) -> Result<(), StorageError> {

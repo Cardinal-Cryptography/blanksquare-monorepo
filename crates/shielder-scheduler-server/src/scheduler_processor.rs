@@ -2,7 +2,6 @@ use std::sync::Arc;
 
 use alloy_primitives::{Address, U256};
 use alloy_signer_local::PrivateKeySigner;
-use base64::prelude::*;
 use chrono::Utc;
 use shielder_contract::{merkle_path::get_current_merkle_path, ConnectionPolicy, ShielderUser};
 use shielder_relayer::{QuoteFeeResponse, RelayQuery};
@@ -17,30 +16,56 @@ use tokio::time::interval;
 use tracing::{error, info, instrument, warn};
 
 use crate::{
+    app_state::AppState,
+    credentials_provider::CredentialsProvider,
     error::SchedulerServerError,
-    handlers::tee_request,
-    storage::{RequestStatus, ScheduledRequest, StorageInterface},
-    AppState,
+    storage::{RequestStatus, ScheduledRequest, StorageProvider},
+    ENCRYPTION_ALGORITHM,
 };
 
 type Result<T> = std::result::Result<T, SchedulerServerError>;
 
 /// Background request scheduler that processes scheduled withdrawal requests
 #[derive(Debug)]
-pub struct SchedulerProcessor<Storage: StorageInterface + 'static> {
-    app_state: Arc<AppState<Storage>>,
+pub struct SchedulerProcessor<
+    Storage: StorageProvider + 'static,
+    Credentials: CredentialsProvider + 'static,
+> {
+    app_state: Arc<AppState<Storage, Credentials>>,
+    scheduler_interval_secs: u64,
+    scheduler_batch_size: usize,
+    scheduler_max_retry_count: usize,
+    scheduler_retry_delay_secs: u32,
+    shielder_address: Address,
+    node_rpc_url: String,
 }
 
-impl<Storage: StorageInterface> SchedulerProcessor<Storage> {
-    pub fn new(app_state: Arc<AppState<Storage>>) -> Self {
-        Self { app_state }
+impl<Storage: StorageProvider, Credentials: CredentialsProvider>
+    SchedulerProcessor<Storage, Credentials>
+{
+    pub fn new(
+        app_state: Arc<AppState<Storage, Credentials>>,
+        scheduler_interval_secs: u64,
+        scheduler_batch_size: usize,
+        scheduler_max_retry_count: usize,
+        scheduler_retry_delay_secs: u32,
+        shielder_address: Address,
+        node_rpc_url: String,
+    ) -> Self {
+        Self {
+            app_state,
+            scheduler_interval_secs,
+            scheduler_batch_size,
+            scheduler_max_retry_count,
+            scheduler_retry_delay_secs,
+            shielder_address,
+            node_rpc_url,
+        }
     }
 
     pub async fn start(self) {
         info!("Starting background task processor");
-        let mut interval = interval(std::time::Duration::from_secs(
-            self.app_state.options.scheduler_interval_secs,
-        ));
+        let mut interval = interval(std::time::Duration::from_secs(self.scheduler_interval_secs));
 
         loop {
             interval.tick().await;
@@ -61,12 +86,9 @@ impl<Storage: StorageInterface> SchedulerProcessor<Storage> {
 
     fn shielder_user_read_only(&self) -> ShielderUser {
         ShielderUser::new(
-            self.app_state.options.shielder_address.parse().expect(
-                "Failed to parse shielder_address as a valid Ethereum address. \
-Please check the SHIELDER_ADDRESS environment variable or --shielder-address argument.",
-            ),
+            self.shielder_address,
             ConnectionPolicy::OnDemand {
-                rpc_url: self.app_state.options.node_rpc_url.clone(),
+                rpc_url: self.node_rpc_url.clone(),
                 signer: PrivateKeySigner::random(),
             },
         )
@@ -76,7 +98,7 @@ Please check the SHIELDER_ADDRESS environment variable or --shielder-address arg
         let requests = self
             .app_state
             .storage
-            .get_pending_requests(self.app_state.options.scheduler_batch_size)
+            .get_pending_requests(self.scheduler_batch_size)
             .await?;
 
         if requests.is_empty() {
@@ -124,11 +146,9 @@ Please check the SHIELDER_ADDRESS environment variable or --shielder-address arg
                     request.last_note_index, e
                 );
 
-                if request_retry_count < self.app_state.options.scheduler_max_retry_count as i32 {
+                if request_retry_count < self.scheduler_max_retry_count as u8 {
                     let new_relay_after = Utc::now()
-                        + chrono::Duration::seconds(
-                            self.app_state.options.scheduler_retry_delay_secs as i64,
-                        );
+                        + chrono::Duration::seconds(self.scheduler_retry_delay_secs as i64);
                     let new_retry_count = request_retry_count + 1;
                     self.app_state
                         .storage
@@ -217,8 +237,6 @@ Please check the SHIELDER_ADDRESS environment variable or --shielder-address arg
         merkle_root: U256,
         merkle_path: [[U256; ARITY]; NOTE_TREE_HEIGHT],
     ) -> Result<Response> {
-        let tee_task_pool = self.app_state.tee_task_pool.clone();
-        let app_state = self.app_state.clone();
         let encryption_envelope = request.encryption_envelope.clone();
         let relayer_address = self
             .app_state
@@ -229,42 +247,25 @@ Please check the SHIELDER_ADDRESS environment variable or --shielder-address arg
         let relayer_fee = quoted_fee.fee_details.total_cost_fee_token;
 
         // Get current AWS credentials
-        let aws_credentials = self.app_state.aws_credentials.lock().await.clone();
-        let public_key_bytes = base64::prelude::BASE64_STANDARD
-            .decode(self.app_state.options.kms_public_key.trim())
-            .map_err(|e| {
-                SchedulerServerError::ParseError(format!(
-                    "Failed to decode base64 KMS_PUBLIC_KEY: {e:?}"
-                ))
-            })?;
+        let aws_credentials = self.app_state.credentials.get_credentials().await?;
 
-        let response = tee_task_pool
-            .spawn(async move {
-                let request = Request::PrepareRelayCalldata {
-                    aws_config: Box::new(shielder_scheduler_common::protocol::AwsConfig {
-                        public_key: public_key_bytes,
-                        kms_key_id: app_state.options.kms_key_id.clone().unwrap_or_default(),
-                        aws_region: app_state.options.aws_region.clone().unwrap_or_default(),
-                        aws_access_key_id: aws_credentials.access_key_id,
-                        aws_secret_access_key: aws_credentials.secret_access_key,
-                        aws_session_token: aws_credentials.session_token.unwrap_or_default(),
-                        kms_encryption_algorithm: "RSAES_OAEP_SHA_256".to_string(),
-                    }),
-                    encryption_envelope: Box::new(encryption_envelope),
-                    relayer_address,
-                    merkle_path: Box::new(merkle_path),
-                    merkle_root,
-                    relayer_fee,
-                };
+        let request = Request::PrepareRelayCalldata {
+            aws_config: Box::new(shielder_scheduler_common::protocol::AwsConfig {
+                public_key: self.app_state.kms_public_key.clone(),
+                kms_key_id: self.app_state.kms_key_id.clone(),
+                aws_region: aws_credentials.region,
+                aws_access_key_id: aws_credentials.access_key_id,
+                aws_secret_access_key: aws_credentials.secret_access_key,
+                aws_session_token: aws_credentials.session_token.unwrap_or_default(),
+                kms_encryption_algorithm: ENCRYPTION_ALGORITHM.to_string(),
+            }),
+            encryption_envelope: Box::new(encryption_envelope),
+            relayer_address,
+            merkle_path: Box::new(merkle_path),
+            merkle_root,
+            relayer_fee,
+        };
 
-                tee_request(app_state, request).await
-            })
-            .await
-            .map_err(SchedulerServerError::TaskPool)?
-            .await
-            .map_err(SchedulerServerError::JoinHandleError)??
-            .map_err(SchedulerServerError::ProvingServerError)?;
-
-        Ok(response.0)
+        self.app_state.tee_controller.tee_request(request).await
     }
 }

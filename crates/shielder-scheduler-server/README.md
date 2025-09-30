@@ -35,17 +35,18 @@ The server maintains proper security by verifying the KMS key relationship with 
 
 ### Local Development
 
-For local development and testing, you can use the cargo feature `local-run` to skip AWS KMS integration and use in-memory storage instead of DynamoDB:
+For local development and testing, use the dedicated local binary that skips AWS KMS integration and uses in-memory storage instead of DynamoDB:
 
-- **Feature Line Flag**: `--features local-run`
-- **No Credential Refresh**: Skips the background AWS credential refresh task when KMS is disabled
-- **Validation Changes**: AWS configuration parameters become optional when `local-run` is used
+- **Local Binary**: `shielder-scheduler-server-local`
+- **No AWS Dependencies**: Uses dummy credentials provider and in-memory storage
+- **Simplified Configuration**: Only requires core application parameters
 
-When using the `local-run` feature:
+When using the local binary:
 
-- The `shielder-scheduler-tee` must also be run with cargo feature `local-run` and `PRIVATE_KEY_BASE64` environment variable
-- AWS parameters (AWS_REGION, KMS_KEY_ID, AWS_IAM_KMS_ROLE) become optional
-- Background AWS credential refresh is disabled
+- The `shielder-scheduler-tee` must also be run with its local configuration
+- AWS parameters (AWS_REGION, KMS_KEY_ID, AWS_IAM_KMS_ROLE) are not required
+- No background AWS credential refresh
+- No metrics collection (simplified for development)
 
 This allows developers to run the server locally without requiring EC2 instance metadata or proper AWS IAM roles.
 
@@ -69,6 +70,39 @@ Retrieve the TEE public key for encrypting payloads.
 
 Schedule a withdrawal request to be processed at a future time.
 
+### 4. Get Request Status
+
+**GET** `/status/{last_note_index}`
+
+Retrieve the status of a withdrawal request by its last note index.
+
+#### Parameters
+
+- `last_note_index`: The last note index of the withdrawal request (path parameter)
+
+#### Response
+
+```json
+{
+  "last_note_index": "12345",
+  "status": "pending",
+  "created_at": "2024-01-01T00:00:00Z",
+  "processed_at": null,
+  "relay_after": "2024-01-01T01:00:00Z"
+}
+```
+
+**Status Values**: `pending`, `completed`, `failed`
+
+**Error Response** (404 when not found):
+
+```json
+{
+  "error": "Request not found",
+  "last_note_index": "12345"
+}
+```
+
 #### Request Body
 
 ```json
@@ -86,7 +120,11 @@ Schedule a withdrawal request to be processed at a future time.
 }
 ```
 
-- `payload`: Base64-encoded encrypted payload containing withdrawal details
+- `encryption_envelope`: Object containing encrypted payload and encryption metadata
+  - `encrypted_payload`: Base64-encoded encrypted payload containing withdrawal details
+  - `encrypted_dek`: Base64-encoded encrypted data encryption key
+  - `iv`: Base64-encoded initialization vector
+  - `auth_tag`: Base64-encoded authentication tag
 - `last_note_index`: Index of the last leaf in the Merkle tree (as string)
 - `pocket_money`: Pocket money amount for the withdrawal (as string, in wei)
 - `token_address`: Token address for the withdrawal (as hex string)
@@ -104,7 +142,6 @@ Schedule a withdrawal request to be processed at a future time.
 ## Request Statuses
 
 - **Pending**: Request is waiting to be processed
-- **Processing**: Request is being retried or is in progress
 - **Completed**: Request has been successfully processed
 - **Failed**: Request processing failed and reached max retry attempts count
 
@@ -150,13 +187,10 @@ The service can be configured using environment variables or command-line argume
 
 ### AWS & KMS Configuration
 
-- `AWS_REGION`: AWS region for STS and KMS operations (required unless built with `local-run`)
-- `AWS_IAM_KMS_ROLE`: IAM role name for KMS access (required unless built with `local-run`)
-- `KMS_KEY_ID`: AWS KMS key identifier for encryption operations (required unless built with `local-run`)
+- `KMS_KEY_ID`: AWS KMS key identifier for encryption operations (required for production binary)
 - `KMS_PUBLIC_KEY`: Base64-encoded public key for KMS verification (always required)
-- `AWS_STS_REFRESH_CREDENTIALS_PERIOD_SECONDS`: How often to refresh AWS STS credentials in seconds (default: 900, range: 900-1800; ignored when built with `local-run`)
 
-**Local Development**: When compiling with the `local-run` feature (`cargo run --features local-run`), AWS-related environment variables (`AWS_REGION`, `KMS_KEY_ID`, `AWS_IAM_KMS_ROLE`) become optional and are ignored if absent. The server uses in-memory storage and skips AWS credential retrieval and refresh logic. The TEE must also be built/run with its corresponding `local-run` feature (and `PRIVATE_KEY_BASE64` if required by that component).
+**Local Development**: When using the `shielder-scheduler-server-local` binary, AWS-related environment variable `KMS_KEY_ID` is not required. The local binary uses in-memory storage and dummy credentials provider, skipping AWS credential retrieval and refresh logic entirely.
 
 **Converting PEM to Base64**: If you have a PEM file, you can convert it to base64:
 
@@ -164,18 +198,6 @@ The service can be configured using environment variables or command-line argume
 # Remove PEM headers/footers and convert to single line base64
 cat your-public-key.pem | grep -v "BEGIN\|END" | tr -d '\n'
 ```
-
-**Note**: AWS credentials are automatically retrieved using EC2 instance metadata at startup and refreshed periodically. Manual AWS credential configuration is no longer required.
-
-**Token Management**: The metadata token TTL is automatically set to twice the refresh period to ensure adequate overlap during credential rotation.
-
-**Validation**: The refresh period is constrained to 900-1800 seconds (15-30 minutes) to ensure:
-
-- Minimum security through frequent credential rotation (≤30 minutes)
-- Reasonable EC2 metadata service usage without excessive calls (≥15 minutes)
-- Optimal balance between security and operational efficiency
-
-**STS Refresh Failure Behavior**: If AWS STS credential refresh fails during runtime, the server will shut down gracefully. This ensures that the service does not continue operating with expired credentials, maintaining security compliance. Operators should monitor for service restarts and address any underlying AWS IAM or network connectivity issues that may cause credential refresh failures.
 
 ### Blockchain Configuration
 
@@ -199,14 +221,22 @@ The service is built with clear separation of concerns:
    - `health.rs`: Health check endpoint
    - `tee_public_key.rs`: TEE public key retrieval
    - `schedule_withdraw.rs`: Withdrawal request scheduling
+   - `get_status.rs`: Request status retrieval
 
-2. **Database Layer** (`db/`):
+2. **Storage Layer** (`storage/`):
 
-   - PostgreSQL connection management
-   - Request storage and retrieval
-   - Status tracking and updates
+   - `dynamo_db.rs`: DynamoDB storage provider for production
+   - `in_memory.rs`: In-memory storage provider for local development
+   - `mod.rs`: Storage provider trait and common functionality
+   - `schema.rs`: Data schemas and models
 
-3. **Scheduler Processor** (`scheduler_processor.rs`):
+3. **Credentials Provider** (`credentials_provider/`):
+
+   - `aws_credentials_provider.rs`: Real AWS credentials with automatic refresh
+   - `dummy_credentials_provider.rs`: Mock credentials for local development
+   - `mod.rs`: Credentials provider trait
+
+4. **Scheduler Processor** (`scheduler_processor.rs`):
 
    - Background processing of scheduled requests
    - Batch processing with configurable limits
@@ -216,21 +246,25 @@ The service is built with clear separation of concerns:
    - TEE communication for calldata preparation
    - Response processing and relay submission
 
-4. **Relayer Communication** (`relayer_controller.rs`):
+5. **Relayer Communication** (`relayer_controller.rs`):
 
    - Communication with external relayer service
    - Fee quotation requests
    - Relay transaction submission
 
-5. **TEE Communication**:
+6. **TEE Communication** (`tee_controller.rs`):
    - Managed through a bounded task pool
    - Vsock-based communication with TEE
    - Configurable timeouts and capacity limits
 
+7. **Application Binaries** (`bin/`):
+   - `main.rs`: Production binary with full AWS integration
+   - `local.rs`: Local development binary with simplified dependencies
+
 ### Data Flow
 
 1. Client submits withdrawal request via HTTP API
-2. Request is validated and stored in PostgreSQL database
+2. Request is validated and stored in the configured storage backend (DynamoDB for production, in-memory for local development)
 3. Background scheduler processor periodically checks for ready requests
 4. Ready requests are processed through the following pipeline:
    - Parse and validate request parameters
@@ -238,7 +272,7 @@ The service is built with clear separation of concerns:
    - Validate fee against user-specified maximum
    - Send request to TEE for calldata preparation
    - Process TEE response and submit to relayer
-5. Results are updated in the database with appropriate status
+5. Results are updated in the storage backend with appropriate status
 
 ## Example Usage
 
@@ -246,38 +280,31 @@ The service is built with clear separation of concerns:
 
 - EC2 instance with an IAM role that has KMS permissions
 - The EC2 instance must have access to EC2 instance metadata service (IMDSv2)
-- The IAM role name must match the configured `AWS_IAM_KMS_ROLE`
 - The specified KMS key must be accessible and properly configured
-- AWS_STS_REFRESH_CREDENTIALS_PERIOD_SECONDS must be between 900 and 1800 seconds
-
-**Validation Examples**:
-
-```bash
-# This will fail - refresh period too short
-export AWS_STS_REFRESH_CREDENTIALS_PERIOD_SECONDS=600
-cargo run  # Error: AWS_STS_REFRESH_CREDENTIALS_PERIOD_SECONDS must be at least 900 seconds
-
-# This will fail - refresh period too long
-export AWS_STS_REFRESH_CREDENTIALS_PERIOD_SECONDS=2000
-cargo run  # Error: AWS_STS_REFRESH_CREDENTIALS_PERIOD_SECONDS must be at most 1800 seconds
-
-# This will work - within valid range
-export AWS_STS_REFRESH_CREDENTIALS_PERIOD_SECONDS=1200
-cargo run  # Success
-```
 
 **Command Line Usage Examples**:
 
-Production mode (default build, DynamoDB + KMS):
+Production mode (DynamoDB + AWS KMS):
 
 ```bash
-cargo run --release -- --kms-public-key <base64-key> --aws-region us-east-1 --kms-key-id <key-id> --aws-iam-kms-role <iam-role-name> --node-rpc-url <rpc-url> --shielder-address <contract-addr> --relayer-url <relayer-url>
+# Using the production binary
+cargo run --bin shielder-scheduler-server --release -- \
+  --kms-public-key <base64-key> \
+  --kms-key-id <key-id> \
+  --node-rpc-url <rpc-url> \
+  --shielder-address <contract-addr> \
+  --relayer-url <relayer-url>
 ```
 
 Local development mode (in-memory storage, no AWS integration):
 
 ```bash
-cargo run --features local-run -- --kms-public-key <base64-key> --node-rpc-url <rpc-url> --shielder-address <contract-addr> --relayer-url <relayer-url>
+# Using the local binary
+cargo run --bin shielder-scheduler-server-local -- \
+  --kms-public-key <base64-key> \
+  --node-rpc-url <rpc-url> \
+  --shielder-address <contract-addr> \
+  --relayer-url <relayer-url>
 ```
 
 ### Generating Test RSA Keys

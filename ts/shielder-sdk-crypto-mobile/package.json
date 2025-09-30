@@ -1,6 +1,6 @@
 {
   "name": "@cardinal-cryptography/shielder-sdk-crypto-mobile",
-  "version": "0.3.0-rc.2",
+  "version": "0.3.0-rc.3",
   "description": "shielder-sdk cryptography bindings for react native",
   "main": "./lib/commonjs/index.js",
   "module": "./lib/module/index.js",
@@ -40,7 +40,7 @@
   ],
   "scripts": {
     "ubrn:ios": "ubrn build ios -r --config ubrn.config.yaml --and-generate",
-    "ubrn:android": "ubrn build android -r --config ubrn.config.yaml --and-generate",
+    "ubrn:android": "ubrn build android -r --config ubrn.config.yaml --and-generate && node scripts/patch-android-build.js",
     "ubrn:clean": "rm -Rf cpp/ android/ ios/ src/gen build/",
     "typecheck": "tsc",
     "lint": "eslint \"**/*.{js,ts,tsx}\"",
@@ -75,8 +75,8 @@
     "eslint-plugin-prettier": "^5.0.1",
     "prettier": "^3.0.3",
     "react": "19.0.0",
-    "react-native": "0.78.1",
-    "react-native-builder-bob": "^0.38.0",
+    "react-native": "0.79.2",
+    "react-native-builder-bob": "0.40.13",
     "turbo": "^1.10.7",
     "typescript": "5.4.5"
   },
@@ -113,7 +113,8 @@
   },
   "eslintIgnore": [
     "node_modules/",
-    "lib/"
+    "lib/",
+    "scripts/"
   ],
   "prettier": {
     "quoteProps": "consistent",
@@ -142,8 +143,7 @@
       [
         "typescript",
         {
-          "project": "tsconfig.build.json",
-          "esm": true
+          "project": "tsconfig.build.json"
         }
       ]
     ]

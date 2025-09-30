@@ -8,7 +8,7 @@ pushd "$REPO_ROOT" >/dev/null
 
 # Configuration
 DOCKER_IMAGE="${ECR_IMAGE:-public.ecr.aws/p5g6f1p8/shielder-scheduler:latest}"
-EIF_OUTPUT="shielder-scheduler-tee.eif"
+EIF_OUTPUT="${COMPONENT_NAME:-shielder-scheduler-tee}.eif"
 
 # Build our custom nitro-cli image if it doesn't exist
 NITRO_CLI_IMAGE="shielder-nitro-cli:latest"

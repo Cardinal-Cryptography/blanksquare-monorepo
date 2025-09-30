@@ -62,7 +62,7 @@ runs:
     - name: Create resources
       if: inputs.create == 'true'
       shell: bash
-      working-directory: tee/terragrunt
+      working-directory: crates/shielder-prover-server/terragrunt
       run: |
         terragrunt init
         terragrunt apply -auto-approve -lock=false
@@ -72,7 +72,7 @@ runs:
       if: inputs.create == 'true'
       id: set-output
       shell: bash
-      working-directory: tee/terragrunt
+      working-directory: crates/shielder-prover-server/terragrunt
       run: |
         PROXY_URL=$(jq -r .proxy_url.value outputs.json)
         echo "proxy_url=$PROXY_URL" >> $GITHUB_OUTPUT
@@ -80,7 +80,7 @@ runs:
     - name: Destroy resources
       if: inputs.destroy == 'true'
       shell: bash
-      working-directory: tee/terragrunt
+      working-directory: crates/shielder-prover-server/terragrunt
       run: |
         terragrunt init
         terragrunt destroy -auto-approve -lock=false

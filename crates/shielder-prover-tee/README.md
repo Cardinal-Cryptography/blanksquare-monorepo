@@ -1,6 +1,6 @@
 ## Overview
 
-The `tee/` subfolder contains Rust crates required to build Shielder Prover Server, a TEE-based REST server which
+This directory contains Rust crates required to build Shielder Prover Server, a TEE-based REST server which
 computes ZK-proofs:
 1. The user wants to generate a proof for relation `R` with witness `w` and statement `s`
 2. The user generates an asymmetric encryption key (`pub_sk`, `sk`) to get a response back from the server
@@ -14,28 +14,29 @@ The proof `π` and `pub_inputs` can be then used in further part of the Shielder
 
 ### Packages
 
-There are three Rust crates:
-* `shielder-prover-common` - contains common definitions between the `shielder-prover-server` and `shielder-prover-tee`,
-* `shielder-prover-server` - a host (EC-2) part of the server. This is the server that is exposed to the Internet, and most
+There are three Rust crates located in the main workspace under `crates/`:
+* `crates/shielder-prover-common` - contains common definitions between the `shielder-prover-server` and `shielder-prover-tee`,
+* `crates/shielder-prover-server` - a host (EC-2) part of the server. This is the server that is exposed to the Internet, and most
 of its function is to forward requests to TEE and limit maximum concurrent requests amount
-* `shielder-prover-tee` - main part of the Server which computes ZK-proofs, runs entirerely in TEE. Communicates with
+* `crates/shielder-prover-tee` - main part of the Server which computes ZK-proofs, runs entirerely in TEE. Communicates with
 `shielder-prover-server` via vsock
 
 ## Building
 
-To build the enclave image of `shielder-prover-tee` (and measurements) you will need `nix` installed 
-(see https://nixos.org/download/#download-nix), and then:
+The enclave image of `shielder-prover-tee` is built using dockerized nitro-cli as part of the CI pipeline. The build process:
 
+1. **Docker Image**: First, a Docker image is built from `crates/shielder-prover-server/docker/Dockerfile`
+2. **EIF Generation**: The Docker image is then converted to an Enclave Image File (EIF) using AWS nitro-cli in a Docker container
+
+### Manual Build (for development)
+
+To manually build the Docker image:
 ```bash
-cd nix
-nix build
+cd crates/shielder-prover-server
+docker build -f docker/Dockerfile -t shielder-prover:local .
 ```
 
-To make sure builds are reproducible, the commit hash of `blanksquare-monorepo` source is hardcoded in nix flake files. To override the commit hash, run:
-```bash
-cd nix
-nix build --override-input blanksquare-monorepo 'github:Cardinal-Cryptography/blanksquare-monorepo/NEW_COMMIT_HASH_HERE'
-```
+The EIF generation is handled by the CI pipeline using the `_build-eif-from-docker.yml` workflow, which uses dockerized nitro-cli for reproducible builds.
 
 ### Local testing
 
@@ -43,6 +44,6 @@ nix build --override-input blanksquare-monorepo 'github:Cardinal-Cryptography/bl
 using NSM driver. Although this driver is [included](https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=b9873755a6c8ccfce79094c4dce9efa3ecb1a749) 
 in Linux kernel 6.8+, it might be missing on your local dev environment. To run `shielder-prover-tee` without attestation, run:
 ```bash
-cd nix && RUST_LOG=info cargo run --release -p shielder-prover-tee --features without_attestation
+RUST_LOG=info cargo run --release -p shielder-prover-tee --features without_attestation
 ```
 

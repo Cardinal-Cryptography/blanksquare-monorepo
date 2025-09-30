@@ -2,7 +2,6 @@
 resolver = "2"
 
 members = ["crates/*"]
-exclude = ["tee"]
 
 [workspace.package]
 edition = "2021"
@@ -31,6 +30,7 @@ assert2 = { version = "0.3.15" }
 async-channel = { version = "2.3.1" }
 aws-nitro-enclaves-nsm-api = { version = "0.4.0" }
 aws-config = { version = "1.8.6" }
+aws-sdk-dynamodb = { version = "1.8.6" }
 axum = { version = "0.8.1" }
 base64 = { version = "0.22.1" }
 byteorder = { version = "1.4.3" }
@@ -40,8 +40,8 @@ clap = { version = "4.5.8" }
 criterion = { version = "0.5.1" }
 darling = { version = "0.20.11" }
 ecies-encryption-cli = { git = "https://github.com/Cardinal-Cryptography/ecies-encryption-lib", tag = "v0.2.0" }
-# below dependency is also used in tee/Cargo.toml workspace
 ecies-encryption-lib = { git = "https://github.com/Cardinal-Cryptography/ecies-encryption-lib", tag = "v0.2.0" }
+enum-map = { version = "2.7.3" }
 futures = { version = "0.3.31" }
 getrandom = { version = "0.2" }
 halo2_poseidon = { git = "https://github.com/Cardinal-Cryptography/poseidon-gadget", rev = "ce317a6" }
@@ -86,12 +86,6 @@ shellexpand = { version = "3.1.0" }
 static_assertions = { version = "1.1.0" }
 strum = { version = "0.27.1" }
 strum_macros = { version = "0.27.1" }
-sqlx = { version = "0.8.6", features = [
-    "runtime-tokio",
-    "postgres",
-    "chrono",
-    "runtime-tokio-native-tls",
-] }
 syn = { version = "2.0.100" }
 testcontainers = { version = "0.19.0" }
 thiserror = { version = "2.0.12" }
@@ -138,3 +132,6 @@ shielder-setup = { path = "crates/shielder-setup" }
 type-conversions = { path = "crates/type-conversions" }
 transcript = { path = "crates/transcript" }
 shielder-scheduler-common = { path = "crates/shielder-scheduler-common" }
+shielder-prover-common = { path = "crates/shielder-prover-common" }
+shielder-prover-server = { path = "crates/shielder-prover-server" }
+shielder-prover-tee = { path = "crates/shielder-prover-tee" }

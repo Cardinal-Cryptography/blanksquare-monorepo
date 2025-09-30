@@ -1,10 +1,10 @@
 mod aws_session_tokens;
 mod command_line_args;
-mod db;
 mod error;
 mod handlers;
 mod relayer_controller;
 mod scheduler_processor;
+mod storage;
 
 use std::{net::SocketAddrV4, sync::Arc, time::Duration};
 
@@ -31,12 +31,13 @@ use crate::{
     handlers::{self as server_handlers},
     relayer_controller::RelayerController,
     scheduler_processor::SchedulerProcessor,
+    storage::StorageInterface,
 };
 
 #[derive(Debug)]
-struct AppState {
+struct AppState<Storage: StorageInterface> {
     options: CommandLineArgs,
-    db_pool: db::PgPool,
+    storage: Storage,
     tee_task_pool: Arc<tokio_task_pool::Pool>,
     aws_credentials: Arc<Mutex<AwsCredentials>>,
     relayer_controller: RelayerController,
@@ -69,27 +70,29 @@ async fn main() -> Result<(), Error> {
         .upkeep_timeout(Duration::from_secs(options.metrics_upkeep_timeout_secs))
         .install()?;
 
-    let db_pool = db::connect_to_db(&options).await?;
-    db::create_tables(&db_pool).await?;
+    #[cfg(not(feature = "local-run"))]
+    let storage = storage::dynamo_db::DynamoDb::new(&options.node_rpc_url).await?;
+    #[cfg(feature = "local-run")]
+    let storage = storage::in_memory::InMemoryStorage::new();
 
     let tee_task_pool = tokio_task_pool::Pool::bounded(options.tee_task_pool_capacity)
         .with_spawn_timeout(Duration::from_secs(options.tee_task_pool_timeout_secs))
         .with_run_timeout(Duration::from_secs(options.tee_compute_timeout_secs))
         .into();
 
-    let aws_credentials = if !options.disable_kms {
-        if let Some(iam_role) = &options.aws_iam_kms_role {
-            aws_session_tokens::get_session_token(
-                options.aws_sts_refresh_period_secs as i32,
-                iam_role,
-            )
-            .await?
-        } else {
-            return Err(Error::ParseError(
-                "AWS_IAM_KMS_ROLE is required when --disable-kms is not set".into(),
-            ));
-        }
-    } else {
+    #[cfg(not(feature = "local-run"))]
+    let aws_credentials = {
+        let aws_iam_kms_role = options.aws_iam_kms_role.clone().ok_or(Error::ParseError(
+            "AWS_IAM_KMS_ROLE is required when local-run is not set".into(),
+        ))?;
+        aws_session_tokens::get_session_token(
+            options.aws_sts_refresh_period_secs as i32,
+            &aws_iam_kms_role,
+        )
+        .await?
+    };
+    #[cfg(feature = "local-run")]
+    let aws_credentials = {
         // Use dummy credentials for local development
         use crate::aws_session_tokens::AwsCredentials;
         AwsCredentials {
@@ -106,8 +109,8 @@ async fn main() -> Result<(), Error> {
 
     let app_state = Arc::new(AppState {
         options,
+        storage,
         tee_task_pool,
-        db_pool,
         aws_credentials: Arc::new(Mutex::new(aws_credentials)),
         relayer_controller,
         shutdown_tx,
@@ -123,7 +126,8 @@ async fn main() -> Result<(), Error> {
     info!("TEE public key verification successful");
 
     // Start the AWS credentials refresh task
-    if !app_state.options.disable_kms {
+    #[cfg(not(feature = "local-run"))]
+    {
         let credentials_refresh_state = app_state.clone();
         tokio::spawn(async move {
             aws_credentials_refresh_task(credentials_refresh_state).await;
@@ -198,52 +202,52 @@ async fn main() -> Result<(), Error> {
 }
 
 /// Background task that periodically refreshes AWS STS credentials
-async fn aws_credentials_refresh_task(app_state: Arc<AppState>) {
-    if !app_state.options.disable_kms {
-        if let Some(iam_role) = &app_state.options.aws_iam_kms_role {
-            let mut interval = tokio::time::interval(Duration::from_secs(
-                app_state.options.aws_sts_refresh_period_secs,
-            ));
+async fn aws_credentials_refresh_task<Storage: StorageInterface>(
+    app_state: Arc<AppState<Storage>>,
+) {
+    #[cfg(not(feature = "local-run"))]
+    {
+        let mut interval = tokio::time::interval(Duration::from_secs(
+            app_state.options.aws_sts_refresh_period_secs,
+        ));
 
-            // Skip the first tick since we already have initial credentials
+        // Skip the first tick since we already have initial credentials
+        interval.tick().await;
+
+        loop {
             interval.tick().await;
 
-            loop {
-                interval.tick().await;
-
-                info!("Refreshing AWS credentials from EC2 metadata");
-                match aws_session_tokens::get_session_token(
-                    app_state.options.aws_sts_refresh_period_secs as i32,
-                    iam_role,
-                )
-                .await
-                {
-                    Ok(new_credentials) => {
-                        let mut credentials = app_state.aws_credentials.lock().await;
-                        *credentials = new_credentials;
-                        info!("AWS credentials refreshed successfully from EC2 metadata");
-                    }
-                    Err(e) => {
-                        tracing::error!(
-                            "Failed to refresh AWS credentials from EC2 metadata: {:?}",
-                            e
-                        );
-                        // Signal graceful shutdown on credential refresh failure
-                        info!("Signaling server shutdown due to AWS credential refresh failure");
-                        let _ = app_state.shutdown_tx.send(true);
-                        return;
-                    }
+            info!("Refreshing AWS credentials from EC2 metadata");
+            // this is safe because we checked during startup
+            let aws_iam_kms_role = app_state.options.aws_iam_kms_role.as_ref().unwrap().clone();
+            match aws_session_tokens::get_session_token(
+                app_state.options.aws_sts_refresh_period_secs as i32,
+                &aws_iam_kms_role,
+            )
+            .await
+            {
+                Ok(new_credentials) => {
+                    let mut credentials = app_state.aws_credentials.lock().await;
+                    *credentials = new_credentials;
+                    info!("AWS credentials refreshed successfully from EC2 metadata");
+                }
+                Err(e) => {
+                    tracing::error!(
+                        "Failed to refresh AWS credentials from EC2 metadata: {:?}",
+                        e
+                    );
+                    // Signal graceful shutdown on credential refresh failure
+                    info!("Signaling server shutdown due to AWS credential refresh failure");
+                    let _ = app_state.shutdown_tx.send(true);
+                    return;
                 }
             }
-        } else {
-            info!("AWS credentials refresh disabled (no AWS settings provided)");
-            // Just keep the task alive but do nothing
-            loop {
-                tokio::time::sleep(Duration::from_secs(3600)).await;
-            }
         }
-    } else {
-        info!("AWS credentials refresh disabled (--disable-kms flag is set)");
+    }
+
+    #[cfg(feature = "local-run")]
+    {
+        info!("AWS credentials refresh disabled (no AWS settings provided)");
         // Just keep the task alive but do nothing
         loop {
             tokio::time::sleep(Duration::from_secs(3600)).await;

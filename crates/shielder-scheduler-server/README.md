@@ -35,18 +35,16 @@ The server maintains proper security by verifying the KMS key relationship with 
 
 ### Local Development
 
-For local development and testing, you can use the `--disable-kms` command line flag to skip AWS KMS integration:
+For local development and testing, you can use the cargo feature `local-run` to skip AWS KMS integration and use in-memory storage instead of DynamoDB:
 
-- **Command Line Flag**: `--disable-kms`
-- **Dummy Credentials**: Uses hardcoded dummy AWS credentials instead of fetching from EC2 metadata
+- **Feature Line Flag**: `--features local-run`
 - **No Credential Refresh**: Skips the background AWS credential refresh task when KMS is disabled
-- **Validation Changes**: AWS configuration parameters become optional when `--disable-kms` is used
+- **Validation Changes**: AWS configuration parameters become optional when `local-run` is used
 
-When using `--disable-kms`:
+When using the `local-run` feature:
 
-- The `shielder-scheduler-tee` must be run with cargo feature `local-run` and `PRIVATE_KEY_BASE64` environment variable
+- The `shielder-scheduler-tee` must also be run with cargo feature `local-run` and `PRIVATE_KEY_BASE64` environment variable
 - AWS parameters (AWS_REGION, KMS_KEY_ID, AWS_IAM_KMS_ROLE) become optional
-- The server uses dummy AWS credentials for TEE communication
 - Background AWS credential refresh is disabled
 
 This allows developers to run the server locally without requiring EC2 instance metadata or proper AWS IAM roles.
@@ -75,7 +73,12 @@ Schedule a withdrawal request to be processed at a future time.
 
 ```json
 {
-  "payload": "base64-encoded-encrypted-payload",
+   "encryption_envelope": {
+      "encrypted_payload": "<base64-encoded>",
+      "encrypted_dek": "<base64-encoded>",
+      "iv": "<base64-encoded>",
+      "auth_tag": "<base64-encoded>="
+   },
   "last_note_index": "12345",
   "pocket_money": "500000000000000000",
   "token_address": "0x1234567890123456789012345678901234567890",
@@ -93,7 +96,7 @@ Schedule a withdrawal request to be processed at a future time.
 
 ```json
 {
-  "request_id": 123,
+  "request_id": "123",
   "message": "Withdraw request scheduled successfully. Request ID: 123"
 }
 ```
@@ -119,26 +122,6 @@ The service runs a background scheduler processor that:
 
 The scheduler processor can handle multiple requests in batches (configurable via `SCHEDULER_BATCH_SIZE`) and provides error handling with automatic retries.
 
-## Database Schema
-
-The service uses PostgreSQL with the following main table:
-
-```sql
-CREATE TABLE scheduled_requests (
-    id BIGSERIAL PRIMARY KEY,
-    payload BYTEA NOT NULL,
-    last_note_index TEXT NOT NULL,
-    pocket_money TEXT NOT NULL,
-    token_address TEXT NOT NULL,
-    relay_after TIMESTAMPTZ NOT NULL,
-    status request_status NOT NULL DEFAULT 'pending',
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    processed_at TIMESTAMPTZ,
-    retry_count INTEGER NOT NULL DEFAULT 0,
-    error_message TEXT
-);
-```
-
 ## Configuration
 
 The service can be configured using environment variables or command-line arguments:
@@ -149,15 +132,6 @@ The service can be configured using environment variables or command-line argume
 - `METRICS_PORT`: Metrics endpoint port (default: 3001)
 - `BIND_ADDRESS`: Server bind address (default: 0.0.0.0)
 - `MAXIMUM_REQUEST_SIZE`: Maximum request size in bytes (default: 102400)
-
-### Database Configuration
-
-- `DB_HOST`: Database host (default: localhost)
-- `DB_PORT`: Database port (default: 5432)
-- `DB_NAME`: Database name (default: scheduler-db)
-- `DB_USER`: Database user (default: postgres)
-- `DB_PASS`: Database password (default: postgres)
-- `DB_USE_SSL`: Use SSL for database connection (default: false)
 
 ### TEE Configuration
 
@@ -176,14 +150,13 @@ The service can be configured using environment variables or command-line argume
 
 ### AWS & KMS Configuration
 
-- `--disable-kms`: Command line flag to disable KMS and use local private key for decryption (for development only)
-- `AWS_REGION`: AWS region for STS and KMS operations (required when KMS is enabled, optional with `--disable-kms`)
-- `AWS_IAM_KMS_ROLE`: IAM role name for KMS access (required when KMS is enabled, optional with `--disable-kms`)
-- `KMS_KEY_ID`: AWS KMS key identifier for encryption operations (required when KMS is enabled, optional with `--disable-kms`)
-- `KMS_PUBLIC_KEY`: Base64-encoded public key for KMS verification (required)
-- `AWS_STS_REFRESH_CREDENTIALS_PERIOD_SECONDS`: How often to refresh AWS STS credentials in seconds (default: 900, range: 900-1800)
+- `AWS_REGION`: AWS region for STS and KMS operations (required unless built with `local-run`)
+- `AWS_IAM_KMS_ROLE`: IAM role name for KMS access (required unless built with `local-run`)
+- `KMS_KEY_ID`: AWS KMS key identifier for encryption operations (required unless built with `local-run`)
+- `KMS_PUBLIC_KEY`: Base64-encoded public key for KMS verification (always required)
+- `AWS_STS_REFRESH_CREDENTIALS_PERIOD_SECONDS`: How often to refresh AWS STS credentials in seconds (default: 900, range: 900-1800; ignored when built with `local-run`)
 
-**Local Development**: When using the `--disable-kms` flag, AWS-related environment variables become optional. If not provided, dummy AWS credentials are used for local testing. The TEE must be run with cargo feature `local_run` and `PRIVATE_KEY_BASE64` environment variable.
+**Local Development**: When compiling with the `local-run` feature (`cargo run --features local-run`), AWS-related environment variables (`AWS_REGION`, `KMS_KEY_ID`, `AWS_IAM_KMS_ROLE`) become optional and are ignored if absent. The server uses in-memory storage and skips AWS credential retrieval and refresh logic. The TEE must also be built/run with its corresponding `local-run` feature (and `PRIVATE_KEY_BASE64` if required by that component).
 
 **Converting PEM to Base64**: If you have a PEM file, you can convert it to base64:
 
@@ -295,44 +268,16 @@ cargo run  # Success
 
 **Command Line Usage Examples**:
 
-Production mode (with KMS):
+Production mode (default build, DynamoDB + KMS):
 
 ```bash
-cargo run -- --kms-public-key <base64-key> --aws-region us-east-1 --kms-key-id <key-id> --aws-iam-kms-role <iam-role-name> --node-rpc-url <rpc-url> --shielder-address <contract-addr> --relayer-rpc-url <relayer-url>
+cargo run --release -- --kms-public-key <base64-key> --aws-region us-east-1 --kms-key-id <key-id> --aws-iam-kms-role <iam-role-name> --node-rpc-url <rpc-url> --shielder-address <contract-addr> --relayer-url <relayer-url>
 ```
 
-Local development mode (without KMS):
+Local development mode (in-memory storage, no AWS integration):
 
 ```bash
-cargo run -- --disable-kms --kms-public-key <base64-key> --node-rpc-url <rpc-url> --shielder-address <contract-addr> --relayer-rpc-url <relayer-url>
-```
-
-### API Testing
-
-Schedule a withdrawal request:
-
-```bash
-curl -X POST http://localhost:3000/schedule_withdraw \
-  -H "Content-Type: application/json" \
-  -d '{
-    "payload": "SGVsbG8gV29ybGQ=",
-    "last_note_index": "12345",
-    "pocket_money": "500000000000000000",
-    "token_address": "0x1234567890123456789012345678901234567890",
-    "relay_after": 1693564800
-  }'
-```
-
-Check service health:
-
-```bash
-curl http://localhost:3000/health
-```
-
-Get TEE public key:
-
-```bash
-curl http://localhost:3000/public_key
+cargo run --features local-run -- --kms-public-key <base64-key> --node-rpc-url <rpc-url> --shielder-address <contract-addr> --relayer-url <relayer-url>
 ```
 
 ### Generating Test RSA Keys

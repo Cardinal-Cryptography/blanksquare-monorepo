@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use tracing::{error, info, instrument};
 
 use crate::{
-    db::{get_request_by_last_note_index, RequestStatus},
+    storage::{RequestStatus, StorageInterface},
     AppState,
 };
 
@@ -24,8 +24,8 @@ pub struct GetStatusResponse {
 }
 
 #[instrument(level = "info", skip_all)]
-pub async fn get_status(
-    State(state): State<Arc<AppState>>,
+pub async fn get_status<Storage: StorageInterface>(
+    State(state): State<Arc<AppState<Storage>>>,
     Path(last_note_index): Path<String>,
 ) -> impl IntoResponse {
     info!(
@@ -33,13 +33,27 @@ pub async fn get_status(
         last_note_index
     );
 
-    match get_request_by_last_note_index(&state.db_pool, &last_note_index).await {
+    match state
+        .storage
+        .get_request_by_last_note_index(&last_note_index)
+        .await
+    {
         Ok(Some(res)) => {
             info!(
                 "Found request with status: {:?} for last_note_index: {}",
                 res.status, last_note_index
             );
-            (axum::http::StatusCode::OK, Json(res)).into_response()
+            (
+                axum::http::StatusCode::OK,
+                Json(GetStatusResponse {
+                    last_note_index: res.last_note_index.to_string(),
+                    status: res.status.clone(),
+                    created_at: res.created_at,
+                    processed_at: res.processed_at,
+                    relay_after: res.relay_after,
+                }),
+            )
+                .into_response()
         }
         Ok(None) => {
             info!("No request found for last_note_index: {}", last_note_index);

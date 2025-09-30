@@ -1,4 +1,4 @@
-use std::{sync::Arc, time::Duration};
+use std::sync::Arc;
 
 use alloy_primitives::{Address, U256};
 use alloy_signer_local::PrivateKeySigner;
@@ -17,43 +17,28 @@ use tokio::time::interval;
 use tracing::{error, info, instrument, warn};
 
 use crate::{
-    db::{
-        get_pending_requests, update_request_status, update_retry_attempt, RequestStatus,
-        ScheduledRequest,
-    },
     error::SchedulerServerError,
     handlers::tee_request,
+    storage::{RequestStatus, ScheduledRequest, StorageInterface},
     AppState,
 };
 
 type Result<T> = std::result::Result<T, SchedulerServerError>;
 
-#[derive(Debug)]
-struct ParsedRequestParams {
-    last_note_index: U256,
-    pocket_money: U256,
-    token_address: Address,
-}
-
 /// Background request scheduler that processes scheduled withdrawal requests
 #[derive(Debug)]
-pub struct SchedulerProcessor {
-    app_state: Arc<AppState>,
+pub struct SchedulerProcessor<Storage: StorageInterface + 'static> {
+    app_state: Arc<AppState<Storage>>,
 }
 
-#[derive(Debug)]
-struct ProcessingResult {
-    request_id: i64,
-}
-
-impl SchedulerProcessor {
-    pub fn new(app_state: Arc<AppState>) -> Self {
+impl<Storage: StorageInterface> SchedulerProcessor<Storage> {
+    pub fn new(app_state: Arc<AppState<Storage>>) -> Self {
         Self { app_state }
     }
 
     pub async fn start(self) {
         info!("Starting background task processor");
-        let mut interval = interval(Duration::from_secs(
+        let mut interval = interval(std::time::Duration::from_secs(
             self.app_state.options.scheduler_interval_secs,
         ));
 
@@ -88,11 +73,11 @@ Please check the SHIELDER_ADDRESS environment variable or --shielder-address arg
     }
 
     async fn process_pending_requests(&self) -> Result<()> {
-        let requests = get_pending_requests(
-            &self.app_state.db_pool,
-            self.app_state.options.scheduler_batch_size as i64,
-        )
-        .await?;
+        let requests = self
+            .app_state
+            .storage
+            .get_pending_requests(self.app_state.options.scheduler_batch_size)
+            .await?;
 
         if requests.is_empty() {
             return Ok(());
@@ -111,50 +96,64 @@ Please check the SHIELDER_ADDRESS environment variable or --shielder-address arg
 
     #[instrument(level = "info", skip_all)]
     async fn process_single_request(&self, request: ScheduledRequest) -> Result<()> {
-        info!("Processing request ID: {}", request.id);
-        let request_id = request.id;
+        info!(
+            "Processing request last_note_index: {}",
+            request.last_note_index
+        );
         let request_retry_count = request.retry_count;
 
-        match self.process_request_logic(request).await {
-            Ok(result) => {
-                info!("Successfully processed request ID: {}", result.request_id);
-                update_request_status(
-                    &self.app_state.db_pool,
-                    result.request_id,
-                    RequestStatus::Completed,
-                    None,
-                )
-                .await?;
+        match self.process_request_logic(&request).await {
+            Ok(_) => {
+                info!(
+                    "Successfully processed request last_note_index: {}",
+                    request.last_note_index
+                );
+                self.app_state
+                    .storage
+                    .update_request_status(
+                        &request.last_note_index.to_string(),
+                        RequestStatus::Completed,
+                        Some(Utc::now()),
+                        None,
+                    )
+                    .await?;
             }
             Err(e) => {
                 warn!(
-                    "Request processing failed for ID: {}, error: {:?}",
-                    request_id, e
+                    "Request processing failed for last_note_index: {}, error: {:?}",
+                    request.last_note_index, e
                 );
 
                 if request_retry_count < self.app_state.options.scheduler_max_retry_count as i32 {
                     let new_relay_after = Utc::now()
-                        + Duration::from_secs(self.app_state.options.scheduler_retry_delay_secs);
-
-                    update_retry_attempt(
-                        &self.app_state.db_pool,
-                        request_id,
-                        new_relay_after,
-                        Some(&e.to_string()),
-                    )
-                    .await?;
+                        + chrono::Duration::seconds(
+                            self.app_state.options.scheduler_retry_delay_secs as i64,
+                        );
+                    let new_retry_count = request_retry_count + 1;
+                    self.app_state
+                        .storage
+                        .update_retry_attempt(
+                            &request.last_note_index.to_string(),
+                            new_relay_after,
+                            new_retry_count,
+                            Some(Utc::now()),
+                            Some(&e.to_string()),
+                        )
+                        .await?;
                 } else {
                     warn!(
-                        "Request ID {} has reached maximum retry count, marking as Failed",
-                        request_id
+                        "Request last_note_index {} has reached maximum retry count, marking as Failed",
+                        request.last_note_index
                     );
-                    update_request_status(
-                        &self.app_state.db_pool,
-                        request_id,
-                        RequestStatus::Failed,
-                        Some(&e.to_string()),
-                    )
-                    .await?;
+                    self.app_state
+                        .storage
+                        .update_request_status(
+                            &request.last_note_index.to_string(),
+                            RequestStatus::Failed,
+                            Some(Utc::now()),
+                            Some(&e.to_string()),
+                        )
+                        .await?;
                 }
             }
         }
@@ -162,39 +161,36 @@ Please check the SHIELDER_ADDRESS environment variable or --shielder-address arg
         Ok(())
     }
 
-    async fn process_request_logic(&self, request: ScheduledRequest) -> Result<ProcessingResult> {
-        let parsed_params = self.parse_request_parameters(&request)?;
-        let (merkle_root, merkle_path) = self
-            .current_merkle_path(parsed_params.last_note_index)
-            .await?;
+    async fn process_request_logic(&self, request: &ScheduledRequest) -> Result<()> {
+        let (merkle_root, merkle_path) = self.current_merkle_path(request.last_note_index).await?;
         let quoted_fee = self
-            .get_quoted_fee(parsed_params.token_address, parsed_params.pocket_money)
+            .get_quoted_fee(request.token_address, request.pocket_money)
             .await?;
 
         let tee_response = self
-            .call_tee_prepare_relay_calldata(&request, &quoted_fee, merkle_root, merkle_path)
+            .call_tee_prepare_relay_calldata(request, &quoted_fee, merkle_root, merkle_path)
             .await?;
 
-        self.process_tee_response(tee_response, quoted_fee, request.id)
-            .await
-    }
-
-    fn parse_request_parameters(&self, request: &ScheduledRequest) -> Result<ParsedRequestParams> {
-        let last_note_index = request.last_note_index_as_u256().map_err(|e| {
-            SchedulerServerError::ValueParseError(format!("Failed to parse last_note_index: {}", e))
-        })?;
-        let pocket_money = request.pocket_money_as_u256().map_err(|e| {
-            SchedulerServerError::ValueParseError(format!("Failed to parse pocket_money: {}", e))
-        })?;
-        let token_address = request.token_address_as_address().map_err(|e| {
-            SchedulerServerError::ValueParseError(format!("Failed to parse token_address: {}", e))
-        })?;
-
-        Ok(ParsedRequestParams {
-            last_note_index,
-            pocket_money,
-            token_address,
-        })
+        match tee_response {
+            Response::PrepareRelayCalldata { calldata } => {
+                info!(
+                    "Successfully prepared relay calldata for request last_note_index: {}",
+                    request.last_note_index,
+                );
+                let relay_query = RelayQuery {
+                    calldata,
+                    quote: quoted_fee.into(),
+                };
+                self.app_state
+                    .relayer_controller
+                    .send_relay_query(relay_query)
+                    .await?;
+                Ok(())
+            }
+            _ => Err(SchedulerServerError::ProvingServerError(
+                VsockError::Protocol("Unexpected response from TEE".to_string()),
+            )),
+        }
     }
 
     async fn get_quoted_fee(
@@ -270,33 +266,5 @@ Please check the SHIELDER_ADDRESS environment variable or --shielder-address arg
             .map_err(SchedulerServerError::ProvingServerError)?;
 
         Ok(response.0)
-    }
-
-    async fn process_tee_response(
-        &self,
-        response: Response,
-        quoted_fee: QuoteFeeResponse,
-        request_id: i64,
-    ) -> Result<ProcessingResult> {
-        match response {
-            Response::PrepareRelayCalldata { calldata } => {
-                info!(
-                    "Successfully prepared relay calldata for request ID: {}",
-                    request_id,
-                );
-                let relay_query = RelayQuery {
-                    calldata,
-                    quote: quoted_fee.into(),
-                };
-                self.app_state
-                    .relayer_controller
-                    .send_relay_query(relay_query)
-                    .await?;
-                Ok(ProcessingResult { request_id })
-            }
-            _ => Err(SchedulerServerError::ProvingServerError(
-                VsockError::Protocol("Unexpected response from TEE".to_string()),
-            )),
-        }
     }
 }

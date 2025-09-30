@@ -7,7 +7,10 @@ use serde::{Deserialize, Serialize};
 use shielder_scheduler_common::protocol::EncryptionEnvelope;
 use tracing::{error, info, instrument};
 
-use crate::{db::insert_scheduled_request, AppState};
+use crate::{
+    storage::{ScheduledRequest, StorageInterface},
+    AppState,
+};
 
 /// When requesting a withdraw schedule, user sends this struct as a JSON
 #[derive(Debug, Deserialize, Serialize)]
@@ -26,13 +29,13 @@ pub struct ScheduleWithdrawRequest {
 
 #[derive(Debug, Serialize)]
 pub struct ScheduleWithdrawResponse {
-    pub request_id: i64,
+    pub request_id: String,
     pub message: String,
 }
 
 #[instrument(level = "info", skip_all)]
-pub async fn schedule_withdraw(
-    State(state): State<Arc<AppState>>,
+pub async fn schedule_withdraw<Storage: StorageInterface>(
+    State(state): State<Arc<AppState<Storage>>>,
     Json(schedule_withdraw_request): Json<ScheduleWithdrawRequest>,
 ) -> impl IntoResponse {
     info!(
@@ -70,28 +73,29 @@ pub async fn schedule_withdraw(
             .into_response();
     }
 
-    match insert_scheduled_request(
-        &state.db_pool,
+    let request = ScheduledRequest::new(
         schedule_withdraw_request.encryption_envelope,
         schedule_withdraw_request.last_note_index,
         schedule_withdraw_request.pocket_money,
         schedule_withdraw_request.token_address,
         relay_after,
-    )
-    .await
-    {
-        Ok(request_id) => {
+    );
+
+    let request_last_note_index = request.last_note_index;
+
+    match state.storage.insert_scheduled_request(request).await {
+        Ok(_) => {
             info!(
-                "Successfully scheduled withdraw request with ID: {}",
-                request_id
+                "Successfully scheduled withdraw request with last_note_index: {}",
+                request_last_note_index
             );
             (
                 axum::http::StatusCode::CREATED,
                 Json(ScheduleWithdrawResponse {
-                    request_id,
+                    request_id: request_last_note_index.to_string(),
                     message: format!(
-                        "Withdraw request scheduled successfully. Request ID: {}",
-                        request_id
+                        "Withdraw request scheduled successfully. Last note index: {}",
+                        request_last_note_index
                     ),
                 }),
             )

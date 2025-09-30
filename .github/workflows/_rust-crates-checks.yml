@@ -10,15 +10,9 @@ on:
 # For shielder-circuit crate, we run tests and build the binary for measuring circuits.
 jobs:
   lint-and-format-rust:
-    name: Run lints and format for ${{ matrix.workspace }}
+    name: Run lints and format for Rust workspace
     runs-on: ubuntu-22.04
     timeout-minutes: 10
-    strategy:
-      fail-fast: false
-      matrix:
-        workspace:
-          - .
-          - tee
     steps:
       - name: Checkout source code
         uses: actions/checkout@v4
@@ -46,7 +40,7 @@ jobs:
 
       - name: Run linter and formatter
         run: |
-          cd ${{ matrix.workspace }} && make lint-rust && make format-rust
+          make lint-rust && make format-rust
 
   test-rust-crates:
     name: Run tests for ${{ matrix.crate }}
@@ -67,7 +61,9 @@ jobs:
           - crates/shielder-scheduler-common
           - crates/shielder-scheduler-server
           - crates/shielder-scheduler-tee
-          - tee
+          - crates/shielder-prover-common
+          - crates/shielder-prover-server
+          - crates/shielder-prover-tee
     steps:
       - name: Checkout source code
         uses: actions/checkout@v4

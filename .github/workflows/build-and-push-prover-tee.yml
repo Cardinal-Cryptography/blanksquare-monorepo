@@ -1,17 +1,17 @@
 ---
-name: Build and push Shielder-Scheduler-TEE docker image
+name: Build and push Shielder-Prover-TEE docker image
 
 on:
   workflow_call:
     inputs:
       ref:
-        description: 'git ref: hash, branch, tag to build shielder-scheduler-tee files from'
+        description: 'git ref: hash, branch, tag to build shielder-prover-tee files from'
         type: string
         required: true
 
 jobs:
   main:
-    name: Build Shielder Scheduler TEE
+    name: Build Shielder Prover TEE
     runs-on: github-large-runner-x64-4-cpu-16-gb-ram-150-gb-disk
     steps:
       - name: Checkout source code
@@ -34,19 +34,14 @@ jobs:
           username: ${{ secrets.AWS_MAINNET_ECR_CC_ACCESS_KEY_ID }}
           password: ${{ secrets.AWS_MAINNET_ECR_CC_ACCESS_KEY }}
 
-      - name: Build kmstool enclave CLI
-        run: |
-          chmod +x ./scripts/build_kmstool_enclave_cli.sh
-          ./scripts/build_kmstool_enclave_cli.sh
-
       - name: Build and push docker image
         id: build-image
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: ./crates/shielder-scheduler-tee/Dockerfile
+          file: ./crates/shielder-prover-tee/Dockerfile
           push: true
           # yamllint disable rule:line-length
           tags: |
-            ${{ vars.ECR_CC_RES_PUBLIC_REGISTRY }}shielder-scheduler:tee-${{ steps.get-ref-properties.outputs.sha }}
-            ${{ github.ref == 'refs/heads/main' && format('{0}shielder-scheduler:tee-latest', vars.ECR_CC_RES_PUBLIC_REGISTRY) || '' }}
+            ${{ vars.ECR_CC_RES_PUBLIC_REGISTRY }}shielder-prover:tee-${{ steps.get-ref-properties.outputs.sha }}
+            ${{ github.ref == 'refs/heads/main' && format('{0}shielder-prover:tee-latest', vars.ECR_CC_RES_PUBLIC_REGISTRY) || '' }}

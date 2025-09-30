@@ -10,7 +10,7 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 COPY . .
-RUN cargo build --release -p shielder-scheduler-tee
+RUN cargo build --release -p shielder-prover-tee
 
 FROM ubuntu:22.04
 
@@ -19,15 +19,12 @@ RUN apt-get update && apt-get install -y \
     tini \
     && rm -rf /var/lib/apt/lists/*
 
-COPY ./artifacts/kms/kmstool_enclave_cli /usr/local/bin/
-COPY ./artifacts/kms/libnsm.so /usr/lib/x86_64-linux-gnu/
-
-COPY --from=builder /app/target/release/shielder-scheduler-tee /usr/local/bin
-RUN chmod +x /usr/local/bin/shielder-scheduler-tee
+COPY --from=builder /app/target/release/shielder-prover-tee /usr/local/bin
+RUN chmod +x /usr/local/bin/shielder-prover-tee
 
 ENV RUST_LOG=debug
 
 RUN useradd -r -s /bin/false server
 USER server
 
-ENTRYPOINT ["tini", "--", "shielder-scheduler-tee"]
+ENTRYPOINT ["tini", "--", "shielder-prover-tee"]

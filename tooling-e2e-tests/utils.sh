@@ -369,6 +369,7 @@ start_scheduler() {
   cd "${ROOT_DIR}"
   log_progress "🔄 Starting Scheduler"
 
+  # TODO: custom deployment setup for testnet (production build requires Enclave)
   docker compose -f crates/shielder-scheduler-server/docker/docker-compose-local.yaml up -d &>> /dev/null
 
   log_progress "✅ Scheduler started"

@@ -80,7 +80,11 @@ pub async fn recover_scheduler_accounts(
             }
         }
         if found_action {
-            app_state.scheduler_accounts.entry(zkid_seed).or_default().push(scheduler_account);
+            app_state
+                .scheduler_accounts
+                .entry(zkid_seed)
+                .or_default()
+                .push(scheduler_account);
         } else {
             break;
         }

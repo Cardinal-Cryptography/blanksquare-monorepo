@@ -12,7 +12,8 @@ use crate::{
         CliConfig,
         Command::{ContractInteraction, StateRead, StateWrite},
         ContractInteractionCommand, DepositCmd, DepositERC20Cmd, LoggingFormat, NewAccountCmd,
-        NewAccountERC20Cmd, ScheduleWithdrawCmd, ScheduleWithdrawERC20Cmd, StateReadCommand, StateWriteCommand, WithdrawCmd, WithdrawERC20Cmd,
+        NewAccountERC20Cmd, ScheduleWithdrawCmd, ScheduleWithdrawERC20Cmd, StateReadCommand,
+        StateWriteCommand, WithdrawCmd, WithdrawERC20Cmd,
     },
     recovery::{recover_scheduler_accounts, recover_state},
     shielder_ops::{deposit, new_account, schedule_withdraw, withdraw},
@@ -107,7 +108,7 @@ fn perform_state_read_action(app_state: &AppState, command: StateReadCommand) ->
                     println!("{:#?}", account.history)
                 }
             }
-        },
+        }
         StateReadCommand::AppConfig => {
             println!("{}", app_state.display_app_config())
         }
@@ -159,26 +160,27 @@ async fn perform_contract_action(
             )
             .await
         }
-        ContractInteractionCommand::ScheduleWithdraw(ScheduleWithdrawCmd { 
-            amount, 
-            to, 
-            relay_after, 
-            max_relayer_fee, 
-            memo, 
-            zkid_seed
+        ContractInteractionCommand::ScheduleWithdraw(ScheduleWithdrawCmd {
+            amount,
+            to,
+            relay_after,
+            max_relayer_fee,
+            memo,
+            zkid_seed,
         }) => {
             schedule_withdraw(
-                app_state, 
-                amount, 
-                to, 
-                Token::Native, 
-                0, 
-                memo.clone().into(), 
-                memo.into(), 
-                relay_after, 
+                app_state,
+                amount,
+                to,
+                Token::Native,
+                0,
+                memo.clone().into(),
+                memo.into(),
+                relay_after,
                 max_relayer_fee,
-                zkid_seed
-            ).await
+                zkid_seed,
+            )
+            .await
         }
         ContractInteractionCommand::ScheduleWithdrawERC20(ScheduleWithdrawERC20Cmd {
             amount,
@@ -188,7 +190,7 @@ async fn perform_contract_action(
             relay_after,
             max_relayer_fee,
             memo,
-            zkid_seed
+            zkid_seed,
         }) => {
             schedule_withdraw(
                 app_state,
@@ -200,7 +202,7 @@ async fn perform_contract_action(
                 memo.into(),
                 relay_after,
                 max_relayer_fee,
-                zkid_seed
+                zkid_seed,
             )
             .await
         }

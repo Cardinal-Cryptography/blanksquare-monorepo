@@ -55,6 +55,7 @@ struct ScheduleWithdrawResponse {
     message: String,
 }
 
+#[allow(clippy::too_many_arguments)]
 pub async fn schedule_withdraw(
     app_state: &mut AppState,
     amount: u128,
@@ -158,7 +159,11 @@ pub async fn schedule_withdraw(
     .await?;
 
     // store the scheduler account back
-    app_state.scheduler_accounts.entry(zkid_seed).or_default().push(scheduler_account);
+    app_state
+        .scheduler_accounts
+        .entry(zkid_seed)
+        .or_default()
+        .push(scheduler_account);
 
     info!(
         "Withdrawal scheduled successfully for {} tokens to be relayed after timestamp {}",
@@ -180,7 +185,7 @@ async fn deposit_call(
     let anonymity_revoker_public_key = user.anonymity_revoker_pubkey::<DryRun>().await?;
 
     let call = prepare_deposit_call(
-        &scheduler_account,
+        scheduler_account,
         amount,
         token,
         anonymity_revoker_public_key,
@@ -221,6 +226,7 @@ async fn deposit_call(
     Ok(new_account_event.newNoteIndex)
 }
 
+#[allow(clippy::too_many_arguments)]
 async fn prepare_withdrawal_payload(
     app_state: &AppState,
     scheduler_account: &ShielderAccount,
@@ -281,7 +287,10 @@ async fn get_tee_public_key(app_state: &AppState) -> Result<Vec<u8>> {
     let tee_response: TeePublicKeyResponse = response.json().await?;
     let public_key_bytes = BASE64.decode(&tee_response.tee_public_key.public_key)?;
 
-    warn!("Not verifying attestation document from scheduler TEE. Attestation document length: {}", tee_response.tee_public_key.attestation_document.len());
+    warn!(
+        "Not verifying attestation document from scheduler TEE. Attestation document length: {}",
+        tee_response.tee_public_key.attestation_document.len()
+    );
     // TODO: verify attestation document
 
     Ok(public_key_bytes)
@@ -364,7 +373,10 @@ async fn send_schedule_request(
     }
 
     let schedule_response: ScheduleWithdrawResponse = response.json().await?;
-    info!("Scheduler response request id: {}\nmessage: {}", schedule_response.request_id, schedule_response.message);
+    info!(
+        "Scheduler response request id: {}\nmessage: {}",
+        schedule_response.request_id, schedule_response.message
+    );
 
     Ok(())
 }

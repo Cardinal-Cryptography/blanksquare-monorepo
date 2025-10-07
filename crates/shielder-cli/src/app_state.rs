@@ -144,12 +144,9 @@ Depositor signing key: {}",
         create_simple_provider(&self.node_rpc_url).await
     }
 
-    pub fn get_next_scheduler_account(
-        &self,
-        token: Token,
-        zkid_seed: U256
-    ) -> ShielderAccount {
-        let scheduler_account_idx = self.scheduler_accounts
+    pub fn get_next_scheduler_account(&self, token: Token, zkid_seed: U256) -> ShielderAccount {
+        let scheduler_account_idx = self
+            .scheduler_accounts
             .get(&zkid_seed)
             .map(|accounts| accounts.len() + 1)
             .unwrap_or(1);

@@ -71,6 +71,9 @@ impl Command {
                 NewAccountERC20Cmd { zkid_seed, .. },
             ))
             | Command::StateWrite(StateWriteCommand::RecoverState { zkid_seed, .. }) => *zkid_seed,
+            Command::StateWrite(StateWriteCommand::RecoverSchedulerAccounts {
+                zkid_seed, ..
+            }) => *zkid_seed,
             _ => None,
         }
     }
@@ -99,8 +102,20 @@ pub enum StateWriteCommand {
         /// Address of the relayer.
         url: String,
     },
+    /// Set scheduler url address.
+    SchedulerUrl {
+        /// Addresss of the scheduler.
+        url: String,
+    },
     /// Recover state from the blockchain.
     RecoverState {
+        /// Token to recover.
+        #[clap(value_parser = parsing::parse_token)]
+        token: Token,
+        /// Optional seed for the ZK ID. If not provided, will be derived from the private key.
+        zkid_seed: Option<U256>,
+    },
+    RecoverSchedulerAccounts {
         /// Token to recover.
         #[clap(value_parser = parsing::parse_token)]
         token: Token,
@@ -113,8 +128,12 @@ pub enum StateWriteCommand {
 pub enum StateReadCommand {
     /// Display account details.
     DisplayAccount,
+    /// Display all scheduler accounts.
+    DisplaySchedulerAccounts,
     /// Display full account history.
     History,
+    /// Display full scheduling accounts history.
+    SchedulingHistory,
     /// Display application configuration.
     AppConfig,
 }
@@ -133,16 +152,23 @@ pub enum ContractInteractionCommand {
     Withdraw(WithdrawCmd),
     /// Unshield some ERC20 tokens.
     WithdrawERC20(WithdrawERC20Cmd),
+    /// Schedule withdrawal of native tokens using scheduler server.
+    ScheduleWithdraw(ScheduleWithdrawCmd),
+    /// Schedule withdrawal of ERC20 tokens using scheduler server.
+    ScheduleWithdrawERC20(ScheduleWithdrawERC20Cmd),
 }
 
 impl ContractInteractionCommand {
     pub fn token(&self) -> Token {
         use ContractInteractionCommand::*;
         match self {
-            NewAccount(_) | Deposit(_) | Withdraw(_) => Token::Native,
+            NewAccount(_) | Deposit(_) | Withdraw(_) | ScheduleWithdraw(_) => Token::Native,
             NewAccountERC20(NewAccountERC20Cmd { token_address, .. })
             | DepositERC20(DepositERC20Cmd { token_address, .. })
-            | WithdrawERC20(WithdrawERC20Cmd { token_address, .. }) => Token::ERC20(*token_address),
+            | WithdrawERC20(WithdrawERC20Cmd { token_address, .. })
+            | ScheduleWithdrawERC20(ScheduleWithdrawERC20Cmd { token_address, .. }) => {
+                Token::ERC20(*token_address)
+            }
         }
     }
 }
@@ -215,6 +241,44 @@ pub struct WithdrawERC20Cmd {
     /// Optional memo attached to the contract call.
     #[clap(long, value_parser = parsing::parse_memo, default_value = "")]
     pub memo: parsing::Memo,
+}
+
+#[derive(Clone, Eq, PartialEq, Debug, Args)]
+pub struct ScheduleWithdrawCmd {
+    /// Amount of the token to be unshielded.
+    pub amount: u128,
+    /// Address to which the tokens should be sent.
+    pub to: Address,
+    /// Unix timestamp (seconds) after which the relay is allowed.
+    pub relay_after: i64,
+    /// Maximum relayer fee willing to pay (in wei).
+    pub max_relayer_fee: u128,
+    /// Optional memo attached to the contract call.
+    #[clap(value_parser = parsing::parse_memo, default_value = "")]
+    pub memo: parsing::Memo,
+    /// Optional seed for the ZK ID. If not provided, will be derived from the private key.
+    pub zkid_seed: Option<U256>,
+}
+
+#[derive(Clone, Eq, PartialEq, Debug, Args)]
+pub struct ScheduleWithdrawERC20Cmd {
+    /// Amount of the token to be unshielded.
+    pub amount: u128,
+    /// Address to which the tokens should be sent.
+    pub to: Address,
+    /// Address of the token.
+    pub token_address: Address,
+    /// Pocket money to be sent to the withdrawal address.
+    pub pocket_money: u128,
+    /// Unix timestamp (seconds) after which the relay is allowed.
+    pub relay_after: i64,
+    /// Maximum relayer fee willing to pay.
+    pub max_relayer_fee: u128,
+    /// Optional memo attached to the contract call.
+    #[clap(long, value_parser = parsing::parse_memo, default_value = "")]
+    pub memo: parsing::Memo,
+    /// Optional seed for the ZK ID. If not provided, will be derived from the private key.
+    pub zkid_seed: Option<U256>,
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug, Default, ValueEnum)]

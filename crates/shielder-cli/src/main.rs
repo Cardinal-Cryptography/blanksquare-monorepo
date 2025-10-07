@@ -12,10 +12,10 @@ use crate::{
         CliConfig,
         Command::{ContractInteraction, StateRead, StateWrite},
         ContractInteractionCommand, DepositCmd, DepositERC20Cmd, LoggingFormat, NewAccountCmd,
-        NewAccountERC20Cmd, StateReadCommand, StateWriteCommand, WithdrawCmd, WithdrawERC20Cmd,
+        NewAccountERC20Cmd, ScheduleWithdrawCmd, ScheduleWithdrawERC20Cmd, StateReadCommand, StateWriteCommand, WithdrawCmd, WithdrawERC20Cmd,
     },
-    recovery::recover_state,
-    shielder_ops::{deposit, new_account, withdraw},
+    recovery::{recover_scheduler_accounts, recover_state},
+    shielder_ops::{deposit, new_account, schedule_withdraw, withdraw},
     state_file::{create_and_save_new_state, get_app_state, save_app_state},
 };
 
@@ -68,9 +68,15 @@ async fn perform_state_write_action(
             info!("Setting relayer url to {url}");
             app_state.relayer_rpc_url = relayer_rpc_url;
         }
-        // for now we support only native recovery
+        StateWriteCommand::SchedulerUrl { url } => {
+            info!("Setting scheduler url to {url}");
+            app_state.scheduler_url = url;
+        }
         StateWriteCommand::RecoverState { token, zkid_seed } => {
             recover_state(app_state, token, zkid_seed).await?;
+        }
+        StateWriteCommand::RecoverSchedulerAccounts { token, zkid_seed } => {
+            recover_scheduler_accounts(app_state, token, zkid_seed).await?;
         }
     };
     Ok(())
@@ -80,7 +86,14 @@ fn perform_state_read_action(app_state: &AppState, command: StateReadCommand) ->
     match command {
         StateReadCommand::DisplayAccount => {
             for account in app_state.accounts.values() {
-                println!("{}", account)
+                println!("{:#?}", account)
+            }
+        }
+        StateReadCommand::DisplaySchedulerAccounts => {
+            for accounts in app_state.scheduler_accounts.values() {
+                for account in accounts {
+                    println!("{:#?}", account)
+                }
             }
         }
         StateReadCommand::History => {
@@ -88,6 +101,13 @@ fn perform_state_read_action(app_state: &AppState, command: StateReadCommand) ->
                 println!("{:#?}", account.history)
             }
         }
+        StateReadCommand::SchedulingHistory => {
+            for accounts in app_state.scheduler_accounts.values() {
+                for account in accounts {
+                    println!("{:#?}", account.history)
+                }
+            }
+        },
         StateReadCommand::AppConfig => {
             println!("{}", app_state.display_app_config())
         }
@@ -136,6 +156,51 @@ async fn perform_contract_action(
                 Token::ERC20(token_address),
                 pocket_money,
                 memo.into(),
+            )
+            .await
+        }
+        ContractInteractionCommand::ScheduleWithdraw(ScheduleWithdrawCmd { 
+            amount, 
+            to, 
+            relay_after, 
+            max_relayer_fee, 
+            memo, 
+            zkid_seed
+        }) => {
+            schedule_withdraw(
+                app_state, 
+                amount, 
+                to, 
+                Token::Native, 
+                0, 
+                memo.clone().into(), 
+                memo.into(), 
+                relay_after, 
+                max_relayer_fee,
+                zkid_seed
+            ).await
+        }
+        ContractInteractionCommand::ScheduleWithdrawERC20(ScheduleWithdrawERC20Cmd {
+            amount,
+            to,
+            token_address,
+            pocket_money,
+            relay_after,
+            max_relayer_fee,
+            memo,
+            zkid_seed
+        }) => {
+            schedule_withdraw(
+                app_state,
+                amount,
+                to,
+                Token::ERC20(token_address),
+                pocket_money,
+                memo.clone().into(),
+                memo.into(),
+                relay_after,
+                max_relayer_fee,
+                zkid_seed
             )
             .await
         }

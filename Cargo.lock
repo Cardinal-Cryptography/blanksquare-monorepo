@@ -6262,6 +6262,7 @@ dependencies = [
 name = "shielder-cli"
 version = "0.1.0"
 dependencies = [
+ "aes-gcm",
  "alloy-primitives",
  "alloy-provider",
  "alloy-rpc-types-eth",
@@ -6269,11 +6270,15 @@ dependencies = [
  "alloy-sol-types",
  "alloy-transport",
  "anyhow",
+ "base64 0.22.1",
  "clap",
  "content-encryption",
+ "hex",
  "inquire",
  "powers-of-tau",
+ "rand 0.8.5",
  "reqwest",
+ "rsa",
  "serde",
  "serde_json",
  "shellexpand",
@@ -6281,6 +6286,7 @@ dependencies = [
  "shielder-circuits",
  "shielder-contract",
  "shielder-relayer",
+ "shielder-scheduler-common",
  "shielder-setup",
  "tokio",
  "tracing",

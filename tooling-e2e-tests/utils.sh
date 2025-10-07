@@ -167,6 +167,21 @@ stop_relayer() {
   log_progress "✅ Relayer stopped"
 }
 
+# ${1} - token address, if empty, native token is assumed
+# ${2} - pocket money, ignored if ${1} is empty
+quote_relayer_fee() {
+  # if arg in not provided, default to native token
+  if [ $# -eq 0 ]; then
+    data='{"fee_token":"Native","pocket_money":"0"}'
+  else
+    data='{"fee_token":{"ERC20": "'${1}'"},"pocket_money":"'${2:-0}'"}'
+  fi
+  curl -s --header "Content-Type: application/json" \
+  --request POST \
+  --data "${data}" \
+  ${RELAYER_URL}/quote_fees | jq -r '.fee_details.total_cost_fee_token'
+}
+
 ####################################################################################################
 #### CLI ###########################################################################################
 ####################################################################################################
@@ -225,6 +240,7 @@ configure_cli() {
   ${1} node-url "${NODE_RPC_URL}"
   ${1} contract-address "${SHIELDER_CONTRACT_ADDRESS}"
   ${1} relayer-url "${RELAYER_URL}"
+  ${1} scheduler-url "${SCHEDULER_URL}"
 
   log_progress "✅ CLI fully configured"
 }
@@ -273,6 +289,12 @@ cleanup() {
   docker logs shielder-relayer > relayer-output.log
   log_progress "🗒 Relayer logs saved to relayer-output.log"
   stop_relayer
+
+  docker logs shielder-scheduler-server-local > scheduler-server-output.log
+  docker logs shielder-scheduler-tee-local > scheduler-tee-output.log
+  log_progress "🗒 Scheduler logs saved to scheduler-server-output.log and scheduler-tee-output.log"
+  docker stop shielder-scheduler-server-local shielder-scheduler-tee-local &>> /dev/null
+  log_progress "✅ Scheduler stopped"
 
   if [[ -z "${TESTNET:-}" ]] && [[ -z "${KEEP_NODE:-}" ]]; then
     log_progress "🗒 Stopping anvil node"
@@ -338,3 +360,16 @@ scan_and_assert_referrals() {
     log_progress "✅ All referrals are valid"
   fi
 } 
+
+####################################################################################################
+#### SCHEDULER #####################################################################################
+####################################################################################################
+
+start_scheduler() {
+  cd "${ROOT_DIR}"
+  log_progress "🔄 Starting Scheduler"
+
+  docker compose -f crates/shielder-scheduler-server/docker/docker-compose-local.yaml up -d &>> /dev/null
+
+  log_progress "✅ Scheduler started"
+}

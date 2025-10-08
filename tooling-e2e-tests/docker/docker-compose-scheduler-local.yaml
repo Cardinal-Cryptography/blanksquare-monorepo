@@ -1,12 +1,12 @@
 services:
   shielder-scheduler-tee-local:
     build:
-      context: ../../..  # Build from repo root to access all dependencies
-      dockerfile: crates/shielder-scheduler-tee/docker/Dockerfile.local
+      context: ../..  # Build from repo root to access all dependencies
+      dockerfile: tooling-e2e-tests/docker/Dockerfile.scheduler-tee-local
     image: shielder-scheduler-tee-local
     container_name: shielder-scheduler-tee-local
     environment:
-      - PRIVATE_KEY_BASE64=${PRIVATE_KEY_BASE64}
+      - PRIVATE_KEY_BASE64=${SCHEDULER_PRIVATE_KEY}
     # Logging
       - RUST_LOG=${RUST_LOG:-info}
     # Use host network to bypass container networking limitations
@@ -17,15 +17,15 @@ services:
 
   shielder-scheduler-server-local:
     build:
-      context: ../../..  # Build from repo root to access all dependencies
-      dockerfile: crates/shielder-scheduler-server/docker/Dockerfile.local
+      context: ../..  # Build from repo root to access all dependencies
+      dockerfile: tooling-e2e-tests/docker/Dockerfile.scheduler-server-local
     image: shielder-scheduler-server-local
     container_name: shielder-scheduler-server-local
     environment:
       # Server Configuration
       - PUBLIC_PORT=${SCHEDULER_PORT:-3000}
       # Key Configuration
-      - KMS_PUBLIC_KEY=${KMS_PUBLIC_KEY}
+      - KMS_PUBLIC_KEY=${SCHEDULER_PUBLIC_KEY}
       # Processor Configuration
       - SCHEDULER_INTERVAL_SECS=${SCHEDULER_INTERVAL_SECS:-5}
       # Blockchain Configuration (required)
@@ -36,6 +36,8 @@ services:
       - RUST_LOG=${RUST_LOG:-info}
     depends_on:
       - shielder-scheduler-tee-local
+    expose:
+      - ${SCHEDULER_PORT:-3000}:${SCHEDULER_PORT:-3000}
     network_mode: host
     # Use privileged mode to access vsock
     privileged: true

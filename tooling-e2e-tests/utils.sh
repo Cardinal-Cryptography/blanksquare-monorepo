@@ -42,7 +42,7 @@ endow_accounts() {
 
   keys=("${ALICE_PUBLIC_KEY}" "${BOB_PUBLIC_KEY}" "${CHARLIE_PUBLIC_KEY}" "${TS_SDK_PUBLIC_KEY}" "${FEE_DESTINATION}")
   for key in "${keys[@]}"; do
-    curl "${NODE_RPC_URL}" -X POST -H "Content-Type: application/json" \
+    curl -s "${NODE_RPC_URL}" -X POST -H "Content-Type: application/json" \
       --data '{"method":"anvil_setBalance","params":["'"${key}"'", "'${AMOUNT}'"],"id":1,"jsonrpc":"2.0"}' \
       &>> output.log
   done
@@ -123,7 +123,7 @@ mint_erc20_tokens() {
 
   for key in "${keys[@]}"; do
     for token in $(echo ${TOKEN_CONTRACT_ADDRESSES} | sed "s/,/ /g"); do
-      cast send -vvvvv \
+      cast send \
         --rpc-url "${NODE_RPC_URL}" \
         --private-key "${DEPLOYER_PRIVATE_KEY}" \
         ${token} \
@@ -290,11 +290,7 @@ cleanup() {
   log_progress "🗒 Relayer logs saved to relayer-output.log"
   stop_relayer
 
-  docker logs shielder-scheduler-server-local > scheduler-server-output.log
-  docker logs shielder-scheduler-tee-local > scheduler-tee-output.log
-  log_progress "🗒 Scheduler logs saved to scheduler-server-output.log and scheduler-tee-output.log"
-  docker stop shielder-scheduler-server-local shielder-scheduler-tee-local &>> /dev/null
-  log_progress "✅ Scheduler stopped"
+  stop_scheduler_local
 
   if [[ -z "${TESTNET:-}" ]] && [[ -z "${KEEP_NODE:-}" ]]; then
     log_progress "🗒 Stopping anvil node"
@@ -365,12 +361,20 @@ scan_and_assert_referrals() {
 #### SCHEDULER #####################################################################################
 ####################################################################################################
 
-start_scheduler() {
-  cd "${ROOT_DIR}"
+start_scheduler_local() {
   log_progress "🔄 Starting Scheduler"
-
-  # TODO: custom deployment setup for testnet (production build requires Enclave)
-  docker compose -f crates/shielder-scheduler-server/docker/docker-compose-local.yaml up -d &>> /dev/null
-
+  cd ${ROOT_DIR}
+  docker compose -f tooling-e2e-tests/docker/docker-compose-scheduler-local.yaml up -d &>> /dev/null
   log_progress "✅ Scheduler started"
+}
+
+stop_scheduler_local() {
+  cd ${ROOT_DIR}
+
+  docker logs shielder-scheduler-server-local > scheduler-server-output.log
+  docker logs shielder-scheduler-tee-local > scheduler-tee-output.log
+  log_progress "🗒 Scheduler logs saved to scheduler-server-output.log and scheduler-tee-output.log"
+
+  docker compose -f tooling-e2e-tests/docker/docker-compose-scheduler-local.yaml down &>> /dev/null
+  log_progress "✅ Scheduler stopped"
 }

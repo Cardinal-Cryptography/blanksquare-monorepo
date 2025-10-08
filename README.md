@@ -208,10 +208,10 @@ Run the full test scenario:
 run tooling-e2e-tests/full_scenario.sh
 ```
 
-For maximum compatibility, use Docker mode (slower but more reliable):
+Run the scheduler (local-builds - no attestation, no kms, no dynamodb) scenario:
 
 ```bash
-run tooling-e2e-tests/full_scenario.sh
+run tooling-e2e-tests/scheduler_scenario.sh
 ```
 
 ### Unit Tests

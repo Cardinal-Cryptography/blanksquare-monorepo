@@ -33,7 +33,7 @@ scenario() {
   ${1} schedule-withdraw $withdrawal_amount "${WITHDRAWAL_PUBLIC_KEY}" $relay_after $max_relayer_fee
 
   # wait until after relay time + scheduler interval + 2 seconds buffer
-  sleep $(($relay_after_seconds + (${SCHEDULER_INTERVAL_SECS:-5} + 2)))
+  sleep $(($relay_after_seconds + ${SCHEDULER_INTERVAL_SECS:-5} + ${SCHEDULER_REQUEST_BUFFER_SECS:-5}))
 
   withdrawal_balance_after=$(cast balance -r "${NODE_RPC_URL}" "${WITHDRAWAL_PUBLIC_KEY}")
   withdrawn=$((withdrawal_balance_after - withdrawal_balance_before))
@@ -62,7 +62,7 @@ scenario() {
   ${1} schedule-withdraw-erc20 $withdrawal_amount "${WITHDRAWAL_PUBLIC_KEY}" "${ERC20_CONTRACT_ADDRESS_1}" $pocket_money $relay_after $max_relayer_fee
 
   # wait until after relay time + scheduler interval + 2 seconds buffer
-  sleep $(($relay_after_seconds + (${SCHEDULER_INTERVAL_SECS:-5} + 2)))
+  sleep $(($relay_after_seconds + ${SCHEDULER_INTERVAL_SECS:-5} + ${SCHEDULER_REQUEST_BUFFER_SECS:-5}))
 
   withdrawal_balance_after=$(cast balance -r "${NODE_RPC_URL}" "${WITHDRAWAL_PUBLIC_KEY}")
   withdrawal_erc20_balance_after=$(erc20_balance "${ERC20_CONTRACT_ADDRESS_1}" "${WITHDRAWAL_PUBLIC_KEY}")
@@ -102,7 +102,7 @@ run() {
 
   setup
 
-  start_scheduler
+  start_scheduler_local
 
   scenario alice ${ALICE_PRIVATE_KEY}
 

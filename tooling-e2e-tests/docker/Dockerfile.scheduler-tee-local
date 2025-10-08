@@ -10,6 +10,7 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 COPY . .
+
 RUN cargo build --release --features local-run -p shielder-scheduler-tee
 
 FROM ubuntu:22.04
@@ -21,8 +22,6 @@ RUN apt-get update && apt-get install -y \
 
 COPY --from=builder /app/target/release/shielder-scheduler-tee /usr/local/bin
 RUN chmod +x /usr/local/bin/shielder-scheduler-tee
-
-ENV RUST_LOG=debug
 
 RUN useradd -r -s /bin/false server
 USER server

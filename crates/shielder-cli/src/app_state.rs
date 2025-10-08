@@ -118,11 +118,13 @@ impl AppState {
 Node address:          {}
 Contract address:      {}
 Relayer url:           {}
-Depositor signing key: {}",
+Depositor signing key: {}
+Scheduler url:         {}",
             self.node_rpc_url,
             self.contract_address,
             self.relayer_rpc_url.relay_url(),
-            self.signing_key
+            self.signing_key,
+            self.scheduler_url
         )
     }
 

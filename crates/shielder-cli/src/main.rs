@@ -70,6 +70,11 @@ async fn perform_state_write_action(
             app_state.relayer_rpc_url = relayer_rpc_url;
         }
         StateWriteCommand::SchedulerUrl { url } => {
+            let health = format!("{}/health", url);
+            let resp = reqwest::get(&health).await?;
+            if !resp.status().is_success() {
+                return Err(anyhow!("Scheduler healthcheck failed at {health}"));
+            }
             info!("Setting scheduler url to {url}");
             app_state.scheduler_url = url;
         }

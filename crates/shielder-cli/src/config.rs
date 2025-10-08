@@ -102,9 +102,9 @@ pub enum StateWriteCommand {
         /// Address of the relayer.
         url: String,
     },
-    /// Set scheduler url address.
+    /// Set scheduler URL address.
     SchedulerUrl {
-        /// Addresss of the scheduler.
+        /// Address of the scheduler.
         url: String,
     },
     /// Recover state from the blockchain.
@@ -254,7 +254,7 @@ pub struct ScheduleWithdrawCmd {
     /// Maximum relayer fee willing to pay (in wei).
     pub max_relayer_fee: u128,
     /// Optional memo attached to the contract call.
-    #[clap(value_parser = parsing::parse_memo, default_value = "")]
+    #[clap(long, value_parser = parsing::parse_memo, default_value = "")]
     pub memo: parsing::Memo,
     /// Optional seed for the ZK ID. If not provided, will be derived from the private key.
     pub zkid_seed: Option<U256>,
@@ -268,11 +268,11 @@ pub struct ScheduleWithdrawERC20Cmd {
     pub to: Address,
     /// Address of the token.
     pub token_address: Address,
-    /// Pocket money to be sent to the withdrawal address.
+    /// Pocket money to be sent to the withdrawal address (in smallest native token units).
     pub pocket_money: u128,
     /// Unix timestamp (seconds) after which the relay is allowed.
     pub relay_after: i64,
-    /// Maximum relayer fee willing to pay.
+    /// Maximum relayer fee willing to pay (in smallest token units, e.g., wei-like).
     pub max_relayer_fee: u128,
     /// Optional memo attached to the contract call.
     #[clap(long, value_parser = parsing::parse_memo, default_value = "")]

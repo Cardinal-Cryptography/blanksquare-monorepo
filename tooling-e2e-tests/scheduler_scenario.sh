@@ -15,7 +15,7 @@ source "${SCRIPT_DIR}/utils.sh"
 # ${1} - actor name
 # ${2} - actor private key
 scenario() {
-  configure_cli ${1} ${2}
+  configure_cli_with_scheduler ${1} ${2}
   log_progress "✅ CLI configured"
 
   relay_after_seconds=5

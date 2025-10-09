@@ -240,6 +240,15 @@ configure_cli() {
   ${1} node-url "${NODE_RPC_URL}"
   ${1} contract-address "${SHIELDER_CONTRACT_ADDRESS}"
   ${1} relayer-url "${RELAYER_URL}"
+
+  log_progress "✅ CLI fully configured"
+}
+
+configure_cli_with_scheduler() {
+  ${1} initialize ${2}
+  ${1} node-url "${NODE_RPC_URL}"
+  ${1} contract-address "${SHIELDER_CONTRACT_ADDRESS}"
+  ${1} relayer-url "${RELAYER_URL}"
   ${1} scheduler-url "${SCHEDULER_URL}"
 
   log_progress "✅ CLI fully configured"

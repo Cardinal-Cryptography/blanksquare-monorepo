@@ -380,6 +380,11 @@ start_scheduler_local() {
 stop_scheduler_local() {
   cd ${ROOT_DIR}
 
+  # stop only if docker containers exist
+  if [ -z "$(docker ps -q -f name=shielder-scheduler-server-local)" ]; then
+    return
+  fi
+
   docker logs shielder-scheduler-server-local > scheduler-server-output.log
   docker logs shielder-scheduler-tee-local > scheduler-tee-output.log
   log_progress "🗒 Scheduler logs saved to scheduler-server-output.log and scheduler-tee-output.log"

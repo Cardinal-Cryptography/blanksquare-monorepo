@@ -71,10 +71,12 @@ pub struct AppState {
     pub accounts: HashMap<Address, ShielderAccount>,
     /// Scheduler accounts, mapped by zkid_seed to a list of accounts.
     /// The list index is used to derive the account id seed (hash([zkid_seed,index+1])).
+    #[serde(default)]
     pub scheduler_accounts: HashMap<U256, Vec<ShielderAccount>>,
     pub node_rpc_url: String,
     pub contract_address: Address,
     pub relayer_rpc_url: RelayerRpcUrl,
+    #[serde(default)]
     pub scheduler_url: String,
     pub signing_key: String,
     pub protocol_fees: ProtocolFees,

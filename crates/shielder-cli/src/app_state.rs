@@ -69,9 +69,15 @@ pub struct ProtocolFees {
 #[derive(Clone, Eq, PartialEq, Debug, Default, Deserialize, Serialize)]
 pub struct AppState {
     pub accounts: HashMap<Address, ShielderAccount>,
+    /// Scheduler accounts, mapped by zkid_seed to a list of accounts.
+    /// The list index is used to derive the account id seed (hash([zkid_seed,index+1])).
+    #[serde(default)]
+    pub scheduler_accounts: HashMap<U256, Vec<ShielderAccount>>,
     pub node_rpc_url: String,
     pub contract_address: Address,
     pub relayer_rpc_url: RelayerRpcUrl,
+    #[serde(default)]
+    pub scheduler_url: String,
     pub signing_key: String,
     pub protocol_fees: ProtocolFees,
 }
@@ -99,7 +105,7 @@ impl AppState {
         }
     }
 
-    fn default_zkid_seed(&self, token: Token) -> U256 {
+    pub fn default_zkid_seed(&self, token: Token) -> U256 {
         let seed =
             U256::from_str(&self.signing_key).expect("Invalid key format - cannot cast to U256");
         field_to_u256(hash(&[
@@ -114,11 +120,13 @@ impl AppState {
 Node address:          {}
 Contract address:      {}
 Relayer url:           {}
-Depositor signing key: {}",
+Depositor signing key: {}
+Scheduler url:         {}",
             self.node_rpc_url,
             self.contract_address,
             self.relayer_rpc_url.relay_url(),
-            self.signing_key
+            self.signing_key,
+            self.scheduler_url
         )
     }
 
@@ -138,5 +146,18 @@ Depositor signing key: {}",
         &self,
     ) -> Result<impl Provider<BoxTransport, AnyNetwork>, ShielderContractError> {
         create_simple_provider(&self.node_rpc_url).await
+    }
+
+    pub fn get_next_scheduler_account(&self, token: Token, zkid_seed: U256) -> ShielderAccount {
+        let scheduler_account_idx = self
+            .scheduler_accounts
+            .get(&zkid_seed)
+            .map(|accounts| accounts.len() + 1)
+            .unwrap_or(1);
+        let id_seed = field_to_u256(hash(&[
+            u256_to_field(zkid_seed),
+            u256_to_field(U256::from(scheduler_account_idx)),
+        ]));
+        ShielderAccount::new(id_seed, token)
     }
 }

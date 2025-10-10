@@ -42,7 +42,7 @@ endow_accounts() {
 
   keys=("${ALICE_PUBLIC_KEY}" "${BOB_PUBLIC_KEY}" "${CHARLIE_PUBLIC_KEY}" "${TS_SDK_PUBLIC_KEY}" "${FEE_DESTINATION}")
   for key in "${keys[@]}"; do
-    curl "${NODE_RPC_URL}" -X POST -H "Content-Type: application/json" \
+    curl -s "${NODE_RPC_URL}" -X POST -H "Content-Type: application/json" \
       --data '{"method":"anvil_setBalance","params":["'"${key}"'", "'${AMOUNT}'"],"id":1,"jsonrpc":"2.0"}' \
       &>> output.log
   done
@@ -123,7 +123,7 @@ mint_erc20_tokens() {
 
   for key in "${keys[@]}"; do
     for token in $(echo ${TOKEN_CONTRACT_ADDRESSES} | sed "s/,/ /g"); do
-      cast send -vvvvv \
+      cast send \
         --rpc-url "${NODE_RPC_URL}" \
         --private-key "${DEPLOYER_PRIVATE_KEY}" \
         ${token} \
@@ -165,6 +165,21 @@ stop_relayer() {
   cd "${ROOT_DIR}"
 
   log_progress "✅ Relayer stopped"
+}
+
+# ${1} - token address, if empty, native token is assumed
+# ${2} - pocket money, ignored if ${1} is empty
+quote_relayer_fee() {
+  # if arg in not provided, default to native token
+  if [ $# -eq 0 ]; then
+    data='{"fee_token":"Native","pocket_money":"0"}'
+  else
+    data='{"fee_token":{"ERC20": "'${1}'"},"pocket_money":"'${2:-0}'"}'
+  fi
+  curl -s --header "Content-Type: application/json" \
+  --request POST \
+  --data "${data}" \
+  ${RELAYER_URL}/quote_fees | jq -r '.fee_details.total_cost_fee_token'
 }
 
 ####################################################################################################
@@ -229,6 +244,16 @@ configure_cli() {
   log_progress "✅ CLI fully configured"
 }
 
+configure_cli_with_scheduler() {
+  ${1} initialize ${2}
+  ${1} node-url "${NODE_RPC_URL}"
+  ${1} contract-address "${SHIELDER_CONTRACT_ADDRESS}"
+  ${1} relayer-url "${RELAYER_URL}"
+  ${1} scheduler-url "${SCHEDULER_URL}"
+
+  log_progress "✅ CLI fully configured"
+}
+
 ####################################################################################################
 #### SETUP & CLEANUP ###############################################################################
 ####################################################################################################
@@ -273,6 +298,8 @@ cleanup() {
   docker logs shielder-relayer > relayer-output.log
   log_progress "🗒 Relayer logs saved to relayer-output.log"
   stop_relayer
+
+  stop_scheduler_local
 
   if [[ -z "${TESTNET:-}" ]] && [[ -z "${KEEP_NODE:-}" ]]; then
     log_progress "🗒 Stopping anvil node"
@@ -338,3 +365,30 @@ scan_and_assert_referrals() {
     log_progress "✅ All referrals are valid"
   fi
 } 
+
+####################################################################################################
+#### SCHEDULER #####################################################################################
+####################################################################################################
+
+start_scheduler_local() {
+  log_progress "🔄 Starting Scheduler"
+  cd ${ROOT_DIR}
+  docker compose -f tooling-e2e-tests/docker/docker-compose-scheduler-local.yaml up -d &>> /dev/null
+  log_progress "✅ Scheduler started"
+}
+
+stop_scheduler_local() {
+  cd ${ROOT_DIR}
+
+  # stop only if docker containers exist
+  if [ -z "$(docker ps -q -f name=shielder-scheduler-server-local)" ]; then
+    return
+  fi
+
+  docker logs shielder-scheduler-server-local > scheduler-server-output.log
+  docker logs shielder-scheduler-tee-local > scheduler-tee-output.log
+  log_progress "🗒 Scheduler logs saved to scheduler-server-output.log and scheduler-tee-output.log"
+
+  docker compose -f tooling-e2e-tests/docker/docker-compose-scheduler-local.yaml down &>> /dev/null
+  log_progress "✅ Scheduler stopped"
+}

@@ -1,0 +1,30 @@
+FROM rust:1.88-slim-bookworm AS builder
+
+WORKDIR /app
+
+# Install build dependencies including OpenSSL dev libraries
+# Note: libssl-dev is needed for compilation but the final binary uses RustLS,
+# so OpenSSL is not required at runtime (binary uses pure Rust crypto)
+RUN apt-get update && \
+    apt-get install -y \
+      curl \
+      pkg-config \
+      libssl-dev \
+      build-essential && \
+    rm -rf /var/lib/apt/lists/*
+
+COPY . .
+
+RUN cargo build --release --bin shielder-scheduler-server-local -p shielder-scheduler-server
+
+FROM debian:bookworm-slim
+# Runtime image doesn't need OpenSSL - the binary uses RustLS with statically linked crypto
+RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*
+COPY --from=builder /app/target/release/shielder-scheduler-server-local /usr/local/bin/
+
+RUN chmod +x /usr/local/bin/shielder-scheduler-server-local
+
+RUN useradd -r -s /bin/false appuser
+USER appuser
+
+ENTRYPOINT ["shielder-scheduler-server-local"]

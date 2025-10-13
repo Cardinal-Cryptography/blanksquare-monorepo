@@ -76,6 +76,14 @@ pub enum PriceProvider {
     Dia(String),
     Pyth(String),
     Static(Decimal),
+    ERC4626 {
+        /// The underlying token price provider
+        underlying_price_provider: Box<PriceProvider>,
+        underlying_decimals: u32,
+        node_rpc_url: String,
+        vault_address: Address,
+        vault_decimals: u32,
+    },
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
@@ -131,6 +139,7 @@ impl<K: Clone + Eq + PartialEq + std::hash::Hash + Decimals> Prices<K> {
                 PriceProvider::Dia(_) => None,
                 PriceProvider::Pyth(_) => None,
                 PriceProvider::Static(price) => Some(Price::static_price(*price, token.decimals())),
+                PriceProvider::ERC4626 { .. } => None,
             };
             inner.insert(token.kind.clone(), Arc::new(Mutex::new(price)));
         }

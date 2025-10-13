@@ -42,6 +42,21 @@ fn config_resolution() -> Result<()> {
             },
             price_provider: PriceProvider::Static(Decimal::new(123, 2)),
         },
+        TokenInfo {
+            kind: TokenKind::ERC20 {
+                address: address!("3333333333333333333333333333333333333333"),
+                decimals: 12,
+            },
+            price_provider: PriceProvider::ERC4626 {
+                underlying_price_provider: Box::new(PriceProvider::Dia(
+                    "https://price.feed".to_string(),
+                )),
+                underlying_decimals: 10,
+                node_rpc_url: "http://localhost:8545".to_string(),
+                vault_address: address!("3333333333333333333333333333333333333333"),
+                vault_decimals: 12,
+            },
+        },
     ];
     let price_feed_refresh_interval = DEFAULT_PRICE_FEED_REFRESH_INTERVAL;
     let rpc_health_cache_validity = DEFAULT_RPC_HEALTH_CACHE_VALIDITY;
@@ -133,6 +148,23 @@ fn config_resolution() -> Result<()> {
                         }
                     },
                     \"price_provider\":{\"Static\":\"1.23\"}
+                },
+                {
+                    \"kind\":{\
+                        \"ERC20\": {
+                            \"address\": \"0x3333333333333333333333333333333333333333\",
+                            \"decimals\": 12
+                        }
+                    },
+                    \"price_provider\":{
+                        \"ERC4626\":{
+                            \"underlying_price_provider\":{\"Dia\":\"https://price.feed\"},
+                            \"underlying_decimals\": 10,
+                            \"node_rpc_url\": \"http://localhost:8545\",
+                            \"vault_address\": \"0x3333333333333333333333333333333333333333\",
+                            \"vault_decimals\": 12
+                        }
+                    }
                 }
             ]",
         );

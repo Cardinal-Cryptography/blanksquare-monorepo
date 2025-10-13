@@ -9,7 +9,10 @@ categories.workspace = true
 repository.workspace = true
 
 [dependencies]
+alloy-contract.workspace = true
+alloy-provider.workspace = true
 alloy-primitives.workspace = true
+alloy-sol-types.workspace = true
 anyhow.workspace = true
 parking_lot.workspace = true
 reqwest = { workspace = true, features = ["json"] }

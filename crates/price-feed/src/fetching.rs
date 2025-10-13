@@ -129,7 +129,7 @@ async fn fetch_erc4626(
     vault_address: &Address,
     vault_decimals: u32,
 ) -> Result<PriceInfoFromProvider, PriceFetchError> {
-    // get the udnerlying price in USD
+    // get the underlying price in USD
     let underlying_price = fetch_price(underlying).await?;
 
     let provider = ProviderBuilder::new()

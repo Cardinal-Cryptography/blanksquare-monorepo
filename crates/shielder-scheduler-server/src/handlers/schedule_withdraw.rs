@@ -16,6 +16,8 @@ use crate::{
 /// When requesting a withdraw schedule, user sends this struct as a JSON
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ScheduleWithdrawRequest {
+    /// User-generated secret index to identify the request.
+    pub secret_index: String,
     pub encryption_envelope: EncryptionEnvelope,
     /// Index of the last leaf in the Merkle tree containing the account's note.
     /// Necessary to get the merkle path from this leaf to the current root.
@@ -40,7 +42,8 @@ pub async fn schedule_withdraw<Storage: StorageProvider, Credentials: Credential
     Json(schedule_withdraw_request): Json<ScheduleWithdrawRequest>,
 ) -> impl IntoResponse {
     info!(
-        "Received schedule withdraw request - last_note_index: {}, pocket_money: {}, token_address: {}, relay_after: {}",
+        "Received schedule withdraw request - secret_index: {}, last_note_index: {}, pocket_money: {}, token_address: {}, relay_after: {}",
+        schedule_withdraw_request.secret_index,
         schedule_withdraw_request.last_note_index,
         schedule_withdraw_request.pocket_money,
         schedule_withdraw_request.token_address,
@@ -75,6 +78,7 @@ pub async fn schedule_withdraw<Storage: StorageProvider, Credentials: Credential
     }
 
     let request = ScheduledRequest::new(
+        schedule_withdraw_request.secret_index,
         schedule_withdraw_request.encryption_envelope,
         schedule_withdraw_request.last_note_index,
         schedule_withdraw_request.pocket_money,

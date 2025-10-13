@@ -5,6 +5,7 @@ use shielder_scheduler_common::protocol::EncryptionEnvelope;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ScheduledRequest {
+    pub id: String,
     pub encryption_envelope: EncryptionEnvelope,
     pub last_note_index: U256,
     pub pocket_money: U256,
@@ -19,6 +20,7 @@ pub struct ScheduledRequest {
 
 impl ScheduledRequest {
     pub fn new(
+        secret_index: String,
         encryption_envelope: EncryptionEnvelope,
         last_note_index: U256,
         pocket_money: U256,
@@ -26,6 +28,7 @@ impl ScheduledRequest {
         relay_after: DateTime<Utc>,
     ) -> Self {
         Self {
+            id: secret_index,
             encryption_envelope,
             last_note_index,
             pocket_money,

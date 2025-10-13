@@ -51,17 +51,15 @@ impl DynamoDb {
             }
         }
 
-        // Primary key: last_note_index
-        let last_note_index_attr = AttributeDefinition::builder()
-            .attribute_name("last_note_index")
+        // Primary key: id
+        let id_attr = AttributeDefinition::builder()
+            .attribute_name("id")
             .attribute_type(ScalarAttributeType::S)
             .build()
-            .map_err(|e| {
-                StorageError::Internal(format!("LastNoteIndex AttrDef build error: {e}"))
-            })?;
+            .map_err(|e| StorageError::Internal(format!("Id AttrDef build error: {e}")))?;
 
         let primary_key_schema = KeySchemaElement::builder()
-            .attribute_name("last_note_index")
+            .attribute_name("id")
             .key_type(KeyType::Hash)
             .build()
             .map_err(|e| {
@@ -114,7 +112,7 @@ impl DynamoDb {
             .client
             .create_table()
             .table_name(&self.table_name)
-            .attribute_definitions(last_note_index_attr)
+            .attribute_definitions(id_attr)
             .attribute_definitions(status_attr)
             .attribute_definitions(relay_after_attr)
             .key_schema(primary_key_schema)
@@ -167,18 +165,12 @@ impl DynamoDb {
         ))
     }
 
-    async fn get_item_by_last_note_index(
-        &self,
-        last_note_index: &str,
-    ) -> Result<Option<ScheduledRequest>, StorageError> {
+    async fn get_item_by_id(&self, id: &str) -> Result<Option<ScheduledRequest>, StorageError> {
         let out = self
             .client
             .get_item()
             .table_name(&self.table_name)
-            .key(
-                "last_note_index",
-                AttributeValue::S(last_note_index.to_string()),
-            )
+            .key("id", AttributeValue::S(id.to_string()))
             .send()
             .await
             .map_err(|e| map_internal("get_item", e))?;
@@ -205,10 +197,7 @@ impl DynamoDb {
         let mut builder = self.client.put_item();
         builder = builder
             .table_name(&self.table_name)
-            .item(
-                "last_note_index",
-                AttributeValue::S(request.last_note_index.to_string()),
-            )
+            .item("id", AttributeValue::S(request.id.to_string()))
             .item(
                 "status",
                 AttributeValue::S(status_to_str(&request.status).to_string()),
@@ -251,14 +240,12 @@ impl StorageProvider for DynamoDb {
         request: ScheduledRequest,
     ) -> Result<(), StorageError> {
         match self
-            .put_request(&request, Some("attribute_not_exists(last_note_index)"))
+            .put_request(&request, Some("attribute_not_exists(id)"))
             .await
         {
             Ok(()) => Ok(()),
             Err(StorageError::Internal(msg)) if msg.contains("ConditionalCheckFailedException") => {
-                Err(StorageError::DuplicateEntry(
-                    request.last_note_index.to_string(),
-                ))
+                Err(StorageError::DuplicateEntry(request.id.to_string()))
             }
             Err(e) => Err(e),
         }
@@ -305,48 +292,45 @@ impl StorageProvider for DynamoDb {
 
     async fn update_request_status(
         &self,
-        last_note_index: &str,
+        id: &str,
         status: RequestStatus,
         processed_at: Option<DateTime<Utc>>,
         error_message: Option<&str>,
     ) -> Result<(), StorageError> {
-        let Some(mut existing) = self.get_item_by_last_note_index(last_note_index).await? else {
-            return Err(StorageError::NotFound(last_note_index.to_string()));
+        let Some(mut existing) = self.get_item_by_id(id).await? else {
+            return Err(StorageError::NotFound(id.to_string()));
         };
         existing.status = status;
         existing.error_message = error_message.map(|s| s.to_string());
         existing.processed_at = processed_at;
 
-        // Simple put since last_note_index (primary key) doesn't change
+        // Simple put since id (primary key) doesn't change
         self.put_request(&existing, None).await
     }
 
     async fn update_retry_attempt(
         &self,
-        last_note_index: &str,
+        id: &str,
         new_relay_after: DateTime<Utc>,
         new_retry_count: u8,
         processed_at: Option<DateTime<Utc>>,
         new_error_message: Option<&str>,
     ) -> Result<(), StorageError> {
-        let Some(mut existing) = self.get_item_by_last_note_index(last_note_index).await? else {
-            return Err(StorageError::NotFound(last_note_index.to_string()));
+        let Some(mut existing) = self.get_item_by_id(id).await? else {
+            return Err(StorageError::NotFound(id.to_string()));
         };
         existing.relay_after = new_relay_after;
         existing.retry_count = new_retry_count;
         existing.error_message = new_error_message.map(|s| s.to_string());
         existing.processed_at = processed_at;
 
-        // Simple put since last_note_index (primary key) doesn't change
+        // Simple put since id (primary key) doesn't change
         self.put_request(&existing, None).await
     }
 
-    async fn get_request_by_last_note_index(
-        &self,
-        last_note_index: &str,
-    ) -> Result<Option<ScheduledRequest>, StorageError> {
+    async fn get_request_by_id(&self, id: &str) -> Result<Option<ScheduledRequest>, StorageError> {
         // Direct lookup by primary key
-        self.get_item_by_last_note_index(last_note_index).await
+        self.get_item_by_id(id).await
     }
 }
 

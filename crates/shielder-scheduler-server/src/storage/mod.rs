@@ -36,7 +36,7 @@ pub trait StorageProvider: Send + Sync {
     /// Optionally, an error message can be provided.
     fn update_request_status(
         &self,
-        last_note_index: &str,
+        id: &str,
         status: RequestStatus,
         processed_at: Option<DateTime<Utc>>,
         error_message: Option<&str>,
@@ -47,17 +47,17 @@ pub trait StorageProvider: Send + Sync {
     /// If the request does not exist, returns a `NotFound` error.
     fn update_retry_attempt(
         &self,
-        last_note_index: &str,
+        id: &str,
         new_relay_after: DateTime<Utc>,
         new_retry_count: u8,
         processed_at: Option<DateTime<Utc>>,
         new_error_message: Option<&str>,
     ) -> impl std::future::Future<Output = Result<(), StorageError>> + Send;
 
-    /// Retrieve a scheduled request by its last note index.
+    /// Retrieve a scheduled request by its ID.
     /// Returns `Ok(None)` if no such request exists.
-    fn get_request_by_last_note_index(
+    fn get_request_by_id(
         &self,
-        last_note_index: &str,
+        id: &str,
     ) -> impl std::future::Future<Output = Result<Option<ScheduledRequest>, StorageError>> + Send;
 }

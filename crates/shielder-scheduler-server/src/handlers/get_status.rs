@@ -34,11 +34,7 @@ pub async fn get_status<Storage: StorageProvider, Credentials: CredentialsProvid
         last_note_index
     );
 
-    match state
-        .storage
-        .get_request_by_last_note_index(&last_note_index)
-        .await
-    {
+    match state.storage.get_request_by_id(&last_note_index).await {
         Ok(Some(res)) => {
             info!(
                 "Found request with status: {:?} for last_note_index: {}",

@@ -1,10 +1,8 @@
 use std::{collections::HashMap, fmt::Display, sync::Arc};
 
 use alloy_primitives::Address;
-use fetching::fetch_price;
 use parking_lot::Mutex;
 pub use price::Price;
-use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use shielder_account::Token;
 use time::OffsetDateTime;
@@ -12,10 +10,11 @@ use tokio::time::Duration;
 use tracing::warn;
 use utoipa::{schema, ToSchema};
 
-use crate::price::Expiration;
-
-mod fetching;
 mod price;
+mod price_provider;
+pub use price_provider::PriceProvider;
+
+use crate::price::Expiration;
 
 pub type LegacyTokenInfo = TokenInfo<TokenKind>;
 pub type SimpleTokenInfo = TokenInfo<SimpleKind>;
@@ -72,21 +71,6 @@ impl Display for TokenKind {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
-pub enum PriceProvider {
-    Dia(String),
-    Pyth(String),
-    Static(Decimal),
-    ERC4626 {
-        /// The underlying token price provider
-        underlying_price_provider: Box<PriceProvider>,
-        underlying_decimals: u32,
-        node_rpc_url: String,
-        vault_address: Address,
-        vault_decimals: u32,
-    },
-}
-
-#[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
 pub struct TokenInfo<K> {
     pub kind: K,
     pub price_provider: PriceProvider,
@@ -136,10 +120,10 @@ impl<K: Clone + Eq + PartialEq + std::hash::Hash + Decimals> Prices<K> {
         for token in tokens {
             token_map.insert(token.kind.clone(), token.clone());
             let price = match &token.price_provider {
-                PriceProvider::Dia(_) => None,
-                PriceProvider::Pyth(_) => None,
                 PriceProvider::Static(price) => Some(Price::static_price(*price, token.decimals())),
-                PriceProvider::ERC4626 { .. } => None,
+                PriceProvider::Dia(_) | PriceProvider::Pyth(_) | PriceProvider::ERC4626 { .. } => {
+                    None
+                }
             };
             inner.insert(token.kind.clone(), Arc::new(Mutex::new(price)));
         }
@@ -190,7 +174,7 @@ impl<K: Clone + Eq + PartialEq + std::hash::Hash + Decimals> Prices<K> {
 
     async fn update(&self) {
         for token in self.tokens.values() {
-            let price_info = fetch_price(&token.price_provider).await;
+            let price_info = token.price_provider.fetch_price().await;
 
             if let Err(err) = price_info {
                 warn!("Failed to update prices: {err}");
@@ -222,7 +206,7 @@ mod tests {
     fn token_with_static_price() -> TokenInfo<TokenKind> {
         TokenInfo {
             kind: TokenKind::Native,
-            price_provider: PriceProvider::Static(Decimal::ONE),
+            price_provider: PriceProvider::Static(rust_decimal::Decimal::ONE),
         }
     }
 

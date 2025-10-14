@@ -94,7 +94,7 @@ pub async fn schedule_withdraw<Storage: StorageProvider, Credentials: Credential
                 axum::http::StatusCode::CREATED,
                 Json(ScheduleWithdrawResponse {
                     request_id: id,
-                    message: format!("Withdraw request scheduled successfully."),
+                    message: "Withdraw request scheduled successfully.".to_string(),
                 }),
             )
                 .into_response()

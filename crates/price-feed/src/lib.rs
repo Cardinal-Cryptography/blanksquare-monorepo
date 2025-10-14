@@ -174,17 +174,16 @@ impl<K: Clone + Eq + PartialEq + std::hash::Hash + Decimals> Prices<K> {
 
     async fn update(&self) {
         for token in self.tokens.values() {
-            let price_info = token.price_provider.fetch_price().await;
-
-            if let Err(err) = price_info {
-                warn!("Failed to update prices: {err}");
-                continue;
+            match token.price_provider.fetch_price().await {
+                Ok(price_info) => {
+                    let price = Price::from_price_info(price_info, token.decimals(), self.validity);
+                    self.inner.get(&token.kind).unwrap().lock().replace(price);
+                }
+                Err(err) => {
+                    warn!("Failed to update prices: {err}");
+                    continue;
+                }
             }
-
-            let price =
-                Price::from_price_info(price_info.unwrap(), token.decimals(), self.validity);
-
-            self.inner.get(&token.kind).unwrap().lock().replace(price);
         }
     }
 }

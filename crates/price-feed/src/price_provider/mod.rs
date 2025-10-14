@@ -44,7 +44,6 @@ pub enum PriceProvider {
         underlying_decimals: u32,
         node_rpc_url: String,
         vault_address: Address,
-        #[serde(skip_deserializing)]
         vault_decimals: u32,
     },
 }

@@ -42,6 +42,7 @@ struct TeePublicKeyData {
 
 #[derive(Debug, Serialize)]
 struct ScheduleWithdrawRequest {
+    id: String,
     encryption_envelope: EncryptionEnvelope,
     last_note_index: U256,
     relay_after: i64,
@@ -72,6 +73,7 @@ pub async fn schedule_withdraw(
     let zkid_seed = zkid_seed.unwrap_or_else(|| app_state.default_zkid_seed(token));
     // create shielder account from seed and index
     let mut scheduler_account = app_state.get_next_scheduler_account(token, zkid_seed);
+    let request_id = app_state.get_next_scheduler_request_id(zkid_seed);
 
     // compute total amount needed:
     // 1. A = amount
@@ -150,6 +152,7 @@ pub async fn schedule_withdraw(
     // send schedule request
     send_schedule_request(
         app_state,
+        request_id,
         encryption_envelope,
         last_note_index,
         pocket_money,
@@ -340,6 +343,7 @@ fn encrypt_payload(
 
 async fn send_schedule_request(
     app_state: &AppState,
+    request_id: String,
     encryption_envelope: EncryptionEnvelope,
     last_note_index: U256,
     pocket_money: u128,
@@ -349,6 +353,7 @@ async fn send_schedule_request(
     let url = format!("{}/schedule_withdraw", app_state.scheduler_url);
 
     let request = ScheduleWithdrawRequest {
+        id: request_id,
         encryption_envelope,
         last_note_index,
         relay_after,

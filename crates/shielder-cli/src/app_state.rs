@@ -149,15 +149,32 @@ Scheduler url:         {}",
     }
 
     pub fn get_next_scheduler_account(&self, token: Token, zkid_seed: U256) -> ShielderAccount {
+        let scheduler_account_idx = self.get_next_scheduler_account_nonce(zkid_seed);
+        let id_seed = self.derive_nonce_key(zkid_seed, scheduler_account_idx);
+        ShielderAccount::new(id_seed, token)
+    }
+
+    pub fn get_next_scheduler_request_id(&self, zkid_seed: U256) -> String {
+        let scheduler_account_idx = self.get_next_scheduler_account_nonce(zkid_seed);
+        self.derive_nonce_request_id(zkid_seed, scheduler_account_idx)
+    }
+
+    pub fn get_next_scheduler_account_nonce(&self, zkid_seed: U256) -> U256 {
         let scheduler_account_idx = self
             .scheduler_accounts
             .get(&zkid_seed)
             .map(|accounts| accounts.len() + 1)
             .unwrap_or(1);
-        let id_seed = field_to_u256(hash(&[
-            u256_to_field(zkid_seed),
-            u256_to_field(U256::from(scheduler_account_idx)),
-        ]));
-        ShielderAccount::new(id_seed, token)
+        U256::from(scheduler_account_idx)
+    }
+
+    pub fn derive_nonce_key(&self, zkid_seed: U256, nonce: U256) -> U256 {
+        field_to_u256(hash(&[u256_to_field(zkid_seed), u256_to_field(nonce)]))
+    }
+
+    /// The request ID is computed as the hash of the zkid_seed and the nonce.
+    pub fn derive_nonce_request_id(&self, zkid_seed: U256, nonce: U256) -> String {
+        let id = field_to_u256(hash(&[u256_to_field(zkid_seed), u256_to_field(nonce)]));
+        hex::encode(id.as_le_bytes())
     }
 }

@@ -74,10 +74,7 @@ async fn main() -> Result<(), Error> {
             "/schedule_withdraw",
             post(server_handlers::schedule_withdraw::schedule_withdraw),
         )
-        .route(
-            "/status/{last_note_index}",
-            get(server_handlers::get_status::get_status),
-        )
+        .route("/status/{id}", get(server_handlers::get_status::get_status))
         .layer(DefaultBodyLimit::max(options.maximum_request_size))
         .layer(CorsLayer::permissive())
         .with_state(app_state);

@@ -197,7 +197,7 @@ impl DynamoDb {
         let mut builder = self.client.put_item();
         builder = builder
             .table_name(&self.table_name)
-            .item("id", AttributeValue::S(request.id.to_string()))
+            .item("id", AttributeValue::S(request.id.clone()))
             .item(
                 "status",
                 AttributeValue::S(status_to_str(&request.status).to_string()),

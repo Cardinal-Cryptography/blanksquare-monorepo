@@ -20,7 +20,7 @@ pub struct ScheduledRequest {
 
 impl ScheduledRequest {
     pub fn new(
-        secret_index: String,
+        id: String,
         encryption_envelope: EncryptionEnvelope,
         last_note_index: U256,
         pocket_money: U256,
@@ -28,7 +28,7 @@ impl ScheduledRequest {
         relay_after: DateTime<Utc>,
     ) -> Self {
         Self {
-            id: secret_index,
+            id,
             encryption_envelope,
             last_note_index,
             pocket_money,

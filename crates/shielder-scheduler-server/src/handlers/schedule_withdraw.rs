@@ -16,8 +16,8 @@ use crate::{
 /// When requesting a withdraw schedule, user sends this struct as a JSON
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ScheduleWithdrawRequest {
-    /// User-generated secret index to identify the request.
-    pub secret_index: String,
+    /// User-generated ID to identify the request.
+    pub id: String,
     pub encryption_envelope: EncryptionEnvelope,
     /// Index of the last leaf in the Merkle tree containing the account's note.
     /// Necessary to get the merkle path from this leaf to the current root.
@@ -42,9 +42,8 @@ pub async fn schedule_withdraw<Storage: StorageProvider, Credentials: Credential
     Json(schedule_withdraw_request): Json<ScheduleWithdrawRequest>,
 ) -> impl IntoResponse {
     info!(
-        "Received schedule withdraw request - secret_index: {}, last_note_index: {}, pocket_money: {}, token_address: {}, relay_after: {}",
-        schedule_withdraw_request.secret_index,
-        schedule_withdraw_request.last_note_index,
+        "Received schedule withdraw request - id: {}, pocket_money: {}, token_address: {}, relay_after: {}",
+        schedule_withdraw_request.id,
         schedule_withdraw_request.pocket_money,
         schedule_withdraw_request.token_address,
         schedule_withdraw_request.relay_after
@@ -78,7 +77,7 @@ pub async fn schedule_withdraw<Storage: StorageProvider, Credentials: Credential
     }
 
     let request = ScheduledRequest::new(
-        schedule_withdraw_request.secret_index,
+        schedule_withdraw_request.id,
         schedule_withdraw_request.encryption_envelope,
         schedule_withdraw_request.last_note_index,
         schedule_withdraw_request.pocket_money,
@@ -86,22 +85,16 @@ pub async fn schedule_withdraw<Storage: StorageProvider, Credentials: Credential
         relay_after,
     );
 
-    let request_last_note_index = request.last_note_index;
+    let id = request.id.clone();
 
     match state.storage.insert_scheduled_request(request).await {
         Ok(_) => {
-            info!(
-                "Successfully scheduled withdraw request with last_note_index: {}",
-                request_last_note_index
-            );
+            info!("Successfully scheduled withdraw request with id: {}", id);
             (
                 axum::http::StatusCode::CREATED,
                 Json(ScheduleWithdrawResponse {
-                    request_id: request_last_note_index.to_string(),
-                    message: format!(
-                        "Withdraw request scheduled successfully. Last note index: {}",
-                        request_last_note_index
-                    ),
+                    request_id: id,
+                    message: format!("Withdraw request scheduled successfully."),
                 }),
             )
                 .into_response()

@@ -9,6 +9,7 @@ use alloy_signer_local::PrivateKeySigner;
 use alloy_transport::BoxTransport;
 use anyhow::anyhow;
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 use shielder_account::{ShielderAccount, Token};
 use shielder_circuits::poseidon::off_circuit::hash;
 use shielder_contract::{
@@ -169,12 +170,19 @@ Scheduler url:         {}",
     }
 
     pub fn derive_nonce_key(&self, zkid_seed: U256, nonce: U256) -> U256 {
-        field_to_u256(hash(&[u256_to_field(zkid_seed), u256_to_field(nonce)]))
+        let mut hasher = Sha256::new();
+        hasher.update(nonce.as_le_bytes());
+        hasher.update(zkid_seed.as_le_bytes());
+        hasher.update(b"shielder_sdk_key_derivation");
+        U256::from_le_bytes(hasher.finalize().into())
     }
 
     /// The request ID is computed as the hash of the zkid_seed and the nonce.
     pub fn derive_nonce_request_id(&self, zkid_seed: U256, nonce: U256) -> String {
-        let id = field_to_u256(hash(&[u256_to_field(zkid_seed), u256_to_field(nonce)]));
-        hex::encode(id.as_le_bytes())
+        let mut hasher = Sha256::new();
+        hasher.update(nonce.as_le_bytes());
+        hasher.update(zkid_seed.as_le_bytes());
+        hasher.update(b"shielder_scheduler_secret_index");
+        hex::encode(hasher.finalize())
     }
 }

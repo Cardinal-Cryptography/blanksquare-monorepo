@@ -40,7 +40,7 @@
   ],
   "scripts": {
     "ubrn:ios": "ubrn build ios -r --config ubrn.config.yaml --and-generate",
-    "ubrn:android": "ubrn build android -r --config ubrn.config.yaml --and-generate && node scripts/patch-android-build.js",
+    "ubrn:android": "ubrn build android -r --config ubrn.config.yaml --and-generate && patch -p0 < patches/build.gradle.patch",
     "ubrn:clean": "rm -Rf cpp/ android/ ios/ src/gen build/",
     "typecheck": "tsc",
     "lint": "eslint \"**/*.{js,ts,tsx}\"",

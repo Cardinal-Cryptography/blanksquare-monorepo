@@ -1,0 +1,12 @@
+--- android/build.gradle	2025-10-15 09:42:44
++++ android/build.gradle	2025-10-15 09:35:36
+@@ -74,7 +74,8 @@
+     }
+     externalNativeBuild {
+       cmake {
+-        arguments '-DANDROID_STL=c++_shared'
++        arguments '-DANDROID_STL=c++_shared',
++                  '-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON'
+         abiFilters (*reactNativeArchitectures())
+       }
+     }

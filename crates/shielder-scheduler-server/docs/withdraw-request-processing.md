@@ -15,7 +15,7 @@ sequenceDiagram
     participant Relayer as Relayer Service
 
     Client->>Server: POST /schedule_withdraw
-    Note right of Client: ScheduleWithdrawRequest with:<br/>- encryption_envelope<br/>- last_note_index<br/>- max_relayer_fee<br/>- relay_after<br/>- pocket_money<br/>- token_address
+    Note right of Client: ScheduleWithdrawRequest with:<br/>- id<br/>- encryption_envelope<br/>- last_note_index<br/>- max_relayer_fee<br/>- relay_after<br/>- pocket_money<br/>- token_address
 
     Server->>Server: Validate request fields
     Server->>Server: Convert relay_after to DateTime

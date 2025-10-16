@@ -72,19 +72,19 @@ Schedule a withdrawal request to be processed at a future time.
 
 ### 4. Get Request Status
 
-**GET** `/status/{last_note_index}`
+**GET** `/status/{id}`
 
 Retrieve the status of a withdrawal request by its last note index.
 
 #### Parameters
 
-- `last_note_index`: The last note index of the withdrawal request (path parameter)
+- `id`: The user-generated id of the withdrawal request (path parameter)
 
 #### Response
 
 ```json
 {
-  "last_note_index": "12345",
+  "id": "12345",
   "status": "pending",
   "created_at": "2024-01-01T00:00:00Z",
   "processed_at": null,
@@ -99,7 +99,7 @@ Retrieve the status of a withdrawal request by its last note index.
 ```json
 {
   "error": "Request not found",
-  "last_note_index": "12345"
+  "id": "12345"
 }
 ```
 
@@ -107,19 +107,21 @@ Retrieve the status of a withdrawal request by its last note index.
 
 ```json
 {
+   "id": "12345"
    "encryption_envelope": {
       "encrypted_payload": "<base64-encoded>",
       "encrypted_dek": "<base64-encoded>",
       "iv": "<base64-encoded>",
       "auth_tag": "<base64-encoded>="
    },
-  "last_note_index": "12345",
+  "last_note_index": "2137",
   "pocket_money": "500000000000000000",
   "token_address": "0x1234567890123456789012345678901234567890",
   "relay_after": 1693564800
 }
 ```
 
+- `id`: User-generated request id.
 - `encryption_envelope`: Object containing encrypted payload and encryption metadata
   - `encrypted_payload`: Base64-encoded encrypted payload containing withdrawal details
   - `encrypted_dek`: Base64-encoded encrypted data encryption key
@@ -134,8 +136,8 @@ Retrieve the status of a withdrawal request by its last note index.
 
 ```json
 {
-  "request_id": "123",
-  "message": "Withdraw request scheduled successfully. Request ID: 123"
+  "request_id": "12345",
+  "message": "Withdraw request scheduled successfully"
 }
 ```
 

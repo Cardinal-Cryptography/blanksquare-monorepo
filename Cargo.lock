@@ -6281,6 +6281,7 @@ dependencies = [
  "rsa",
  "serde",
  "serde_json",
+ "sha2",
  "shellexpand",
  "shielder-account",
  "shielder-circuits",

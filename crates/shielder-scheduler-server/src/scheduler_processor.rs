@@ -118,22 +118,16 @@ impl<Storage: StorageProvider, Credentials: CredentialsProvider>
 
     #[instrument(level = "info", skip_all)]
     async fn process_single_request(&self, request: ScheduledRequest) -> Result<()> {
-        info!(
-            "Processing request last_note_index: {}",
-            request.last_note_index
-        );
+        info!("Processing request id: {}", request.id);
         let request_retry_count = request.retry_count;
 
         match self.process_request_logic(&request).await {
             Ok(_) => {
-                info!(
-                    "Successfully processed request last_note_index: {}",
-                    request.last_note_index
-                );
+                info!("Successfully processed request id: {}", request.id);
                 self.app_state
                     .storage
                     .update_request_status(
-                        &request.last_note_index.to_string(),
+                        &request.id.to_string(),
                         RequestStatus::Completed,
                         Some(Utc::now()),
                         None,
@@ -142,8 +136,8 @@ impl<Storage: StorageProvider, Credentials: CredentialsProvider>
             }
             Err(e) => {
                 warn!(
-                    "Request processing failed for last_note_index: {}, error: {:?}",
-                    request.last_note_index, e
+                    "Request processing failed for id: {}, error: {:?}",
+                    request.id, e
                 );
 
                 if request_retry_count < self.scheduler_max_retry_count as u8 {
@@ -153,7 +147,7 @@ impl<Storage: StorageProvider, Credentials: CredentialsProvider>
                     self.app_state
                         .storage
                         .update_retry_attempt(
-                            &request.last_note_index.to_string(),
+                            &request.id.to_string(),
                             new_relay_after,
                             new_retry_count,
                             Some(Utc::now()),
@@ -162,13 +156,13 @@ impl<Storage: StorageProvider, Credentials: CredentialsProvider>
                         .await?;
                 } else {
                     warn!(
-                        "Request last_note_index {} has reached maximum retry count, marking as Failed",
-                        request.last_note_index
+                        "Request id {} has reached maximum retry count, marking as Failed",
+                        request.id
                     );
                     self.app_state
                         .storage
                         .update_request_status(
-                            &request.last_note_index.to_string(),
+                            &request.id.to_string(),
                             RequestStatus::Failed,
                             Some(Utc::now()),
                             Some(&e.to_string()),
@@ -194,8 +188,8 @@ impl<Storage: StorageProvider, Credentials: CredentialsProvider>
         match tee_response {
             Response::PrepareRelayCalldata { calldata } => {
                 info!(
-                    "Successfully prepared relay calldata for request last_note_index: {}",
-                    request.last_note_index,
+                    "Successfully prepared relay calldata for request id: {}",
+                    request.id,
                 );
                 let relay_query = RelayQuery {
                     calldata,

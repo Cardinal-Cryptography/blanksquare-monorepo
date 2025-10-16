@@ -44,7 +44,7 @@ impl StorageProvider for InMemoryStorage {
         request: ScheduledRequest,
     ) -> Result<(), StorageError> {
         let mut requests = self.requests.lock().unwrap();
-        let key = request.last_note_index.to_string();
+        let key = request.id.clone();
         if requests.contains_key(&key) {
             return Err(StorageError::DuplicateEntry(key));
         }
@@ -54,47 +54,44 @@ impl StorageProvider for InMemoryStorage {
 
     async fn update_request_status(
         &self,
-        last_note_index: &str,
+        id: &str,
         status: RequestStatus,
         processed_at: Option<DateTime<Utc>>,
         error_message: Option<&str>,
     ) -> Result<(), StorageError> {
         let mut requests = self.requests.lock().unwrap();
-        if let Some(request) = requests.get_mut(last_note_index) {
+        if let Some(request) = requests.get_mut(id) {
             request.status = status;
             request.processed_at = processed_at;
             request.error_message = error_message.map(|s| s.to_string());
             Ok(())
         } else {
-            Err(StorageError::NotFound(last_note_index.to_string()))
+            Err(StorageError::NotFound(id.to_string()))
         }
     }
 
     async fn update_retry_attempt(
         &self,
-        last_note_index: &str,
+        id: &str,
         new_relay_after: DateTime<Utc>,
         new_retry_count: u8,
         processed_at: Option<DateTime<Utc>>,
         new_error_message: Option<&str>,
     ) -> Result<(), StorageError> {
         let mut requests = self.requests.lock().unwrap();
-        if let Some(request) = requests.get_mut(last_note_index) {
+        if let Some(request) = requests.get_mut(id) {
             request.relay_after = new_relay_after;
             request.retry_count = new_retry_count;
             request.processed_at = processed_at;
             request.error_message = new_error_message.map(|s| s.to_string());
             Ok(())
         } else {
-            Err(StorageError::NotFound(last_note_index.to_string()))
+            Err(StorageError::NotFound(id.to_string()))
         }
     }
 
-    async fn get_request_by_last_note_index(
-        &self,
-        last_note_index: &str,
-    ) -> Result<Option<ScheduledRequest>, StorageError> {
+    async fn get_request_by_id(&self, id: &str) -> Result<Option<ScheduledRequest>, StorageError> {
         let requests = self.requests.lock().unwrap();
-        Ok(requests.get(last_note_index).cloned())
+        Ok(requests.get(id).cloned())
     }
 }

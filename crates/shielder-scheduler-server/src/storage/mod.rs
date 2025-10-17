@@ -40,6 +40,7 @@ pub trait StorageProvider: Send + Sync {
         status: RequestStatus,
         processed_at: Option<DateTime<Utc>>,
         error_message: Option<&str>,
+        prune_after: Option<DateTime<Utc>>,
     ) -> impl std::future::Future<Output = Result<(), StorageError>> + Send;
 
     /// Update the retry attempt of a scheduled request.

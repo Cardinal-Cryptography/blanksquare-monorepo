@@ -58,12 +58,14 @@ impl StorageProvider for InMemoryStorage {
         status: RequestStatus,
         processed_at: Option<DateTime<Utc>>,
         error_message: Option<&str>,
+        prune_after: Option<DateTime<Utc>>,
     ) -> Result<(), StorageError> {
         let mut requests = self.requests.lock().unwrap();
         if let Some(request) = requests.get_mut(id) {
             request.status = status;
             request.processed_at = processed_at;
             request.error_message = error_message.map(|s| s.to_string());
+            request.prune_after = prune_after;
             Ok(())
         } else {
             Err(StorageError::NotFound(id.to_string()))

@@ -16,6 +16,8 @@ pub struct ScheduledRequest {
     pub retry_count: u8,
     pub processed_at: Option<DateTime<Utc>>,
     pub error_message: Option<String>,
+    // (Optional) Time after which the request can be cleared from storage.
+    pub prune_after: Option<DateTime<Utc>>,
 }
 
 impl ScheduledRequest {
@@ -39,6 +41,7 @@ impl ScheduledRequest {
             retry_count: 0,
             processed_at: None,
             error_message: None,
+            prune_after: None,
         }
     }
 }

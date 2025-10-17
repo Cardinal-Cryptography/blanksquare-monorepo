@@ -225,6 +225,12 @@ impl DynamoDb {
                 AttributeValue::N(processed_at.timestamp().to_string()),
             );
         }
+        if let Some(prune_after) = request.prune_after {
+            builder = builder.item(
+                "prune_after",
+                AttributeValue::N(prune_after.timestamp().to_string()),
+            );
+        }
 
         builder
             .send()
@@ -296,6 +302,7 @@ impl StorageProvider for DynamoDb {
         status: RequestStatus,
         processed_at: Option<DateTime<Utc>>,
         error_message: Option<&str>,
+        prune_after: Option<DateTime<Utc>>,
     ) -> Result<(), StorageError> {
         let Some(mut existing) = self.get_item_by_id(id).await? else {
             return Err(StorageError::NotFound(id.to_string()));
@@ -303,6 +310,7 @@ impl StorageProvider for DynamoDb {
         existing.status = status;
         existing.error_message = error_message.map(|s| s.to_string());
         existing.processed_at = processed_at;
+        existing.prune_after = prune_after;
 
         // Simple put since id (primary key) doesn't change
         self.put_request(&existing, None).await

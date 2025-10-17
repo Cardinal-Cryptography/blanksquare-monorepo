@@ -131,6 +131,7 @@ impl<Storage: StorageProvider, Credentials: CredentialsProvider>
                         RequestStatus::Completed,
                         Some(Utc::now()),
                         None,
+                        Some(Utc::now()),
                     )
                     .await?;
             }
@@ -166,6 +167,7 @@ impl<Storage: StorageProvider, Credentials: CredentialsProvider>
                             RequestStatus::Failed,
                             Some(Utc::now()),
                             Some(&e.to_string()),
+                            None,
                         )
                         .await?;
                 }

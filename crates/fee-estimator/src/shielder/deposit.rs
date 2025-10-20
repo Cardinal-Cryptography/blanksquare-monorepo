@@ -123,14 +123,18 @@ async fn ensure_account_created(
     if account.nonce == 0 {
         info!("Account is not created yet. Creating a new account...");
         if let Token::ERC20(token_address) = token {
-            // approve amount * 2 to ensure that we would have allowance after the new account creation
-            let (tx_hash, _) = shielder_user
-                .approve_erc20::<Call>(token_address, contract_address, amount * U256::from(2))
+            let allowance = shielder_user
+                .erc20_allowance::<DryRun>(token_address, shielder_user.address(), contract_address)
                 .await?;
-            provider
-                .get_transaction_receipt(tx_hash)
-                .await?
-                .expect("Transaction receipt not found");
+            if allowance < amount {
+                let (tx_hash, _) = shielder_user
+                    .approve_erc20::<Call>(token_address, contract_address, amount * U256::from(2))
+                    .await?;
+                provider
+                    .get_transaction_receipt(tx_hash)
+                    .await?
+                    .expect("Transaction receipt not found");
+            }
         }
         let tx_hash =
             create_new_account(account, shielder_user, amount, token, protocol_fee).await?;

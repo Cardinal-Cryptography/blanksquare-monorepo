@@ -4876,7 +4876,10 @@ dependencies = [
 name = "price-feed"
 version = "0.1.0"
 dependencies = [
+ "alloy-contract",
  "alloy-primitives",
+ "alloy-provider",
+ "alloy-sol-types",
  "anyhow",
  "parking_lot",
  "reqwest",

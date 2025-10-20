@@ -1,7 +1,7 @@
 use rust_decimal::Decimal;
 use time::{Duration, OffsetDateTime};
 
-use crate::fetching::PriceInfoFromProvider;
+use crate::price_provider::PriceInfoFromProvider;
 
 /// The expiration of a price.
 #[derive(Clone, Debug)]

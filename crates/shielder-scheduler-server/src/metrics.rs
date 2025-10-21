@@ -1,4 +1,4 @@
-use std::{collections::HashSet, net::SocketAddrV4, time::Duration};
+use std::{collections::HashSet, net::SocketAddr, time::Duration};
 
 use metrics::{counter, histogram};
 use metrics_exporter_prometheus::PrometheusBuilder;
@@ -26,8 +26,8 @@ mod counters {
         "process_scheduled_requests_success_total";
     pub(crate) const PROCESS_SCHEDULED_REQUESTS_FAILURE_TOTAL: &str =
         "process_scheduled_requests_failure_total";
-    pub(crate) const PROCESS_SCHEDULER_REQUESTS_RETRY_TOTAL: &str =
-        "process_scheduler_requests_retry_total";
+    pub(crate) const PROCESS_SCHEDULED_REQUESTS_RETRY_TOTAL: &str =
+        "process_scheduled_requests_retry_total";
 }
 
 fn init_counters() {
@@ -37,7 +37,7 @@ fn init_counters() {
     counter!(counters::SCHEDULE_WITHDRAW_REQUESTS_TOTAL).increment(0);
     counter!(counters::PROCESS_SCHEDULED_REQUESTS_SUCCESS_TOTAL).increment(0);
     counter!(counters::PROCESS_SCHEDULED_REQUESTS_FAILURE_TOTAL).increment(0);
-    counter!(counters::PROCESS_SCHEDULER_REQUESTS_RETRY_TOTAL).increment(0);
+    counter!(counters::PROCESS_SCHEDULED_REQUESTS_RETRY_TOTAL).increment(0);
 }
 
 pub struct Metrics;
@@ -49,18 +49,16 @@ impl Metrics {
         bucket_duration_secs: u64,
         upkeep_timeout_secs: u64,
     ) -> Result<(), Error> {
-        tracing_subscriber::registry()
+        _ = tracing_subscriber::registry()
             .with(fmt::layer().with_filter(EnvFilter::from_default_env()))
             .with(FutureHistogramLayer::with_all_spans().with_filter(EnvFilter::new("info")))
-            .init();
+            .try_init();
 
+        let addr: SocketAddr = format!("{}:{}", bind_address, metrics_port)
+            .parse()
+            .map_err(|_| Error::ParseError("Invalid bind address or port".to_string()))?;
         PrometheusBuilder::new()
-            .with_http_listener(SocketAddrV4::new(
-                bind_address
-                    .parse()
-                    .map_err(|_| Error::ParseError("Invalid bind address".to_string()))?,
-                metrics_port,
-            ))
+            .with_http_listener(addr)
             .set_bucket_duration(Duration::from_secs(bucket_duration_secs))?
             .upkeep_timeout(Duration::from_secs(upkeep_timeout_secs))
             .install()?;
@@ -93,7 +91,7 @@ impl Metrics {
     }
 
     pub fn record_process_scheduled_request_retry() {
-        counter!(counters::PROCESS_SCHEDULER_REQUESTS_RETRY_TOTAL).increment(1);
+        counter!(counters::PROCESS_SCHEDULED_REQUESTS_RETRY_TOTAL).increment(1);
     }
 }
 

@@ -6422,7 +6422,6 @@ dependencies = [
  "alloy-primitives",
  "base64 0.22.1",
  "futures",
- "metrics",
  "serde",
  "serde_json",
  "shielder-relayer",
@@ -6431,8 +6430,6 @@ dependencies = [
  "tokio",
  "tokio-util",
  "tokio-vsock",
- "tracing",
- "tracing-subscriber",
 ]
 
 [[package]]

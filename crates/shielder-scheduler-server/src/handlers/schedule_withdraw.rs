@@ -10,6 +10,7 @@ use tracing::{error, info, instrument};
 use crate::{
     app_state::AppState,
     credentials_provider::CredentialsProvider,
+    metrics::Metrics,
     storage::{ScheduledRequest, StorageProvider},
 };
 
@@ -41,6 +42,7 @@ pub async fn schedule_withdraw<Storage: StorageProvider, Credentials: Credential
     State(state): State<Arc<AppState<Storage, Credentials>>>,
     Json(schedule_withdraw_request): Json<ScheduleWithdrawRequest>,
 ) -> impl IntoResponse {
+    Metrics::record_schedule_withdraw_request();
     info!(
         "Received schedule withdraw request - id: {}, pocket_money: {}, token_address: {}, relay_after: {}",
         schedule_withdraw_request.id,

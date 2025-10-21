@@ -19,6 +19,7 @@ use crate::{
     app_state::AppState,
     credentials_provider::CredentialsProvider,
     error::SchedulerServerError,
+    metrics::Metrics,
     storage::{RequestStatus, ScheduledRequest, StorageProvider},
     ENCRYPTION_ALGORITHM,
 };
@@ -123,6 +124,7 @@ impl<Storage: StorageProvider, Credentials: CredentialsProvider>
 
         match self.process_request_logic(&request).await {
             Ok(_) => {
+                Metrics::record_process_scheduled_request_success();
                 info!("Successfully processed request id: {}", request.id);
                 self.app_state
                     .storage
@@ -136,6 +138,7 @@ impl<Storage: StorageProvider, Credentials: CredentialsProvider>
                     .await?;
             }
             Err(e) => {
+                Metrics::record_process_scheduled_request_retry();
                 warn!(
                     "Request processing failed for id: {}, error: {:?}",
                     request.id, e
@@ -156,6 +159,7 @@ impl<Storage: StorageProvider, Credentials: CredentialsProvider>
                         )
                         .await?;
                 } else {
+                    Metrics::record_process_scheduled_request_failure();
                     warn!(
                         "Request id {} has reached maximum retry count, marking as Failed",
                         request.id

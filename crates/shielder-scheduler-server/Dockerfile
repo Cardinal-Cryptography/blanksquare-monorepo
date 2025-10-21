@@ -26,6 +26,6 @@ RUN chmod +x /usr/local/bin/shielder-scheduler-server
 RUN useradd -r -s /bin/false appuser
 USER appuser
 
-EXPOSE 3000 3001
+EXPOSE 3000 9090
 
 ENTRYPOINT ["shielder-scheduler-server"]

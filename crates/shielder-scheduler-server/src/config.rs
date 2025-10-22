@@ -9,7 +9,7 @@ pub struct Config {
     pub public_port: u16,
 
     /// A port on which this server exposes its metrics endpoint.
-    #[clap(short, long, default_value = "9090", env = "METRICS_PORT")]
+    #[clap(short, long, default_value = "3001", env = "METRICS_PORT")]
     pub metrics_port: u16,
 
     /// Local IPv4 address on which this server listens to incoming HTTP connections

@@ -168,7 +168,7 @@ The service can be configured using environment variables or command-line argume
 ### Server Configuration
 
 - `PUBLIC_PORT`: HTTP server port (default: 3000)
-- `METRICS_PORT`: Metrics endpoint port (default: 9090)
+- `METRICS_PORT`: Metrics endpoint port (default: 3001)
 - `BIND_ADDRESS`: Server bind address (default: 0.0.0.0)
 - `MAXIMUM_REQUEST_SIZE`: Maximum request size in bytes (default: 102400)
 
@@ -332,8 +332,8 @@ export KMS_PUBLIC_KEY=$(cat test_public_key_base64.txt)
 
 ### Monitoring
 
-The service exposes Prometheus metrics on the `/metrics` endpoint (default port 9090):
+The service exposes Prometheus metrics on the `/metrics` endpoint (default port 3001):
 
 ```bash
-curl http://localhost:9090/metrics
+curl http://localhost:3001/metrics
 ```

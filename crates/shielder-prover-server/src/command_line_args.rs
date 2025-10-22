@@ -7,7 +7,7 @@ pub struct CommandLineArgs {
     pub public_port: u16,
 
     /// A port on which this server exposes its metrics endpoint.
-    #[arg(short, long, default_value = "9090", env = "METRICS_PORT")]
+    #[arg(short, long, default_value = "3001", env = "METRICS_PORT")]
     pub metrics_port: u16,
 
     /// Internal port on which host and tee applications talks to each other

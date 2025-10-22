@@ -2,9 +2,13 @@
 
 use std::{env, io, sync::Arc, time::Duration};
 
+use alloy_primitives::U256;
+use alloy_signer_local::PrivateKeySigner;
 use anyhow::Result;
 use axum::{extract::State, response::IntoResponse, routing::get, Json, Router};
 use config::{config_from_env, ServiceConfig};
+use shielder_account::{ShielderAccount, Token};
+use shielder_contract::{ConnectionPolicy, ShielderUser};
 use tokio::{sync::RwLock, time::interval};
 use tower_http::cors::CorsLayer;
 
@@ -16,9 +20,14 @@ use fees::{get_fee_values, FeeResponse};
 use tracing::{error, info};
 use tracing_subscriber::EnvFilter;
 
+use crate::shielder::ensure_account_created::ensure_account_created;
+
 #[derive(Clone)]
 pub struct AppState {
     pub service_config: ServiceConfig,
+    pub created_shielder_account_erc20: ShielderAccount,
+    pub created_shielder_account_native: ShielderAccount,
+    pub shielder_user: ShielderUser,
     pub fees: Arc<RwLock<FeeResponse>>,
 }
 
@@ -35,8 +44,16 @@ async fn start_fee_monitor(app_state: Arc<AppState>) -> Result<()> {
 
         let service_config = app_state.service_config.clone();
 
-        // Update fees with mocked values that change each iterationlet service_config = service_config.clone();
-        let new_fees = get_fee_values(service_config).await;
+        // Update fees with mocked values that change each iteration
+        let new_fees = get_fee_values(
+            &app_state.created_shielder_account_native,
+            &app_state.created_shielder_account_erc20,
+            &app_state.service_config.empty_shielder_seed,
+            app_state.service_config.erc20_token_address,
+            &app_state.shielder_user,
+            &service_config.rpc_url,
+        )
+        .await;
 
         if new_fees.is_err() {
             error!("Failed to fetch new fees: {:?}", new_fees.err());
@@ -72,10 +89,53 @@ async fn main() -> Result<()> {
     let service_config = config_from_env()?;
 
     info!("Setting up server...");
+
+    let shielder_user = ShielderUser::new(
+        service_config.contract_address,
+        ConnectionPolicy::OnDemand {
+            rpc_url: service_config.rpc_url.clone(),
+            signer: PrivateKeySigner::from_bytes(&service_config.account_pk.into())
+                .expect("Invalid key format - cannot cast to PrivateKeySigner"),
+        },
+    );
+
+    // Ensure account is created before starting the server for both native and ERC20 tokens
+    let created_shielder_account_native = ensure_account_created(
+        &shielder_user,
+        service_config.created_shielder_seed_native,
+        service_config.rpc_url.clone(),
+        service_config.contract_address,
+        Token::Native,
+        U256::from(1),
+    )
+    .await?;
+    let created_shielder_account_erc20 = ensure_account_created(
+        &shielder_user,
+        service_config.created_shielder_seed_erc20,
+        service_config.rpc_url.clone(),
+        service_config.contract_address,
+        Token::ERC20(service_config.erc20_token_address),
+        U256::from(1),
+    )
+    .await?;
+
+    let initial_fee_values = get_fee_values(
+        &created_shielder_account_native,
+        &created_shielder_account_erc20,
+        &service_config.empty_shielder_seed,
+        service_config.erc20_token_address,
+        &shielder_user,
+        &service_config.rpc_url,
+    )
+    .await?;
+
     // Create the initial AppState with default values
     let app_state = Arc::new(AppState {
         service_config: service_config.clone(),
-        fees: Arc::new(RwLock::new(get_fee_values(service_config.clone()).await?)),
+        created_shielder_account_erc20,
+        created_shielder_account_native,
+        shielder_user,
+        fees: Arc::new(RwLock::new(initial_fee_values)),
     });
 
     // 1) Spawn the fee monitor as a background task:

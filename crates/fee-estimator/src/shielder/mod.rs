@@ -4,6 +4,7 @@ use alloy_primitives::{
 };
 
 pub mod deposit;
+pub mod ensure_account_created;
 pub mod new_account;
 mod pk;
 

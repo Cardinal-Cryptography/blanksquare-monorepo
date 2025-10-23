@@ -1,4 +1,4 @@
-use std::{net::SocketAddrV4, sync::Arc, time::Duration};
+use std::sync::Arc;
 
 use axum::{
     extract::DefaultBodyLimit,
@@ -6,21 +6,19 @@ use axum::{
     Router,
 };
 use clap::Parser;
-use metrics_exporter_prometheus::PrometheusBuilder;
-use shielder_scheduler_common::metrics::FutureHistogramLayer;
 use shielder_scheduler_server::{
     app_state::AppState,
     config::Config,
     credentials_provider,
     error::SchedulerServerError as Error,
     handlers::{self as server_handlers},
+    metrics::Metrics,
     scheduler_processor::SchedulerProcessor,
     storage,
 };
 use tokio::net::TcpListener;
 use tower_http::cors::CorsLayer;
 use tracing::info;
-use tracing_subscriber::{fmt, layer::SubscriberExt, util::SubscriberInitExt, EnvFilter, Layer};
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
@@ -28,24 +26,6 @@ async fn main() -> Result<(), Error> {
     let kms_key_id = options.kms_key_id.clone().ok_or(Error::ParseError(
         "KMS_KEY_ID environment variable is required".to_string(),
     ))?;
-
-    tracing_subscriber::registry()
-        .with(fmt::layer().with_filter(EnvFilter::from_default_env()))
-        // Initialize metrics collection
-        .with(FutureHistogramLayer::with_all_spans().with_filter(EnvFilter::new("info")))
-        .init();
-
-    PrometheusBuilder::new()
-        .with_http_listener(SocketAddrV4::new(
-            options
-                .bind_address
-                .parse()
-                .map_err(|_| Error::ParseError("Invalid bind address".to_string()))?,
-            options.metrics_port,
-        ))
-        .set_bucket_duration(Duration::from_secs(options.metrics_bucket_duration_secs))?
-        .upkeep_timeout(Duration::from_secs(options.metrics_upkeep_timeout_secs))
-        .install()?;
 
     let aws_sdk_config = aws_config::load_defaults(aws_config::BehaviorVersion::latest()).await;
 
@@ -85,6 +65,13 @@ async fn main() -> Result<(), Error> {
     tokio::spawn(async move {
         scheduler_processor.start().await;
     });
+
+    Metrics::start_metrics_server(
+        &options.bind_address,
+        options.metrics_port,
+        options.metrics_bucket_duration_secs,
+        options.metrics_upkeep_timeout_secs,
+    )?;
 
     let listener = TcpListener::bind((options.bind_address, options.public_port)).await?;
 

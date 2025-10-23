@@ -65,7 +65,6 @@ deploy_shielder_contracts() {
       2> output.log \
     | grep 'Shielder deployed at:' | awk '{print $NF}')
   export SHIELDER_CONTRACT_ADDRESS
-  sleep 5
 
   log_progress "✅ Contracts deployed"
 }
@@ -81,7 +80,6 @@ deploy_erc20_token() {
       2> output.log \
     | jq -r '.deployedTo'
   )
-  sleep 10
 }
 
 deploy_erc20_tokens() {
@@ -131,7 +129,6 @@ mint_erc20_tokens() {
         ${key} \
         ${AMOUNT} \
         &>> output.log
-      sleep 10
     done
   done
 

@@ -12,6 +12,7 @@ use tracing::{error, info, instrument};
 use crate::{
     app_state::AppState,
     credentials_provider::CredentialsProvider,
+    metrics::Metrics,
     storage::{RequestStatus, StorageProvider},
 };
 
@@ -29,6 +30,7 @@ pub async fn get_status<Storage: StorageProvider, Credentials: CredentialsProvid
     State(state): State<Arc<AppState<Storage, Credentials>>>,
     Path(id): Path<String>,
 ) -> impl IntoResponse {
+    Metrics::record_get_status_request();
     info!("Received get status request for id: {}", id);
 
     match state.storage.get_request_by_id(&id).await {

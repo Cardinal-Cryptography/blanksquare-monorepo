@@ -6,7 +6,7 @@ use tracing::instrument;
 
 use crate::{
     app_state::AppState, credentials_provider::CredentialsProvider, error::SchedulerServerError,
-    storage::StorageProvider, ENCRYPTION_ALGORITHM,
+    metrics::Metrics, storage::StorageProvider, ENCRYPTION_ALGORITHM,
 };
 
 #[instrument(level = "info", skip_all)]
@@ -16,6 +16,7 @@ pub async fn tee_public_key<
 >(
     State(state): State<Arc<AppState<Storage, Credentials>>>,
 ) -> Result<Json<Response>, SchedulerServerError> {
+    Metrics::record_tee_public_key_request();
     // Get current AWS credentials
     let aws_credentials = state.credentials.get_credentials().await?;
     let tee_response = state

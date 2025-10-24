@@ -1,12 +1,99 @@
-use std::collections::HashSet;
+use std::{collections::HashSet, net::SocketAddr, time::Duration};
 
-use metrics::histogram;
+use metrics::{counter, histogram};
+use metrics_exporter_prometheus::PrometheusBuilder;
 use tokio::time::Instant;
 use tracing::{
     span::{Attributes, Id},
     Subscriber,
 };
-use tracing_subscriber::{layer::Context, registry::LookupSpan, Layer};
+use tracing_subscriber::{
+    fmt,
+    layer::{Context, SubscriberExt},
+    registry::LookupSpan,
+    util::SubscriberInitExt,
+    EnvFilter, Layer,
+};
+
+use crate::error::SchedulerServerError as Error;
+
+mod counters {
+    pub(crate) const HEALTH_REQUESTS_TOTAL: &str = "health_requests_total";
+    pub(crate) const TEE_PUBLIC_KEY_REQUESTS_TOTAL: &str = "tee_public_key_requests_total";
+    pub(crate) const GET_STATUS_REQUESTS_TOTAL: &str = "get_status_requests_total";
+    pub(crate) const SCHEDULE_WITHDRAW_REQUESTS_TOTAL: &str = "schedule_withdraw_requests_total";
+    pub(crate) const PROCESS_SCHEDULED_REQUESTS_SUCCESS_TOTAL: &str =
+        "process_scheduled_requests_success_total";
+    pub(crate) const PROCESS_SCHEDULED_REQUESTS_FAILURE_TOTAL: &str =
+        "process_scheduled_requests_failure_total";
+    pub(crate) const PROCESS_SCHEDULED_REQUESTS_RETRY_TOTAL: &str =
+        "process_scheduled_requests_retry_total";
+}
+
+fn init_counters() {
+    counter!(counters::HEALTH_REQUESTS_TOTAL).increment(0);
+    counter!(counters::TEE_PUBLIC_KEY_REQUESTS_TOTAL).increment(0);
+    counter!(counters::GET_STATUS_REQUESTS_TOTAL).increment(0);
+    counter!(counters::SCHEDULE_WITHDRAW_REQUESTS_TOTAL).increment(0);
+    counter!(counters::PROCESS_SCHEDULED_REQUESTS_SUCCESS_TOTAL).increment(0);
+    counter!(counters::PROCESS_SCHEDULED_REQUESTS_FAILURE_TOTAL).increment(0);
+    counter!(counters::PROCESS_SCHEDULED_REQUESTS_RETRY_TOTAL).increment(0);
+}
+
+pub struct Metrics;
+
+impl Metrics {
+    pub fn start_metrics_server(
+        bind_address: &str,
+        metrics_port: u16,
+        bucket_duration_secs: u64,
+        upkeep_timeout_secs: u64,
+    ) -> Result<(), Error> {
+        _ = tracing_subscriber::registry()
+            .with(fmt::layer().with_filter(EnvFilter::from_default_env()))
+            .with(FutureHistogramLayer::with_all_spans().with_filter(EnvFilter::new("info")))
+            .try_init();
+
+        let addr: SocketAddr = format!("{}:{}", bind_address, metrics_port)
+            .parse()
+            .map_err(|_| Error::ParseError("Invalid bind address or port".to_string()))?;
+        PrometheusBuilder::new()
+            .with_http_listener(addr)
+            .set_bucket_duration(Duration::from_secs(bucket_duration_secs))?
+            .upkeep_timeout(Duration::from_secs(upkeep_timeout_secs))
+            .install()?;
+        init_counters();
+        Ok(())
+    }
+
+    pub fn record_health_request() {
+        counter!(counters::HEALTH_REQUESTS_TOTAL).increment(1);
+    }
+
+    pub fn record_tee_public_key_request() {
+        counter!(counters::TEE_PUBLIC_KEY_REQUESTS_TOTAL).increment(1);
+    }
+
+    pub fn record_get_status_request() {
+        counter!(counters::GET_STATUS_REQUESTS_TOTAL).increment(1);
+    }
+
+    pub fn record_schedule_withdraw_request() {
+        counter!(counters::SCHEDULE_WITHDRAW_REQUESTS_TOTAL).increment(1);
+    }
+
+    pub fn record_process_scheduled_request_success() {
+        counter!(counters::PROCESS_SCHEDULED_REQUESTS_SUCCESS_TOTAL).increment(1);
+    }
+
+    pub fn record_process_scheduled_request_failure() {
+        counter!(counters::PROCESS_SCHEDULED_REQUESTS_FAILURE_TOTAL).increment(1);
+    }
+
+    pub fn record_process_scheduled_request_retry() {
+        counter!(counters::PROCESS_SCHEDULED_REQUESTS_RETRY_TOTAL).increment(1);
+    }
+}
 
 #[derive(Debug, Clone)]
 pub enum TrackedSpans {

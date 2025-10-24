@@ -12,21 +12,17 @@ use shielder_scheduler_server::{
     credentials_provider,
     error::SchedulerServerError as Error,
     handlers::{self as server_handlers},
+    metrics::Metrics,
     scheduler_processor::SchedulerProcessor,
     storage,
 };
 use tokio::net::TcpListener;
 use tower_http::cors::CorsLayer;
 use tracing::info;
-use tracing_subscriber::{fmt, layer::SubscriberExt, util::SubscriberInitExt, EnvFilter, Layer};
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
     let options = Config::parse();
-
-    tracing_subscriber::registry()
-        .with(fmt::layer().with_filter(EnvFilter::from_default_env()))
-        .init();
 
     let storage = storage::in_memory::InMemoryStorage::new();
 
@@ -61,6 +57,13 @@ async fn main() -> Result<(), Error> {
     tokio::spawn(async move {
         scheduler_processor.start().await;
     });
+
+    Metrics::start_metrics_server(
+        &options.bind_address,
+        options.metrics_port,
+        options.metrics_bucket_duration_secs,
+        options.metrics_upkeep_timeout_secs,
+    )?;
 
     let listener = TcpListener::bind((options.bind_address, options.public_port)).await?;
 

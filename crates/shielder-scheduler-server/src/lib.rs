@@ -3,6 +3,7 @@ pub mod config;
 pub mod credentials_provider;
 pub mod error;
 pub mod handlers;
+pub mod metrics;
 pub mod relayer_controller;
 pub mod scheduler_processor;
 pub mod storage;

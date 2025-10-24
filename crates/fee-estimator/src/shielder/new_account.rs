@@ -1,5 +1,4 @@
 use alloy_primitives::{Address, Bytes, TxHash, U256};
-use alloy_signer_local::PrivateKeySigner;
 use anyhow::Result;
 use shielder_account::{
     call_data::{NewAccountCall, NewAccountCallExtra, NewAccountCallType},
@@ -7,7 +6,7 @@ use shielder_account::{
 };
 use shielder_contract::{
     call_type::{Call, DryRun, EstimateGas},
-    ConnectionPolicy, NoProvider, ShielderUser,
+    ShielderUser,
 };
 use shielder_setup::{
     protocol_fee::compute_protocol_fee_from_gross, shielder_circuits::GrumpkinPointAffine,
@@ -16,44 +15,36 @@ use shielder_setup::{
 use crate::shielder::{get_mac_salt, pk::NEW_ACCOUNT_PROVING_EQUIPMENT};
 
 pub async fn estimate_new_account_gas(
-    private_key: U256,
-    shielder_seed: U256,
-    rpc_url: String,
-    contract_address: Address,
+    shielder_account: &ShielderAccount,
+    shielder_user: &ShielderUser,
     token: Token,
     amount: U256,
 ) -> Result<u64> {
     let amount = U256::from(amount);
-    let signer = PrivateKeySigner::from_bytes(&private_key.into())
-        .expect("Invalid key format - cannot cast to PrivateKeySigner");
-    let shielder_account = ShielderAccount::new(shielder_seed, token);
 
-    let user = ShielderUser::<NoProvider>::new(
-        contract_address,
-        ConnectionPolicy::OnDemand { rpc_url, signer },
-    );
-
-    let anonymity_revoker_public_key = user.anonymity_revoker_pubkey::<DryRun>().await?;
-    let protocol_fee_bps = user.protocol_deposit_fee_bps::<DryRun>().await?;
+    let anonymity_revoker_public_key = shielder_user.anonymity_revoker_pubkey::<DryRun>().await?;
+    let protocol_fee_bps = shielder_user.protocol_deposit_fee_bps::<DryRun>().await?;
 
     let protocol_fee = compute_protocol_fee_from_gross(amount, protocol_fee_bps);
 
     let call = prepare_call(
-        &shielder_account,
+        shielder_account,
         amount,
         token,
         anonymity_revoker_public_key,
-        user.address(),
+        shielder_user.address(),
         protocol_fee,
         Bytes::from(vec![]),
     )?;
     let estimated_gas = match token {
         Token::Native => {
-            user.new_account_native::<EstimateGas>(call.try_into().unwrap(), amount)
+            shielder_user
+                .new_account_native::<EstimateGas>(call.try_into().unwrap(), amount)
                 .await?
         }
         Token::ERC20(_) => {
-            user.new_account_erc20::<EstimateGas>(call.try_into().unwrap())
+            shielder_user
+                .new_account_erc20::<EstimateGas>(call.try_into().unwrap())
                 .await?
         }
     };

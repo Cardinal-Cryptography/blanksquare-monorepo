@@ -1,13 +1,10 @@
-use alloy_primitives::U256;
+use alloy_primitives::{Address, U256};
 use alloy_provider::Provider;
 use anyhow::Result;
-use shielder_account::Token;
-use shielder_contract::providers::create_simple_provider;
+use shielder_account::{ShielderAccount, Token};
+use shielder_contract::{providers::create_simple_provider, ShielderUser};
 
-use crate::{
-    config::ServiceConfig,
-    shielder::{deposit::estimate_deposit_gas, new_account::estimate_new_account_gas},
-};
+use crate::shielder::{deposit::estimate_deposit_gas, new_account::estimate_new_account_gas};
 
 #[derive(Clone, serde::Serialize)]
 pub struct FeeResponse {
@@ -20,8 +17,18 @@ pub struct FeeResponse {
 }
 
 /// Returns a FeeResponse with gas estimations computed concurrently.
-pub async fn get_fee_values(config: ServiceConfig) -> Result<FeeResponse> {
-    let provider = create_simple_provider(&config.rpc_url).await?;
+pub async fn get_fee_values(
+    created_shielder_account_native: &ShielderAccount,
+    created_shielder_account_erc20: &ShielderAccount,
+    empty_shielder_seed: &U256,
+    erc20_token_address: Address,
+    shielder_user: &ShielderUser,
+    rpc_url: &str,
+) -> Result<FeeResponse> {
+    let provider = create_simple_provider(rpc_url).await?;
+    let empty_shielder_account_native = ShielderAccount::new(*empty_shielder_seed, Token::Native);
+    let empty_shielder_account_erc20 =
+        ShielderAccount::new(*empty_shielder_seed, Token::ERC20(erc20_token_address));
     // Run all gas estimations and gas price fetch concurrently
     let (
         native_new_account_result,
@@ -31,35 +38,27 @@ pub async fn get_fee_values(config: ServiceConfig) -> Result<FeeResponse> {
         gas_price_result,
     ) = tokio::join!(
         estimate_new_account_gas(
-            config.account_pk,
-            config.empty_shielder_seed,
-            config.rpc_url.clone(),
-            config.contract_address,
+            &empty_shielder_account_native,
+            shielder_user,
             Token::Native,
             U256::from(1),
         ),
         estimate_new_account_gas(
-            config.account_pk,
-            config.empty_shielder_seed,
-            config.rpc_url.clone(),
-            config.contract_address,
-            Token::ERC20(config.erc20_token_address),
+            &empty_shielder_account_erc20,
+            shielder_user,
+            Token::ERC20(erc20_token_address),
             U256::from(1),
         ),
         estimate_deposit_gas(
-            config.account_pk,
-            config.created_shielder_seed_native,
-            config.rpc_url.clone(),
-            config.contract_address,
+            created_shielder_account_native,
+            shielder_user,
             Token::Native,
             U256::from(1),
         ),
         estimate_deposit_gas(
-            config.account_pk,
-            config.created_shielder_seed_erc20,
-            config.rpc_url.clone(),
-            config.contract_address,
-            Token::ERC20(config.erc20_token_address),
+            created_shielder_account_erc20,
+            shielder_user,
+            Token::ERC20(erc20_token_address),
             U256::from(1),
         ),
         provider.get_gas_price()

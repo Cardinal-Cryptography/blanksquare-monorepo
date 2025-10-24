@@ -16,9 +16,7 @@ services:
       - FEE_ESTIMATOR_DATA_DIR=/app/data
     volumes:
       - fee-estimator-data:/app/data
-    ports:
-      - "3000:3000"
-    restart: unless-stopped
+    network_mode: host
 
 volumes:
   fee-estimator-data:

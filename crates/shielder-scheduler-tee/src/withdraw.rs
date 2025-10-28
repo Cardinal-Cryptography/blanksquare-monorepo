@@ -17,7 +17,7 @@ use shielder_contract::WithdrawCommitment;
 use shielder_relayer::RelayCalldata;
 use shielder_setup::{
     consts::{ARITY, TREE_HEIGHT},
-    version::contract_version,
+    version::ContractVersion,
 };
 use type_conversions::{address_to_field, field_to_address, field_to_u256, u256_to_field};
 
@@ -103,6 +103,7 @@ impl WithdrawCircuit {
     #[allow(clippy::too_many_arguments)]
     pub fn get_relayer_calldata(
         &self,
+        contract_version: ContractVersion,
         amount: U256,
         to: Address,
         merkle_path: [[U256; ARITY]; TREE_HEIGHT],
@@ -123,7 +124,7 @@ impl WithdrawCircuit {
             to,
             relayer_address: relayer_fee_address,
             relayer_fee: total_cost_fee_token,
-            contract_version: contract_version(),
+            contract_version,
             chain_id,
             mac_salt: Self::get_salt(),
             pocket_money,
@@ -149,7 +150,7 @@ impl WithdrawCircuit {
         );
 
         let withdraw_call = WithdrawCall {
-            expected_contract_version: contract_version().to_bytes(),
+            expected_contract_version: contract_version.to_bytes(),
             token: field_to_address(prover_knowledge.token_address).into(),
             amount: field_to_u256(
                 prover_knowledge.compute_public_input(WithdrawInstance::WithdrawalValue),
@@ -178,7 +179,7 @@ impl WithdrawCircuit {
         };
 
         RelayCalldata {
-            expected_contract_version: contract_version().to_bytes(),
+            expected_contract_version: contract_version.to_bytes(),
             amount,
             withdraw_address: to,
             merkle_root,

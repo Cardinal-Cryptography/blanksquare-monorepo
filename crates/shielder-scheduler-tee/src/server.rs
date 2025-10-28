@@ -12,7 +12,10 @@ use shielder_scheduler_common::{
     protocol::{AwsConfig, EncryptionEnvelope, Payload, Request, Response, TEEServer},
     vsock::VsockError,
 };
-use shielder_setup::consts::{ARITY, TREE_HEIGHT};
+use shielder_setup::{
+    consts::{ARITY, TREE_HEIGHT},
+    version::ContractVersion,
+};
 use tokio_vsock::{VsockAddr, VsockListener, VsockStream};
 
 use crate::{
@@ -158,6 +161,7 @@ impl Server {
         };
         let withdraw_circuit = WithdrawCircuit::new(payload.account_id, token);
         let relayer_calldata = withdraw_circuit.get_relayer_calldata(
+            ContractVersion::from_bytes(payload.contract_version),
             payload.withdrawal_value,
             payload.withdraw_address,
             *relay_params.merkle_path,

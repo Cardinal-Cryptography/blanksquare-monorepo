@@ -3,7 +3,7 @@ use axum::{
     response::{IntoResponse, Response as AxumResponse},
 };
 use shielder_contract::ShielderContractError;
-use shielder_scheduler_common::vsock::VsockError;
+use shielder_scheduler_common::{protocol::TeeError, vsock::VsockError};
 use tokio::task::JoinError;
 use tracing::error;
 
@@ -20,8 +20,14 @@ pub enum SchedulerServerError {
     #[error("Join handle error: {0}")]
     JoinHandleError(#[from] JoinError),
 
-    #[error("Proving Server error: {0}")]
-    ProvingServerError(#[from] VsockError),
+    #[error("Unexpected response")]
+    UnexpectedTeeResponse,
+
+    #[error("TEE Error: {0}")]
+    TeeError(#[from] TeeError),
+
+    #[error("Vsock Error: {0}")]
+    VsockError(#[from] VsockError),
 
     #[error("Failed to initialize metrics: {0}")]
     MetricsError(#[from] metrics_exporter_prometheus::BuildError),

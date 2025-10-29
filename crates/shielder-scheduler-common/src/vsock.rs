@@ -15,11 +15,8 @@ pub enum VsockError {
     #[error("Serde error: {0}")]
     Serde(#[from] serde_json::Error),
 
-    #[error("Protocol error: {0}")]
-    Protocol(String),
-
-    #[error("KMS error: {0}")]
-    KMS(String),
+    #[error("NSM error: {0}")]
+    NSM(String),
 
     #[error("Connection closed")]
     Closed,

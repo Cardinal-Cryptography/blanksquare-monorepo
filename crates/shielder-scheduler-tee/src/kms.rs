@@ -6,9 +6,6 @@ use aes_gcm::{
     Aes256Gcm, Nonce,
 };
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine};
-#[cfg(feature = "local-run")]
-use log::info;
-#[cfg(not(feature = "local-run"))]
 use log::{debug, info};
 #[cfg(feature = "local-run")]
 use rsa::{pkcs8::DecodePrivateKey, RsaPrivateKey};
@@ -70,15 +67,14 @@ impl KmsDecryptionController {
 
             debug!("Executing command: {:?}", cmd);
             let output = cmd.output().map_err(|e| {
-                use shielder_scheduler_common::protocol::TeeError;
-
-                TeeError::KMS(format!("failed to run kmstool_enclave_cli: {e:?}"))
+                debug!("Failed to execute kmstool_enclave_cli: {e:?}");
+                TeeError::KMS("failed to run kmstool_enclave_cli".into())
             })?;
 
             if !output.status.success() {
                 let stderr: std::borrow::Cow<'_, str> = String::from_utf8_lossy(&output.stderr);
-                info!("Decrypting data encryption key failed with {stderr}");
-                return Err(TeeError::KMS(format!("kmstool failed: {}", stderr)));
+                debug!("Decrypting data encryption key failed with {stderr}");
+                return Err(TeeError::KMS("kmstool failed".into()));
             }
             info!("Decrypting data encryption key success");
 
@@ -105,11 +101,13 @@ impl KmsDecryptionController {
         let decrypted_data = {
             let padding = Oaep::new::<Sha256>();
             let private_key = RsaPrivateKey::from_pkcs8_der(&self.private_key).map_err(|e| {
-                TeeError::KMS(format!("Failed to parse private key from DER: {e:?}"))
+                debug!("Failed to parse private key from DER: {e:?}");
+                TeeError::KMS("Failed to parse private key from DER".into())
             })?;
-            private_key
-                .decrypt(padding, encrypted_dek)
-                .map_err(|e| TeeError::KMS(format!("Failed to decrypt with private key: {e:?}")))?
+            private_key.decrypt(padding, encrypted_dek).map_err(|e| {
+                debug!("Failed to decrypt with private key: {e:?}");
+                TeeError::KMS("Failed to decrypt with private key".into())
+            })?
         };
         Ok(decrypted_data)
     }
@@ -124,28 +122,25 @@ impl KmsDecryptionController {
         info!("Decrypting data encryption key success");
 
         if dek.len() != 32 {
-            return Err(TeeError::KMS(format!(
-                "Invalid data key length: expected 32 bytes, got {}",
-                dek.len()
-            )));
+            return Err(TeeError::KMS(
+                "Invalid data key length: expected 32 bytes".into(),
+            ));
         }
 
         info!("Decrypting payload");
 
         // Validate IV/nonce length - AES-GCM requires exactly 12 bytes (96 bits)
         if encryption_envelope.iv.len() != 12 {
-            return Err(TeeError::KMS(format!(
-                "Invalid IV length: expected 12 bytes for AES-GCM, got {}",
-                encryption_envelope.iv.len()
-            )));
+            return Err(TeeError::KMS(
+                "Invalid IV length: expected 12 bytes for AES-GCM".into(),
+            ));
         }
 
         // Validate auth tag length - AES-GCM typically uses 16 bytes (128 bits)
         if encryption_envelope.auth_tag.len() != 16 {
-            return Err(TeeError::KMS(format!(
-                "Invalid auth tag length: expected 16 bytes for AES-GCM, got {}",
-                encryption_envelope.auth_tag.len()
-            )));
+            return Err(TeeError::KMS(
+                "Invalid auth tag length: expected 16 bytes for AES-GCM".into(),
+            ));
         }
 
         // Validate that we have some ciphertext
@@ -158,14 +153,19 @@ impl KmsDecryptionController {
         let mut full_ciphertext = encryption_envelope.encrypted_payload.clone();
         full_ciphertext.extend(encryption_envelope.auth_tag.clone());
 
-        let cipher = Aes256Gcm::new_from_slice(&dek)
-            .map_err(|e| TeeError::KMS(format!("Failed to create AES cipher: {e:?}")))?;
+        let cipher = Aes256Gcm::new_from_slice(&dek).map_err(|e| {
+            debug!("Failed to create AES cipher: {e:?}");
+            TeeError::KMS("Failed to create AES cipher".into())
+        })?;
 
         let nonce = Nonce::from_slice(&encryption_envelope.iv);
         let decrypted_payload = cipher
             .decrypt(nonce, full_ciphertext.as_ref())
-            .map_err(|e| TeeError::KMS(format!("Failed to decrypt payload: {e:?}")))?;
-        info!("Decrypting payloadsuccess");
+            .map_err(|e| {
+                debug!("Failed to decrypt payload: {e:?}");
+                TeeError::KMS("Failed to decrypt payload".into())
+            })?;
+        info!("Decrypting payload success");
 
         Ok(decrypted_payload)
     }
@@ -176,13 +176,19 @@ impl KmsDecryptionController {
         // Parse public key from DER bytes (the public_key field now contains base64-decoded DER bytes)
         let oaep_padding = Oaep::new::<Sha256>();
         let encrypted_data: Vec<u8> = RsaPublicKey::from_public_key_der(&aws_config.public_key)
-            .map_err(|e| TeeError::KMS(format!("Failed to parse public key DER: {e:?}")))?
+            .map_err(|e| {
+                debug!("Failed to parse public key DER: {e:?}");
+                TeeError::KMS("Failed to parse public key DER".into())
+            })?
             .encrypt(
                 &mut rand::thread_rng(),
                 oaep_padding,
                 expected_data.as_bytes(),
             )
-            .map_err(|e| TeeError::KMS(format!("Failed to encrypt data: {e:?}")))?;
+            .map_err(|e| {
+                debug!("Failed to encrypt data: {e:?}");
+                TeeError::KMS("Failed to encrypt data".into())
+            })?;
 
         let decrypted_data = self.decrypt_dek(aws_config, &encrypted_data)?;
         if decrypted_data != expected_data.as_bytes() {

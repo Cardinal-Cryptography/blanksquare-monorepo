@@ -156,7 +156,8 @@ impl Server {
         let decrypted_payload = self.kms.decrypt_payload(aws_config, &encryption_envelope)?;
 
         let payload: Payload = serde_json::from_slice(&decrypted_payload).map_err(|e| {
-            TeeError::Protocol(format!("Failed to deserialize decrypted payload: {e:?}"))
+            debug!("Failed to deserialize decrypted payload: {e:?}");
+            TeeError::Protocol("Failed to deserialize decrypted payload.".into())
         })?;
 
         info!("Deserialized payload.");
@@ -164,10 +165,13 @@ impl Server {
         debug!("Relay params: {:?}", relay_params);
 
         if relay_params.relayer_fee > payload.max_relayer_fee {
-            return Err(TeeError::Protocol(format!(
+            debug!(
                 "Relayer fee {} exceeds max relayer fee {}",
                 relay_params.relayer_fee, payload.max_relayer_fee
-            )));
+            );
+            return Err(TeeError::Protocol(
+                "Actual relayer fee exceeds max relayer fee".into(),
+            ));
         }
 
         let token = match payload.token_address {
@@ -222,10 +226,8 @@ impl Server {
         let nsm_fd = nsm_init();
 
         if nsm_fd < 0 {
-            return Err(VsockError::NSM(format!(
-                "Failed to initialize NSM driver (return code) = {}",
-                nsm_fd
-            )));
+            debug!("Failed to initialize NSM driver (return code) = {}", nsm_fd);
+            return Err(VsockError::NSM("Failed to initialize NSM driver".into()));
         }
 
         Ok(nsm_fd)

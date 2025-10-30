@@ -133,7 +133,20 @@ pub enum Response {
 
     /// Response to [`Request::PrepareRelayCalldata`].
     /// Contains calldata that can be used to relay the transaction to the chain.
-    PrepareRelayCalldata { calldata: RelayCalldata },
+    PrepareRelayCalldata {
+        calldata: RelayCalldata,
+    },
+
+    Error(TeeError),
+}
+
+#[derive(thiserror::Error, Serialize, Deserialize, Debug)]
+pub enum TeeError {
+    #[error("Protocol error: {0}")]
+    Protocol(String),
+
+    #[error("KMS error: {0}")]
+    KMS(String),
 }
 
 pub type TEEServer = VsockServer<Request, Response>;

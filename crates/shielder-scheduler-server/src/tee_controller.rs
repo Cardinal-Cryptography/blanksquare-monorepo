@@ -37,7 +37,8 @@ impl TeeController {
     pub async fn tee_request(&self, request: Request) -> Result<Response, SchedulerServerError> {
         let tee_cid = self.tee_cid;
         let tee_port = self.tee_port;
-        self.tee_task_pool
+        let response = self
+            .tee_task_pool
             .spawn(async move {
                 let mut tee_client = TEEClient::new(tee_cid, tee_port)
                     .instrument(info_span!("Building_VSOCK_connection"))
@@ -52,6 +53,10 @@ impl TeeController {
             .map_err(SchedulerServerError::TaskPool)?
             .await
             .map_err(SchedulerServerError::JoinHandleError)??
-            .map_err(SchedulerServerError::ProvingServerError)
+            .map_err(SchedulerServerError::VsockError)?;
+        match response {
+            Response::Error(e) => Err(SchedulerServerError::TeeError(e)),
+            _ => Ok(response),
+        }
     }
 }

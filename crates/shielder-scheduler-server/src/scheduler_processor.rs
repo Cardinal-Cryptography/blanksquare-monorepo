@@ -5,10 +5,7 @@ use alloy_signer_local::PrivateKeySigner;
 use chrono::Utc;
 use shielder_contract::{merkle_path::get_current_merkle_path, ConnectionPolicy, ShielderUser};
 use shielder_relayer::{QuoteFeeResponse, RelayQuery};
-use shielder_scheduler_common::{
-    protocol::{Request, Response},
-    vsock::VsockError,
-};
+use shielder_scheduler_common::protocol::{Request, Response};
 use shielder_setup::{
     consts::ARITY, shielder_circuits::consts::merkle_constants::NOTE_TREE_HEIGHT,
 };
@@ -207,9 +204,7 @@ impl<Storage: StorageProvider, Credentials: CredentialsProvider>
                     .await?;
                 Ok(())
             }
-            _ => Err(SchedulerServerError::ProvingServerError(
-                VsockError::Protocol("Unexpected response from TEE".to_string()),
-            )),
+            _ => Err(SchedulerServerError::UnexpectedTeeResponse),
         }
     }
 

@@ -8,8 +8,9 @@ use aws_nitro_enclaves_nsm_api::{
     driver::{nsm_exit, nsm_init, nsm_process_request},
 };
 use log::{debug, info};
+use shielder_relayer::RelayCalldata;
 use shielder_scheduler_common::{
-    protocol::{AwsConfig, EncryptionEnvelope, Payload, Request, Response, TEEServer},
+    protocol::{AwsConfig, EncryptionEnvelope, Payload, Request, Response, TEEServer, TeeError},
     vsock::VsockError,
 };
 use shielder_setup::{
@@ -53,7 +54,7 @@ impl Server {
             options.kms_proxy_port,
             #[cfg(feature = "local-run")]
             options.private_key,
-        )?;
+        );
 
         Ok(Arc::new(Self {
             listener,
@@ -86,7 +87,16 @@ impl Server {
                     match request {
                         Request::Ping => Ok(Response::Pong),
                         Request::TeePublicKey { aws_config } => {
-                            self.public_key_response(&aws_config).await
+                            let result = self.public_key_response(&aws_config).await;
+                            match result {
+                                Ok((public_key, attestation_document)) => {
+                                    Ok(Response::TeePublicKey {
+                                        public_key,
+                                        attestation_document,
+                                    })
+                                }
+                                Err(e) => Ok(Response::Error(e)),
+                            }
                         }
                         Request::PrepareRelayCalldata {
                             aws_config,
@@ -102,12 +112,17 @@ impl Server {
                                 merkle_path,
                                 merkle_root,
                             };
-                            self.prepare_relay_calldata_response(
-                                &aws_config,
-                                *encryption_envelope,
-                                relay_params,
-                            )
-                            .await
+                            let result = self
+                                .prepare_relay_calldata_response(
+                                    &aws_config,
+                                    *encryption_envelope,
+                                    relay_params,
+                                )
+                                .await;
+                            match result {
+                                Ok(calldata) => Ok(Response::PrepareRelayCalldata { calldata }),
+                                Err(e) => Ok(Response::Error(e)),
+                            }
                         }
                     }
                 })
@@ -116,7 +131,10 @@ impl Server {
     }
 
     /// Return the KMS public key (base64) and an attestation document embedding the same key.
-    async fn public_key_response(&self, aws_config: &AwsConfig) -> Result<Response, VsockError> {
+    async fn public_key_response(
+        &self,
+        aws_config: &AwsConfig,
+    ) -> Result<(Vec<u8>, Vec<u8>), TeeError> {
         self.kms.verify_public_key(aws_config)?;
 
         #[cfg(not(feature = "local-run"))]
@@ -126,10 +144,7 @@ impl Server {
         #[cfg(feature = "local-run")]
         let attestation_document = Vec::new();
 
-        Ok(Response::TeePublicKey {
-            public_key: aws_config.public_key.clone(),
-            attestation_document,
-        })
+        Ok((aws_config.public_key.clone(), attestation_document))
     }
 
     async fn prepare_relay_calldata_response(
@@ -137,11 +152,12 @@ impl Server {
         aws_config: &AwsConfig,
         encryption_envelope: EncryptionEnvelope,
         relay_params: RelayParams,
-    ) -> Result<Response, VsockError> {
+    ) -> Result<RelayCalldata, TeeError> {
         let decrypted_payload = self.kms.decrypt_payload(aws_config, &encryption_envelope)?;
 
         let payload: Payload = serde_json::from_slice(&decrypted_payload).map_err(|e| {
-            VsockError::Protocol(format!("Failed to deserialize decrypted payload: {e:?}"))
+            debug!("Failed to deserialize decrypted payload: {e:?}");
+            TeeError::Protocol("Failed to deserialize decrypted payload.".into())
         })?;
 
         info!("Deserialized payload.");
@@ -149,10 +165,13 @@ impl Server {
         debug!("Relay params: {:?}", relay_params);
 
         if relay_params.relayer_fee > payload.max_relayer_fee {
-            return Err(VsockError::Protocol(format!(
+            debug!(
                 "Relayer fee {} exceeds max relayer fee {}",
                 relay_params.relayer_fee, payload.max_relayer_fee
-            )));
+            );
+            return Err(TeeError::Protocol(
+                "Actual relayer fee exceeds max relayer fee".into(),
+            ));
         }
 
         let token = match payload.token_address {
@@ -178,16 +197,14 @@ impl Server {
             relay_params.merkle_root,
         );
 
-        Ok(Response::PrepareRelayCalldata {
-            calldata: relayer_calldata,
-        })
+        Ok(relayer_calldata)
     }
 
     #[cfg(not(feature = "local-run"))]
     fn request_attestation_from_nsm_driver(
         &self,
         tee_public_key: Vec<u8>,
-    ) -> Result<Vec<u8>, VsockError> {
+    ) -> Result<Vec<u8>, TeeError> {
         match nsm_process_request(
             self.nsm_fd,
             NsmRequest::Attestation {
@@ -197,7 +214,7 @@ impl Server {
             },
         ) {
             NsmResponse::Attestation { document } => Ok(document),
-            _ => Err(VsockError::Protocol(String::from(
+            _ => Err(TeeError::Protocol(String::from(
                 "NSM driver failed to compute attestation.",
             ))),
         }
@@ -209,10 +226,8 @@ impl Server {
         let nsm_fd = nsm_init();
 
         if nsm_fd < 0 {
-            return Err(VsockError::Protocol(format!(
-                "Failed to initialize NSM driver (return code) = {}",
-                nsm_fd
-            )));
+            debug!("Failed to initialize NSM driver (return code) = {}", nsm_fd);
+            return Err(VsockError::NSM("Failed to initialize NSM driver".into()));
         }
 
         Ok(nsm_fd)

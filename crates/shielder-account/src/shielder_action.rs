@@ -121,6 +121,14 @@ impl ShielderAction {
             }
         }
     }
+
+    pub fn tx_hash(&self) -> TxHash {
+        match self {
+            Self::NewAccount(data) | Self::Deposit(data) | Self::Withdraw { data, .. } => {
+                data.tx_hash
+            }
+        }
+    }
 }
 
 #[derive(Clone, Eq, PartialEq, Debug, Deserialize, Serialize)]

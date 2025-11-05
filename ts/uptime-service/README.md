@@ -121,35 +121,11 @@ The service exposes the following metrics:
 **Labels:** `service_name`, `endpoint`  
 **Buckets:** 0.001, 0.01, 0.1, 0.5, 1, 2, 5, 10
 
-### `service_probe_success_total`
-
-**Type:** Counter  
-**Description:** Total number of successful health probes  
-**Labels:** `service_name`, `endpoint`
-
-### `service_probe_failure_total`
-
-**Type:** Counter  
-**Description:** Total number of failed health probes  
-**Labels:** `service_name`, `endpoint`
-
 ### `service_last_probe_timestamp`
 
 **Type:** Gauge  
 **Description:** Unix timestamp of the last probe attempt  
 **Labels:** `service_name`, `endpoint`
-
-## Prometheus Configuration
-
-Add this job to your `prometheus.yml`:
-
-```yaml
-scrape_configs:
-  - job_name: "uptime-service"
-    static_configs:
-      - targets: ["localhost:9090"]
-    scrape_interval: 15s
-```
 
 ## Grafana Dashboard
 
@@ -171,12 +147,6 @@ avg_over_time(service_up[24h]) * 100
 
 ```promql
 rate(service_response_time_seconds_sum[5m]) / rate(service_response_time_seconds_count[5m])
-```
-
-**Total Failures:**
-
-```promql
-service_probe_failure_total
 ```
 
 ### Alert Rules

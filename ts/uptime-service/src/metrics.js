@@ -12,7 +12,7 @@ export const serviceUp = new Gauge({
   name: "service_up",
   help: "Service availability status (1 = up, 0 = down)",
   labelNames: ["service_name", "endpoint"],
-  registers: [register],
+  registers: [register]
 });
 
 // Metric: Response time in seconds
@@ -21,23 +21,7 @@ export const serviceResponseTime = new Histogram({
   help: "Service response time in seconds",
   labelNames: ["service_name", "endpoint"],
   buckets: [0.001, 0.01, 0.1, 0.5, 1, 2, 5, 10],
-  registers: [register],
-});
-
-// Metric: Total successful probes
-export const serviceProbeSuccess = new Counter({
-  name: "service_probe_success_total",
-  help: "Total number of successful health probes",
-  labelNames: ["service_name", "endpoint"],
-  registers: [register],
-});
-
-// Metric: Total failed probes
-export const serviceProbeFailure = new Counter({
-  name: "service_probe_failure_total",
-  help: "Total number of failed health probes",
-  labelNames: ["service_name", "endpoint"],
-  registers: [register],
+  registers: [register]
 });
 
 // Metric: Last probe timestamp
@@ -45,7 +29,7 @@ export const serviceLastProbeTimestamp = new Gauge({
   name: "service_last_probe_timestamp",
   help: "Unix timestamp of the last probe attempt",
   labelNames: ["service_name", "endpoint"],
-  registers: [register],
+  registers: [register]
 });
 
 /**
@@ -56,7 +40,6 @@ export function recordSuccess(serviceName, endpoint, responseTime) {
 
   serviceUp.set(labels, 1);
   serviceResponseTime.observe(labels, responseTime);
-  serviceProbeSuccess.inc(labels);
   serviceLastProbeTimestamp.set(labels, Date.now() / 1000);
 }
 
@@ -67,6 +50,5 @@ export function recordFailure(serviceName, endpoint) {
   const labels = { service_name: serviceName, endpoint };
 
   serviceUp.set(labels, 0);
-  serviceProbeFailure.inc(labels);
   serviceLastProbeTimestamp.set(labels, Date.now() / 1000);
 }

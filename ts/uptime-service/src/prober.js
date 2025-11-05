@@ -18,8 +18,8 @@ async function probeEndpoint(endpoint, timeout) {
       method: endpoint.method,
       signal: controller.signal,
       headers: {
-        "User-Agent": "uptime-service/1.0",
-      },
+        "User-Agent": "uptime-service/1.0"
+      }
     });
 
     clearTimeout(timeoutId);

@@ -15,7 +15,7 @@ export function startMetricsServer(port) {
   app.get("/health", (req, res) => {
     res.status(200).json({
       status: "ok",
-      timestamp: new Date().toISOString(),
+      timestamp: new Date().toISOString()
     });
   });
 
@@ -38,8 +38,8 @@ export function startMetricsServer(port) {
       version: "1.0.0",
       endpoints: {
         health: "/health",
-        metrics: "/metrics",
-      },
+        metrics: "/metrics"
+      }
     });
   });
 

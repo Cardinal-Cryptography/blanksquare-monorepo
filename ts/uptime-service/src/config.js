@@ -8,7 +8,7 @@ export function loadConfig() {
     port: parseInt(process.env.PORT || "9090", 10),
     probeInterval: parseInt(process.env.PROBE_INTERVAL || "30000", 10),
     timeout: parseInt(process.env.TIMEOUT || "5000", 10),
-    endpoints: [],
+    endpoints: []
   };
 
   // Parse and validate endpoints
@@ -45,7 +45,7 @@ export function loadConfig() {
         name: endpoint.name,
         url: endpoint.url,
         method: endpoint.method || "GET",
-        expectedStatus: endpoint.expectedStatus || 200,
+        expectedStatus: endpoint.expectedStatus || 200
       };
     });
 

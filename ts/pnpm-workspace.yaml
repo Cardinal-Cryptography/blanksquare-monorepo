@@ -6,3 +6,4 @@ packages:
   - "shielder-sdk"
   - "shielder-sdk-tests"
   - "!shielder-sdk-crypto-mobile"
+  - "!uptime-service"

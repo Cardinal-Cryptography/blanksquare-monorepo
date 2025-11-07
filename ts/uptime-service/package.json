@@ -1,0 +1,24 @@
+{
+  "name": "uptime-service",
+  "version": "1.0.0",
+  "description": "Uptime monitoring service that exposes Prometheus metrics for health endpoints",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "start": "bun run src/index.js",
+    "dev": "bun --watch src/index.js"
+  },
+  "keywords": [
+    "uptime",
+    "monitoring",
+    "prometheus",
+    "health-check",
+    "metrics"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "prom-client": "^15.1.0"
+  }
+}

@@ -1,6 +1,7 @@
 # This workflow is out-to-date. It won't work as it is now, due to the fact Base Sepolia testnet 
 # has a specific behaviour resulting in errors like "replacement transaction underpriced" or "nonce too low:".
-# current workaround was to sleep, but it was removed in https://github.com/Cardinal-Cryptography/blanksquare-monorepo/commit/72536953ee7d324b4a776c0726ae035bace88655#diff-3df7cd0db2829cdf3b5197063ca9550661d58f7b6316e5eec8bf95aa779b016c
+# current workaround was to sleep, but it was removed in 
+# https://github.com/Cardinal-Cryptography/blanksquare-monorepo/commit/72536953ee7d324b4a776c0726ae035bace88655
 ---
 name: Nightly E2E tests run on testnet
 
